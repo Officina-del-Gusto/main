@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  LayoutDashboard, Users, Plus, Edit, Trash2, Power, 
-  Star, Archive, Search, FileText, Check, X, LogOut, Save, Download, Home, RotateCcw, Eye, Layers, Database, AlertTriangle, Copy, Bell, ArrowRight
+  LayoutDashboard, Users, Plus, Edit, Trash2, Power, PowerOff,
+  Star, Archive, Check, X, LogOut, Home, RotateCcw, Eye, Layers, AlertTriangle, Copy, ArrowRight
 } from 'lucide-react';
 import { 
   Job, Application, 
-  getJobs, saveJob, deleteJob, toggleJobStatus, seedDatabase, checkDbConnection,
+  getJobs, saveJob, deleteJob, toggleJobStatus, activateAllJobs, deactivateAllJobs, deleteAllJobs, resetDatabase, checkDbConnection,
   getApplications, updateApplicationStatus, deleteApplication 
 } from '../utils/mockData';
 
@@ -96,7 +96,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const handleEditJob = (job?: Job) => {
     if (job) {
       if (job.id.startsWith('default-')) {
-        showNotification("Apasă 'Populează Joburi' pentru a salva acest job în baza de date înainte de editare.", 'error');
+        showNotification("Apasă 'Activează Toate' pentru a salva acest job în baza de date înainte de editare.", 'error');
         return;
       }
       setCurrentJob(job);
@@ -122,7 +122,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
         showNotification("Job salvat cu succes!");
       } catch (e: any) {
         if (e.message === "DEFAULT_JOB_ERROR") {
-           showNotification("Nu poți edita un job default. Apasă 'Populează Joburi' mai întâi.", 'error');
+           showNotification("Nu poți edita un job default. Apasă 'Activează Toate' mai întâi.", 'error');
         } else {
            showNotification("Eroare la salvare. Verifică baza de date.", 'error');
         }
@@ -141,7 +141,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           showNotification("Job șters cu succes!");
         } catch (e: any) {
           if (e.message === "DEFAULT_JOB_ERROR") {
-             showNotification("Joburile default nu se pot șterge. Apasă 'Populează Joburi' mai întâi.", 'error');
+             showNotification("Joburile default nu se pot șterge. Apasă 'Activează Toate' mai întâi.", 'error');
           } else {
              showNotification("Eroare la ștergere.", 'error');
           }
@@ -157,31 +157,100 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
        await refreshData();
        showNotification(currentStatus ? "Job dezactivat!" : "Job activat!");
      } catch (e: any) {
-       if (e.message === "DEFAULT_JOB_ERROR") {
-          showNotification("Apasă 'Populează Joburi' pentru a putea modifica statusul.", 'error');
-       } else {
-          showNotification("Eroare la modificare status.", 'error');
-       }
+       showNotification("Eroare la modificare status.", 'error');
      }
   };
 
-  const handleSeedDB = async () => {
+  const handleActivateAll = async () => {
     setConfirmConfig({
       isOpen: true,
-      message: 'Această acțiune va salva joburile default în baza de date Supabase. Continui?',
+      message: 'Această acțiune va activa toate joburile (cele default vor fi salvate în baza de date). Continui?',
       onConfirm: async () => {
         setIsLoading(true);
         try {
-          await seedDatabase();
+          await activateAllJobs();
           await refreshData();
-          showNotification('Joburile au fost adăugate cu succes!');
+          showNotification('Toate joburile au fost activate!');
           setDbError(false);
         } catch (e: any) {
           if (e.message === "CONNECTION_ERROR") {
              setDbError(true);
              showNotification('Eroare conexiune. Rulează scriptul SQL.', 'error');
           } else {
-             showNotification('Eroare la populare.', 'error');
+             showNotification('Eroare la activare.', 'error');
+          }
+        }
+        setIsLoading(false);
+        setConfirmConfig(null);
+      }
+    });
+  };
+
+  const handleDeactivateAll = async () => {
+    setConfirmConfig({
+      isOpen: true,
+      message: 'Această acțiune va dezactiva toate joburile. Continui?',
+      onConfirm: async () => {
+        setIsLoading(true);
+        try {
+          await deactivateAllJobs();
+          await refreshData();
+          showNotification('Toate joburile au fost dezactivate!');
+          setDbError(false);
+        } catch (e: any) {
+          if (e.message === "CONNECTION_ERROR") {
+             setDbError(true);
+             showNotification('Eroare conexiune. Rulează scriptul SQL.', 'error');
+          } else {
+             showNotification('Eroare la dezactivare.', 'error');
+          }
+        }
+        setIsLoading(false);
+        setConfirmConfig(null);
+      }
+    });
+  };
+
+  const handleDeleteAll = async () => {
+    setConfirmConfig({
+      isOpen: true,
+      message: '⚠️ ATENȚIE: Această acțiune va șterge TOATE joburile din baza de date! Această acțiune este ireversibilă. Ești sigur?',
+      onConfirm: async () => {
+        setIsLoading(true);
+        try {
+          await deleteAllJobs();
+          await refreshData();
+          showNotification('Toate joburile au fost șterse!');
+        } catch (e: any) {
+          if (e.message === "CONNECTION_ERROR") {
+             setDbError(true);
+             showNotification('Eroare conexiune. Rulează scriptul SQL.', 'error');
+          } else {
+             showNotification('Eroare la ștergere.', 'error');
+          }
+        }
+        setIsLoading(false);
+        setConfirmConfig(null);
+      }
+    });
+  };
+
+  const handleResetDB = async () => {
+    setConfirmConfig({
+      isOpen: true,
+      message: '🚨 PERICOL: Această acțiune va RESETA COMPLET baza de date! Toate joburile, aplicațiile și CV-urile vor fi șterse definitiv. Această acțiune NU poate fi anulată! Ești ABSOLUT sigur?',
+      onConfirm: async () => {
+        setIsLoading(true);
+        try {
+          await resetDatabase();
+          await refreshData();
+          showNotification('Baza de date a fost resetată complet!');
+        } catch (e: any) {
+          if (e.message === "CONNECTION_ERROR") {
+             setDbError(true);
+             showNotification('Eroare conexiune. Rulează scriptul SQL.', 'error');
+          } else {
+             showNotification('Eroare la resetare.', 'error');
           }
         }
         setIsLoading(false);
@@ -368,26 +437,51 @@ for delete using ( bucket_id = 'cvs' );
                 {/* --- JOBS TAB --- */}
                 {activeTab === 'jobs' && (
                   <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                      <h2 className="text-2xl font-bold text-stone-800">Joburi Postate</h2>
-                      <div className="flex gap-3">
-                        <button 
-                          onClick={handleSeedDB}
-                          className={`px-4 py-3 rounded-xl font-bold flex items-center gap-2 transition-transform active:scale-95 shadow-md ${
-                            isDemoMode 
-                              ? 'bg-bakery-500 hover:bg-bakery-600 text-white animate-pulse' 
-                              : 'bg-stone-200 hover:bg-stone-300 text-stone-700'
-                          }`}
-                          title="Salvează joburile default în baza de date"
-                        >
-                          <Database size={20} /> Populează Joburi
-                          {isDemoMode && <ArrowRight size={16} className="animate-bounce-x" />}
-                        </button>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex justify-between items-center">
+                        <h2 className="text-2xl font-bold text-stone-800">Joburi Postate</h2>
                         <button 
                           onClick={() => handleEditJob()}
                           className="bg-bakery-500 hover:bg-bakery-600 text-white px-6 py-3 rounded-xl font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95"
                         >
                           <Plus size={20} /> Adaugă Job
+                        </button>
+                      </div>
+                      
+                      {/* Bulk Action Buttons */}
+                      <div className="flex flex-wrap gap-3">
+                        <button 
+                          onClick={handleActivateAll}
+                          className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-transform active:scale-95 shadow-md ${
+                            isDemoMode 
+                              ? 'bg-green-500 hover:bg-green-600 text-white animate-pulse' 
+                              : 'bg-green-500 hover:bg-green-600 text-white'
+                          }`}
+                          title="Activează toate joburile"
+                        >
+                          <Power size={18} /> Activează Toate
+                          {isDemoMode && <ArrowRight size={14} className="animate-bounce-x" />}
+                        </button>
+                        <button 
+                          onClick={handleDeactivateAll}
+                          className="px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-transform active:scale-95 shadow-md bg-orange-500 hover:bg-orange-600 text-white"
+                          title="Dezactivează toate joburile"
+                        >
+                          <PowerOff size={18} /> Dezactivează Toate
+                        </button>
+                        <button 
+                          onClick={handleDeleteAll}
+                          className="px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-transform active:scale-95 shadow-md bg-red-500 hover:bg-red-600 text-white"
+                          title="Șterge toate joburile"
+                        >
+                          <Trash2 size={18} /> Șterge Toate
+                        </button>
+                        <button 
+                          onClick={handleResetDB}
+                          className="px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-transform active:scale-95 shadow-md bg-red-700 hover:bg-red-800 text-white ring-2 ring-red-300"
+                          title="Resetează complet baza de date"
+                        >
+                          <RotateCcw size={18} /> Resetează DB
                         </button>
                       </div>
                     </div>
@@ -416,7 +510,7 @@ for delete using ( bucket_id = 'cvs' );
                           </div>
                         </div>
                       ))}
-                      {jobs.length === 0 && <p className="text-center text-stone-500 py-10">Nu sunt joburi. Apasă "Populează Joburi" dacă e prima rulare.</p>}
+                      {jobs.length === 0 && <p className="text-center text-stone-500 py-10">Nu sunt joburi. Apasă "Activează Toate" pentru a adăuga joburile default.</p>}
                     </div>
                   </div>
                 )}

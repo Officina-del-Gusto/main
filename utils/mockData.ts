@@ -33,7 +33,7 @@ const DEFAULT_JOBS: Job[] = [
     type: 'Full-time',
     location: 'Drăgășani',
     description: 'Te ocupi de servirea clienților cu zâmbetul pe buze, aranjarea produselor la raft și menținerea curățeniei. Experiența nu este obligatorie, te învățăm noi tot ce trebuie! Căutăm o persoană serioasă și punctuală.',
-    active: true,
+    active: false,
     datePosted: new Date().toISOString()
   },
   {
@@ -42,7 +42,7 @@ const DEFAULT_JOBS: Job[] = [
     type: 'Full-time',
     location: 'Băbeni',
     description: 'Ești pasionat de aluaturi? Căutăm o persoană harnică pentru prepararea produselor de patiserie (merdenele, ștrudele, covrigi). Oferim program de lucru stabil, salariu motivant și o echipă prietenoasă.',
-    active: true,
+    active: false,
     datePosted: new Date().toISOString()
   },
   {
@@ -51,7 +51,7 @@ const DEFAULT_JOBS: Job[] = [
     type: 'Full-time',
     location: 'Drăgășani & Băbeni',
     description: 'Căutăm o persoană organizată pentru a coordona activitatea în ambele locații. Responsabilități: gestiune stocuri, coordonare echipă, asigurarea calității. Permis cat. B necesar.',
-    active: true,
+    active: false,
     datePosted: new Date().toISOString()
   }
 ];
@@ -162,9 +162,27 @@ export const deleteJob = async (id: string) => {
 
 export const toggleJobStatus = async (id: string, currentStatus: boolean) => {
   try {
+    // If it's a default job (not in DB), insert it first then set active
     if (id.startsWith('default-')) {
-       throw new Error("DEFAULT_JOB_ERROR");
+      const defaultJob = DEFAULT_JOBS.find(j => j.id === id);
+      if (!defaultJob) {
+        throw new Error("DEFAULT_JOB_NOT_FOUND");
+      }
+      
+      const dbPayload = {
+        title: defaultJob.title,
+        type: defaultJob.type,
+        location: defaultJob.location,
+        description: defaultJob.description,
+        active: !currentStatus  // Toggle: if currently false, set to true
+      };
+      
+      const { error } = await supabase.from('jobs').insert([dbPayload]);
+      if (error) throw error;
+      return;
     }
+    
+    // For existing DB jobs, simply toggle
     const { error } = await supabase.from('jobs').update({ active: !currentStatus }).eq('id', id);
     if (error) throw error;
   } catch (e: any) { 
@@ -173,25 +191,133 @@ export const toggleJobStatus = async (id: string, currentStatus: boolean) => {
   }
 };
 
-export const seedDatabase = async () => {
+export const activateAllJobs = async () => {
   try {
     const connected = await checkDbConnection();
     if (!connected) {
         throw new Error("CONNECTION_ERROR");
     }
 
-    const dbJobs = DEFAULT_JOBS.map(job => ({
-      title: job.title,
-      type: job.type,
-      location: job.location,
-      description: job.description,
-      active: job.active
-    }));
+    // Get existing jobs from DB
+    const { data: existingJobs, error: fetchError } = await supabase
+      .from('jobs')
+      .select('title');
+    
+    if (fetchError) throw fetchError;
+    
+    const existingTitles = new Set(existingJobs?.map(j => j.title) || []);
+    
+    // Find default jobs that don't exist in DB yet
+    const jobsToInsert = DEFAULT_JOBS
+      .filter(job => !existingTitles.has(job.title))
+      .map(job => ({
+        title: job.title,
+        type: job.type,
+        location: job.location,
+        description: job.description,
+        active: true
+      }));
+    
+    // Insert new jobs if any
+    if (jobsToInsert.length > 0) {
+      const { error: insertError } = await supabase.from('jobs').insert(jobsToInsert);
+      if (insertError) throw insertError;
+    }
+    
+    // Set ALL jobs in DB to active
+    const { error: updateError } = await supabase.from('jobs').update({ active: true }).neq('id', '00000000-0000-0000-0000-000000000000');
+    if (updateError) throw updateError;
+  } catch (error: any) {
+    console.error("Error activating all jobs:", error.message || error);
+    throw error;
+  }
+};
 
-    const { error } = await supabase.from('jobs').insert(dbJobs);
+export const deactivateAllJobs = async () => {
+  try {
+    const connected = await checkDbConnection();
+    if (!connected) {
+        throw new Error("CONNECTION_ERROR");
+    }
+
+    // Get existing jobs from DB
+    const { data: existingJobs, error: fetchError } = await supabase
+      .from('jobs')
+      .select('title');
+    
+    if (fetchError) throw fetchError;
+    
+    const existingTitles = new Set(existingJobs?.map(j => j.title) || []);
+    
+    // Find default jobs that don't exist in DB yet
+    const jobsToInsert = DEFAULT_JOBS
+      .filter(job => !existingTitles.has(job.title))
+      .map(job => ({
+        title: job.title,
+        type: job.type,
+        location: job.location,
+        description: job.description,
+        active: false
+      }));
+    
+    // Insert new jobs if any
+    if (jobsToInsert.length > 0) {
+      const { error: insertError } = await supabase.from('jobs').insert(jobsToInsert);
+      if (insertError) throw insertError;
+    }
+    
+    // Set ALL jobs in DB to inactive
+    const { error: updateError } = await supabase.from('jobs').update({ active: false }).neq('id', '00000000-0000-0000-0000-000000000000');
+    if (updateError) throw updateError;
+  } catch (error: any) {
+    console.error("Error deactivating all jobs:", error.message || error);
+    throw error;
+  }
+};
+
+export const deleteAllJobs = async () => {
+  try {
+    const connected = await checkDbConnection();
+    if (!connected) {
+        throw new Error("CONNECTION_ERROR");
+    }
+
+    // Delete all jobs from DB
+    const { error } = await supabase.from('jobs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     if (error) throw error;
   } catch (error: any) {
-    console.error("Error seeding DB:", error.message || error);
+    console.error("Error deleting all jobs:", error.message || error);
+    throw error;
+  }
+};
+
+export const resetDatabase = async () => {
+  try {
+    const connected = await checkDbConnection();
+    if (!connected) {
+        throw new Error("CONNECTION_ERROR");
+    }
+
+    // Delete all jobs from DB
+    const { error: jobsError } = await supabase.from('jobs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (jobsError) throw jobsError;
+
+    // Delete all applications from DB
+    const { error: appsError } = await supabase.from('applications').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (appsError) throw appsError;
+
+    // Try to clear CVs from storage bucket (optional - may fail if bucket doesn't exist)
+    try {
+      const { data: files } = await supabase.storage.from('cvs').list();
+      if (files && files.length > 0) {
+        const fileNames = files.map(f => f.name);
+        await supabase.storage.from('cvs').remove(fileNames);
+      }
+    } catch (storageError: any) {
+      console.warn("Could not clear CVs storage:", storageError.message);
+    }
+  } catch (error: any) {
+    console.error("Error resetting database:", error.message || error);
     throw error;
   }
 };
