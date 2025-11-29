@@ -28,6 +28,19 @@ const Footer: React.FC<FooterProps> = ({ onAdminClick }) => {
               <Facebook size={24} />
             </a>
             <a 
+              href="https://wa.me/40754554194" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="w-12 h-12 rounded-full overflow-hidden hover:scale-110 transition-all duration-300 transform shadow-lg"
+              aria-label="WhatsApp"
+            >
+              <img 
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/WhatsApp_icon.png/500px-WhatsApp_icon.png" 
+                alt="WhatsApp" 
+                className="w-full h-full object-cover"
+              />
+            </a>
+            <a 
               href="mailto:odgdragasani@gmail.com" 
               className="w-12 h-12 rounded-full bg-stone-800 hover:bg-bakery-400 text-white flex items-center justify-center transition-all duration-300 transform hover:scale-110 shadow-lg"
               aria-label="Email"
@@ -35,7 +48,7 @@ const Footer: React.FC<FooterProps> = ({ onAdminClick }) => {
               <Mail size={24} />
             </a>
             <a 
-              href="tel:+40742314657" 
+              href="tel:+40754554194" 
               className="w-12 h-12 rounded-full bg-stone-800 hover:bg-bakery-500 text-white flex items-center justify-center transition-all duration-300 transform hover:scale-110 shadow-lg"
               aria-label="Phone"
             >

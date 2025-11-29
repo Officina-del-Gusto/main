@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Users, Plus, Edit, Trash2, Power, PowerOff,
-  Star, Archive, Check, X, LogOut, Home, RotateCcw, Eye, Layers, AlertTriangle, Copy, ArrowRight
+  Star, Archive, Check, X, LogOut, Home, RotateCcw, Eye, Layers, AlertTriangle, Copy, ArrowRight, Settings
 } from 'lucide-react';
 import { 
   Job, Application, 
@@ -49,6 +49,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Settings State
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsForm, setSettingsForm] = useState({
+    currentPassword: '',
+    newUsername: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [settingsError, setSettingsError] = useState<string | null>(null);
   const [dbError, setDbError] = useState(false);
   
   // UI State
@@ -375,6 +385,9 @@ for delete using ( bucket_id = 'cvs' );
             <span className="font-serif text-xl font-bold hidden sm:inline">Panou Administrare</span>
           </div>
           <div className="flex gap-3">
+            <button onClick={() => setIsSettingsOpen(true)} className="flex items-center gap-2 bg-stone-700 hover:bg-stone-600 px-4 py-2 rounded-lg text-sm font-bold">
+              <Settings size={16} /> Setări
+            </button>
             <button onClick={onLogout} className="flex items-center gap-2 bg-stone-700 hover:bg-stone-600 px-4 py-2 rounded-lg text-sm font-bold">
               <Home size={16} /> Acasă
             </button>
@@ -623,6 +636,127 @@ for delete using ( bucket_id = 'cvs' );
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setIsEditingJob(false)} className="flex-1 py-3 bg-stone-200 hover:bg-stone-300 rounded-xl font-bold text-stone-600">Anulează</button>
                 <button type="submit" className="flex-1 py-3 bg-bakery-500 hover:bg-bakery-600 rounded-xl font-bold text-white shadow-md">Salvează</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* SETTINGS MODAL */}
+      {isSettingsOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setIsSettingsOpen(false)}>
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-stone-800 flex items-center gap-2">
+                <Settings size={24} className="text-bakery-500" />
+                Setări Admin
+              </h3>
+              <button onClick={() => setIsSettingsOpen(false)} className="p-2 hover:bg-stone-100 rounded-lg transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            {settingsError && (
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm font-bold flex items-center gap-2">
+                <AlertTriangle size={16} />
+                {settingsError}
+              </div>
+            )}
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const savedPassword = localStorage.getItem('adminPassword') || 'mamaliga';
+              
+              if (settingsForm.currentPassword !== savedPassword) {
+                setSettingsError('Parola curentă este incorectă!');
+                return;
+              }
+              
+              if (settingsForm.newPassword && settingsForm.newPassword !== settingsForm.confirmPassword) {
+                setSettingsError('Parolele noi nu se potrivesc!');
+                return;
+              }
+              
+              if (!settingsForm.newUsername && !settingsForm.newPassword) {
+                setSettingsError('Trebuie să schimbi cel puțin numele de utilizator sau parola!');
+                return;
+              }
+              
+              // Update credentials
+              if (settingsForm.newUsername) {
+                localStorage.setItem('adminUsername', settingsForm.newUsername);
+              }
+              if (settingsForm.newPassword) {
+                localStorage.setItem('adminPassword', settingsForm.newPassword);
+              }
+              
+              showNotification('Credențiale actualizate cu succes! Vei fi deconectat.');
+              setTimeout(() => {
+                onLogout();
+              }, 2000);
+              
+            }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-stone-600 mb-1">Parolă Curentă *</label>
+                <input 
+                  type="password" 
+                  required
+                  value={settingsForm.currentPassword}
+                  onChange={e => setSettingsForm({...settingsForm, currentPassword: e.target.value})}
+                  className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none"
+                  placeholder="Introdu parola curentă"
+                />
+              </div>
+
+              <div className="border-t border-stone-200 pt-4">
+                <p className="text-xs text-stone-500 mb-3 italic">Completează doar câmpurile pe care vrei să le modifici</p>
+                
+                <div className="mb-4">
+                  <label className="block text-sm font-bold text-stone-600 mb-1">Nume Utilizator Nou (Opțional)</label>
+                  <input 
+                    type="text" 
+                    value={settingsForm.newUsername}
+                    onChange={e => setSettingsForm({...settingsForm, newUsername: e.target.value})}
+                    className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none"
+                    placeholder="Lasă gol pentru a păstra"
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-bold text-stone-600 mb-1">Parolă Nouă (Opțional)</label>
+                  <input 
+                    type="password" 
+                    value={settingsForm.newPassword}
+                    onChange={e => setSettingsForm({...settingsForm, newPassword: e.target.value})}
+                    className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none"
+                    placeholder="Lasă gol pentru a păstra"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-stone-600 mb-1">Confirmă Parola Nouă</label>
+                  <input 
+                    type="password" 
+                    value={settingsForm.confirmPassword}
+                    onChange={e => setSettingsForm({...settingsForm, confirmPassword: e.target.value})}
+                    className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none"
+                    placeholder="Doar dacă ai introdus parolă nouă"
+                    disabled={!settingsForm.newPassword}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => {
+                  setIsSettingsOpen(false);
+                  setSettingsForm({ currentPassword: '', newUsername: '', newPassword: '', confirmPassword: '' });
+                  setSettingsError(null);
+                }} className="flex-1 py-3 bg-stone-200 hover:bg-stone-300 rounded-xl font-bold text-stone-600">
+                  Anulează
+                </button>
+                <button type="submit" className="flex-1 py-3 bg-bakery-500 hover:bg-bakery-600 rounded-xl font-bold text-white shadow-md">
+                  Salvează Modificările
+                </button>
               </div>
             </form>
           </div>

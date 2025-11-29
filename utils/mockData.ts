@@ -56,19 +56,7 @@ const DEFAULT_JOBS: Job[] = [
   }
 ];
 
-const DEFAULT_APPLICATIONS: Application[] = [
-  {
-    id: 'default-app-1',
-    jobId: 'default-sales',
-    jobTitle: 'Lucrător Comercial',
-    applicantName: 'Ana Maria Popescu',
-    phone: '0740 123 456',
-    email: 'ana.popescu@email.com',
-    message: '[Locație Dorită: Drăgășani]\n\nBună ziua, am o experiență de 2 ani în vânzări și sunt foarte interesată de acest post. Sunt o persoană comunicativă și serioasă.',
-    status: 'new',
-    dateApplied: new Date(Date.now() - 86400000).toISOString() // 1 day ago
-  }
-];
+const DEFAULT_APPLICATIONS: Application[] = [];
 
 // --- CONNECTION CHECK ---
 export const checkDbConnection = async (): Promise<boolean> => {
@@ -100,18 +88,26 @@ export const getJobs = async (): Promise<Job[]> => {
       throw error;
     }
 
-    if (data && data.length > 0) {
-      return data.map((row: any) => ({
-        id: row.id,
-        title: row.title,
-        type: row.type,
-        location: row.location,
-        description: row.description,
-        active: row.active,
-        datePosted: row.created_at
-      }));
+    // Convert DB jobs to Job[] format
+    const dbJobs: Job[] = data ? data.map((row: any) => ({
+      id: row.id,
+      title: row.title,
+      type: row.type,
+      location: row.location,
+      description: row.description,
+      active: row.active,
+      datePosted: row.created_at
+    })) : [];
+    
+    // If we have jobs in DB, check which default jobs are not yet in DB
+    if (dbJobs.length > 0) {
+      const dbTitles = new Set(dbJobs.map(j => j.title));
+      const remainingDefaults = DEFAULT_JOBS.filter(dj => !dbTitles.has(dj.title));
+      // Return DB jobs first, then remaining defaults
+      return [...dbJobs, ...remainingDefaults];
     }
     
+    // If DB is completely empty, return default jobs
     return DEFAULT_JOBS;
 
   } catch (err: any) {

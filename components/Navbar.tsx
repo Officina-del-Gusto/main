@@ -48,17 +48,32 @@ const Navbar: React.FC = () => {
               </button>
             ))}
             
-            <a 
-              href="tel:+40742314657" 
-              className={`px-5 py-2.5 rounded-full font-bold transition-all shadow-md flex items-center gap-2 ${
-                scrolled 
-                  ? 'bg-bakery-500 text-white hover:bg-bakery-600' 
-                  : 'bg-white text-bakery-800 hover:bg-bakery-100'
-              }`}
-            >
-              <Phone size={18} />
-              <span className="hidden lg:inline">0742 314 657</span>
-            </a>
+            <div className="flex gap-2">
+              <a 
+                href="tel:+40754554194" 
+                className={`px-5 py-2.5 rounded-full font-bold transition-all shadow-md flex items-center gap-2 ${
+                  scrolled 
+                    ? 'bg-bakery-500 text-white hover:bg-bakery-600' 
+                    : 'bg-white text-bakery-800 hover:bg-bakery-100'
+                }`}
+              >
+                <Phone size={18} />
+                <span className="hidden lg:inline">0754 554 194</span>
+              </a>
+              <a 
+                href="https://wa.me/40754554194" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full overflow-hidden hover:scale-110 transition-all duration-300 transform shadow-md flex items-center justify-center"
+                aria-label="WhatsApp"
+              >
+                <img 
+                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/WhatsApp_icon.png/500px-WhatsApp_icon.png" 
+                  alt="WhatsApp" 
+                  className="w-full h-full object-cover"
+                />
+              </a>
+            </div>
           </div>
 
           <div className="md:hidden flex items-center">
@@ -89,8 +104,15 @@ const Navbar: React.FC = () => {
               Locație & Program
             </button>
             <div className="pt-4 flex flex-col gap-3">
-              <a href="tel:+40742314657" className="w-full text-center bg-bakery-500 text-white px-4 py-4 rounded-xl font-bold hover:bg-bakery-600 flex items-center justify-center gap-2 shadow-sm">
+              <a href="tel:+40754554194" className="w-full text-center bg-bakery-500 text-white px-4 py-4 rounded-xl font-bold hover:bg-bakery-600 flex items-center justify-center gap-2 shadow-sm">
                 <Phone size={20} /> Sună Acum
+              </a>
+              <a href="https://wa.me/40754554194" target="_blank" rel="noopener noreferrer" className="w-full text-center bg-green-500 text-white px-4 py-4 rounded-xl font-bold hover:bg-green-600 flex items-center justify-center gap-2 shadow-sm">
+                <img 
+                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/WhatsApp_icon.png/500px-WhatsApp_icon.png" 
+                  alt="WhatsApp" 
+                  className="w-5 h-5 rounded"
+                /> WhatsApp
               </a>
               <button onClick={() => scrollToSection('contact')} className="w-full text-center bg-bakery-100 text-bakery-900 px-4 py-4 rounded-xl font-bold hover:bg-bakery-200 flex items-center justify-center gap-2">
                 <MapPin size={20} /> Vezi Locațiile

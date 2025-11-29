@@ -24,7 +24,7 @@ const products: Product[] = [
   },
   {
     id: 3,
-    name: "Pizza Homemade",
+    name: "Pizza de Casă",
     description: "Pizza de casă cu blat pufos, sos bogat de roșii și ingrediente din belșug. O masă completă.",
     image: "https://savoriurbane.com/wp-content/uploads/2017/07/Pizza-cu-blat-pufos-cu-de-toate-pizza-romaneasca-8.jpg",
     tag: "Rețetă Proprie"

@@ -78,6 +78,25 @@ const JobsSection: React.FC = () => {
     e.preventDefault();
     if (!selectedJob) return;
 
+    // Phone validation - Allow international numbers or Romanian format
+    const cleanPhone = formData.phone.replace(/[\s\-\(\)]/g, ''); // Remove spaces, dashes, parentheses
+    
+    // Accept international format (+country code) OR Romanian format
+    const internationalRegex = /^\+[1-9][0-9]{7,14}$/; // International format: + followed by country code and 8-15 digits
+    const romanianRegex = /^(0040|0)(7[0-9]{8}|[23][0-9]{8})$/; // Romanian format
+    
+    if (!internationalRegex.test(cleanPhone) && !romanianRegex.test(cleanPhone)) {
+      setSubmitError("Te rugăm să introduci un număr de telefon valid (ex: 0712 345 678 sau +39 123 456 789)");
+      return;
+    }
+
+    // Additional check: prevent obvious fake numbers like 123456, 111111, etc.
+    const digitsOnly = cleanPhone.replace(/^\+?[0-9]{1,3}/, ''); // Remove country code
+    if (/^(0+|1+|2+|3+|4+|5+|6+|7+|8+|9+|123456|654321)$/.test(digitsOnly)) {
+      setSubmitError("Acest număr de telefon nu pare valid. Te rugăm să introduci un număr real.");
+      return;
+    }
+
     setIsLoading(true);
     setSubmitError(null);
 
@@ -248,8 +267,14 @@ const JobsSection: React.FC = () => {
 
       {/* Application Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl relative animate-fade-in">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
+          onClick={handleCloseModal}
+        >
+          <div 
+            className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl relative animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
             
             <button 
               onClick={handleCloseModal}
@@ -302,8 +327,9 @@ const JobsSection: React.FC = () => {
                       value={formData.phone}
                       onChange={e => setFormData({...formData, phone: e.target.value})}
                       className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bakery-400 focus:ring-2 focus:ring-bakery-200 outline-none transition-all disabled:opacity-70 bg-white text-black placeholder-gray-500 font-medium"
-                      placeholder="Ex: 07xx xxx xxx"
+                      placeholder="Ex: 0712 345 678 sau +39 123 456 789"
                     />
+                    <p className="text-xs text-bakery-600 mt-1">Acceptăm numere românești sau internaționale</p>
                   </div>
 
                   {/* Location Dropdown */}

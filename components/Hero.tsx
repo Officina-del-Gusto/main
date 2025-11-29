@@ -92,10 +92,26 @@ const Hero: React.FC = () => {
 
       <div className="relative z-10 text-center px-4 max-w-5xl mx-auto pt-10">
         <div className="mb-8 inline-block">
-          <span className="py-2 px-6 border border-white/30 rounded-full text-bakery-50 text-sm md:text-base font-medium tracking-widest uppercase bg-black/40 backdrop-blur-md flex items-center gap-2 shadow-lg">
+          <div className="py-2 px-6 border border-white/30 rounded-full text-bakery-50 text-sm md:text-base font-medium tracking-widest uppercase bg-black/40 backdrop-blur-md flex items-center gap-2 shadow-lg">
             <MapPin size={16} className="text-bakery-400" />
-            Drăgășani <span className="text-bakery-400 mx-1">•</span> Băbeni
-          </span>
+            <a 
+              href="https://maps.app.goo.gl/3tqYZfiPDNWVssdT6" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:text-bakery-300 transition-colors underline decoration-transparent hover:decoration-bakery-300"
+            >
+              Drăgășani
+            </a>
+            <span className="text-bakery-400 mx-1">•</span>
+            <a 
+              href="https://maps.app.goo.gl/EvRhmPqz1rA1H1b28" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:text-bakery-300 transition-colors underline decoration-transparent hover:decoration-bakery-300"
+            >
+              Băbeni
+            </a>
+          </div>
         </div>
         
         {/* Text shadows increased to compensate for lighter background */}
@@ -103,7 +119,7 @@ const Hero: React.FC = () => {
           Officina del Gusto
         </h1>
         
-        <p className="font-cursive text-3xl md:text-5xl text-bakery-200 mb-8 drop-shadow-[0_4px_6px_rgba(0,0,0,0.95)]">
+        <p className="font-cursive text-3xl md:text-5xl text-bakery-300 mb-8 drop-shadow-[0_4px_8px_rgba(0,0,0,1)] [text-shadow:_0_0_30px_rgb(0_0_0_/_80%),_0_2px_4px_rgb(0_0_0_/_100%)]">
           Magia gustului autentic
         </p>
 

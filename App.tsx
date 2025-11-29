@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import InfoSection from './components/InfoSection';
@@ -7,16 +7,43 @@ import JobsSection from './components/JobsSection';
 import MapSection from './components/MapSection';
 import Footer from './components/Footer';
 import AdminDashboard from './components/AdminDashboard';
-import { Lock } from 'lucide-react';
+import { Lock, ArrowUp } from 'lucide-react';
 
 const App: React.FC = () => {
   const [view, setView] = useState<'public' | 'login' | 'admin'>('public');
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Show scroll-to-top button when scrolled down
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Initialize default credentials on first load
+  React.useEffect(() => {
+    if (!localStorage.getItem('adminUsername')) {
+      localStorage.setItem('adminUsername', 'odg');
+    }
+    if (!localStorage.getItem('adminPassword')) {
+      localStorage.setItem('adminPassword', 'mamaliga');
+    }
+  }, []);
 
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (loginForm.username === 'odg' && loginForm.password === 'mamaliga') {
+    const savedUsername = localStorage.getItem('adminUsername') || 'odg';
+    const savedPassword = localStorage.getItem('adminPassword') || 'mamaliga';
+    
+    if (loginForm.username === savedUsername && loginForm.password === savedPassword) {
       setView('admin');
       setLoginError(false);
     } else {
@@ -98,6 +125,17 @@ const App: React.FC = () => {
         <MapSection />
       </main>
       <Footer onAdminClick={() => setView('login')} />
+      
+      {/* Scroll to Top Button */}
+      <button
+        onClick={scrollToTop}
+        className={`fixed bottom-8 right-8 z-40 p-4 bg-bakery-500 hover:bg-bakery-600 text-white rounded-full shadow-lg transition-all duration-300 transform ${
+          showScrollTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16 pointer-events-none'
+        }`}
+        aria-label="Scroll to top"
+      >
+        <ArrowUp size={24} />
+      </button>
     </div>
   );
 };

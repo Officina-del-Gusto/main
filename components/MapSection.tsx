@@ -18,9 +18,9 @@ const locations = {
     title: 'Băbeni',
     addressLine1: 'Strada Dragoș Vrânceanu 145',
     addressLine2: 'Băbeni 245100, România',
-    // Properly encoded URL for "Strada Dragoș Vrânceanu 145, Băbeni 245100, Romania"
+    // Google Maps shortened link for Officina del Gusto Băbeni
     mapSrc: 'https://maps.google.com/maps?q=Strada+Drago%C8%99+Vr%C3%A2nceanu+145,+B%C4%83beni+245100,+Romania&t=&z=17&ie=UTF8&iwloc=&output=embed',
-    mapLink: 'https://www.google.com/maps/search/?api=1&query=Strada+Drago%C8%99+Vr%C3%A2nceanu+145,+B%C4%83beni+245100'
+    mapLink: 'https://maps.app.goo.gl/EvRhmPqz1rA1H1b28'
   }
 };
 
@@ -35,7 +35,7 @@ const MapSection: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-serif font-bold mb-4 text-bakery-400">Te așteptăm la noi!</h2>
+          <h2 className="text-4xl md:text-5xl font-serif font-bold mb-4 text-bakery-400">Te așteptăm pe la noi!</h2>
           <div className="flex justify-center gap-4 mt-8">
             <button
               onClick={() => setActiveLocation('dragasani')}
@@ -89,8 +89,8 @@ const MapSection: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="font-serif font-bold text-xl text-white mb-1">Comenzi Telefonice</h4>
-                  <a href="tel:+40742314657" className="text-stone-400 hover:text-bakery-300 transition-colors text-lg font-medium block mt-1">
-                    +40 742 314 657
+                  <a href="tel:+40754554194" className="text-stone-400 hover:text-bakery-300 transition-colors text-lg font-medium block mt-1">
+                    0754 554 194
                   </a>
                 </div>
               </div>
