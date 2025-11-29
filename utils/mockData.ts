@@ -224,8 +224,8 @@ export const activateAllJobs = async () => {
       if (insertError) throw insertError;
     }
     
-    // Set ALL jobs in DB to active
-    const { error: updateError } = await supabase.from('jobs').update({ active: true }).neq('id', '00000000-0000-0000-0000-000000000000');
+    // Set ALL jobs in DB to active (using .not('id', 'is', null) to match all rows)
+    const { error: updateError } = await supabase.from('jobs').update({ active: true }).not('id', 'is', null);
     if (updateError) throw updateError;
   } catch (error: any) {
     console.error("Error activating all jobs:", error.message || error);
@@ -266,8 +266,8 @@ export const deactivateAllJobs = async () => {
       if (insertError) throw insertError;
     }
     
-    // Set ALL jobs in DB to inactive
-    const { error: updateError } = await supabase.from('jobs').update({ active: false }).neq('id', '00000000-0000-0000-0000-000000000000');
+    // Set ALL jobs in DB to inactive (using .not('id', 'is', null) to match all rows)
+    const { error: updateError } = await supabase.from('jobs').update({ active: false }).not('id', 'is', null);
     if (updateError) throw updateError;
   } catch (error: any) {
     console.error("Error deactivating all jobs:", error.message || error);
@@ -282,8 +282,8 @@ export const deleteAllJobs = async () => {
         throw new Error("CONNECTION_ERROR");
     }
 
-    // Delete all jobs from DB
-    const { error } = await supabase.from('jobs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    // Delete all jobs from DB (using .not('id', 'is', null) to match all rows)
+    const { error } = await supabase.from('jobs').delete().not('id', 'is', null);
     if (error) throw error;
   } catch (error: any) {
     console.error("Error deleting all jobs:", error.message || error);
@@ -298,12 +298,12 @@ export const resetDatabase = async () => {
         throw new Error("CONNECTION_ERROR");
     }
 
-    // Delete all jobs from DB
-    const { error: jobsError } = await supabase.from('jobs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    // Delete all jobs from DB (using .not('id', 'is', null) to match all rows)
+    const { error: jobsError } = await supabase.from('jobs').delete().not('id', 'is', null);
     if (jobsError) throw jobsError;
 
     // Delete all applications from DB
-    const { error: appsError } = await supabase.from('applications').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    const { error: appsError } = await supabase.from('applications').delete().not('id', 'is', null);
     if (appsError) throw appsError;
 
     // Try to clear CVs from storage bucket (optional - may fail if bucket doesn't exist)
