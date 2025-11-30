@@ -70,13 +70,36 @@ const App: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Initialize default credentials on first load
+  // Initialize default values on first load/visit
   React.useEffect(() => {
+    // Admin credentials
     if (!localStorage.getItem('adminUsername')) {
       localStorage.setItem('adminUsername', 'odg');
     }
     if (!localStorage.getItem('adminPassword')) {
       localStorage.setItem('adminPassword', 'mamaliga');
+    }
+  }, []);
+  
+  // Force Christmas mode to be enabled on every page load/refresh
+  // Users can still disable during session, but it resets on next visit
+  // EXCEPT: respect "never ask again" for music popup
+  React.useEffect(() => {
+    // Always reset user preference to enabled on page load
+    localStorage.setItem('christmasEffects', 'true');
+    setChristmasUserEnabled(true);
+    
+    // Only reset music choice if user hasn't chosen "never"
+    const musicChoice = localStorage.getItem('christmasMusicChoice');
+    if (musicChoice !== 'never') {
+      localStorage.removeItem('christmasMusicChoice');
+    }
+    
+    // Only set admin enabled if not explicitly disabled by admin
+    const adminSetting = localStorage.getItem('christmasAdminEnabled');
+    if (adminSetting === null || adminSetting === 'true') {
+      localStorage.setItem('christmasAdminEnabled', 'true');
+      setChristmasAdminEnabled(true);
     }
   }, []);
 

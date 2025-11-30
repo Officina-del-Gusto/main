@@ -21,9 +21,8 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ christmasAdminEnabled = true }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [christmasEnabled, setChristmasEnabled] = useState(() => {
-    return safeGetBooleanFromStorage('christmasEffects', true);
-  });
+  // Default to true - App.tsx will reset localStorage on mount anyway
+  const [christmasEnabled, setChristmasEnabled] = useState(true);
 
   useEffect(() => {
     const handleScroll = () => {
