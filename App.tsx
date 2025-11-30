@@ -79,27 +79,30 @@ const App: React.FC = () => {
     if (!localStorage.getItem('adminPassword')) {
       localStorage.setItem('adminPassword', 'mamaliga');
     }
+    
+    // Set default admin enabled only on FIRST visit (if null)
+    if (localStorage.getItem('christmasAdminEnabled') === null) {
+      localStorage.setItem('christmasAdminEnabled', 'true');
+    }
   }, []);
   
-  // Force Christmas mode to be enabled on every page load/refresh
-  // Users can still disable during session, but it resets on next visit
-  // EXCEPT: respect "never ask again" for music popup
+  // Force Christmas USER preference to enabled on every page load/refresh
+  // This ensures Christmas shows by default, but ADMIN toggle is always respected
   React.useEffect(() => {
-    // Always reset user preference to enabled on page load
-    localStorage.setItem('christmasEffects', 'true');
-    setChristmasUserEnabled(true);
-    
-    // Only reset music choice if user hasn't chosen "never"
-    const musicChoice = localStorage.getItem('christmasMusicChoice');
-    if (musicChoice !== 'never') {
-      localStorage.removeItem('christmasMusicChoice');
-    }
-    
-    // Only set admin enabled if not explicitly disabled by admin
+    // Only reset user preference if admin has Christmas enabled
     const adminSetting = localStorage.getItem('christmasAdminEnabled');
-    if (adminSetting === null || adminSetting === 'true') {
-      localStorage.setItem('christmasAdminEnabled', 'true');
-      setChristmasAdminEnabled(true);
+    const adminEnabled = adminSetting !== 'false'; // null or 'true' = enabled
+    
+    if (adminEnabled) {
+      // Reset user preference to enabled on page load
+      localStorage.setItem('christmasEffects', 'true');
+      setChristmasUserEnabled(true);
+      
+      // Only reset music choice if user hasn't chosen "never"
+      const musicChoice = localStorage.getItem('christmasMusicChoice');
+      if (musicChoice !== 'never') {
+        localStorage.removeItem('christmasMusicChoice');
+      }
     }
   }, []);
 
