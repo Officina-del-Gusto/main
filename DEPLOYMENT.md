@@ -2,13 +2,16 @@
 
 ## Setup Instructions
 
-### 1. Get Hostinger FTP Credentials
+### 1. Get Hostinger SFTP/FTP Credentials
 
-Log into your Hostinger control panel (hPanel) and get:
-- **FTP Server**: Usually `ftp.yourdomain.com` or an IP address
-- **FTP Username**: Your hosting username
+Log into your Hostinger control panel (hPanel) → Files → FTP Accounts and get:
+- **FTP Server**: Look for "Hostname" - usually `your-server-name.hostinger.com` or an IP like `123.45.67.89`
+  - **DO NOT** include `ftp://` or port numbers
+  - Example: `srv123456.hstgr.cloud` or `123.45.67.89`
+- **FTP Username**: Your hosting username (usually shown in FTP Accounts)
 - **FTP Password**: Your hosting password
-- **Server Directory**: Usually `public_html/` or `domains/yourdomain.com/public_html/`
+- **Server Directory**: Usually `/public_html` or `/domains/yourdomain.com/public_html`
+  - **Important**: Must start with `/` (absolute path)
 
 ### 2. Configure GitHub Secrets
 
