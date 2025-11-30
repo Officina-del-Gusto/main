@@ -6,8 +6,9 @@ import emailjs from '@emailjs/browser';
 
 // EmailJS Credentials
 const EMAILJS_SERVICE_ID = "service_7kfjg5q"; 
-const EMAILJS_TEMPLATE_ID = "template_hdk6gfp"; 
-const EMAILJS_PUBLIC_KEY = "tpzvd85CgW2Vc_aeG"; 
+const EMAILJS_TEMPLATE_ID = "template_hdk6gfp"; // Replace with your new template ID
+const EMAILJS_PUBLIC_KEY = "tpzvd85CgW2Vc_aeG";
+const OWNER_EMAIL = "odgdragasani@gmail.com"; // Owner's email to receive notifications 
 
 const JobsSection: React.FC = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -125,17 +126,22 @@ const JobsSection: React.FC = () => {
 
       await submitApplication(newApplication);
 
-      // EmailJS Params
-      const templateParams = {
-        to_name: "Officina del Gusto",
+      // EmailJS Params - Send notification to owner
+      const templateParams: any = {
+        to_email: OWNER_EMAIL,
         applicant_name: formData.name,
         job_title: selectedJob.title,
         applicant_phone: formData.phone,
-        applicant_email: formData.email,
-        message: formData.message,
+        applicant_email: formData.email || "",
+        message: formData.message || "",
         preferred_location: formData.preferredLocation,
-        cv_link: downloadUrl || "Fără CV"
+        cv_link: downloadUrl || ""
       };
+
+      // Add reply_to if applicant provided email
+      if (formData.email) {
+        templateParams.reply_to = formData.email;
+      }
 
       try {
         await emailjs.send(
@@ -144,8 +150,10 @@ const JobsSection: React.FC = () => {
           templateParams,
           EMAILJS_PUBLIC_KEY
         );
+        console.log("✅ Email notification sent to owner successfully!");
       } catch (emailError) {
-        console.error("Email sending failed:", emailError);
+        console.error("❌ Email sending failed:", emailError);
+        // Don't block application submission if email fails
       }
 
       setShowSuccess(true);
