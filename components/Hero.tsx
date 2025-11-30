@@ -76,8 +76,8 @@ const Hero: React.FC = () => {
         <ChevronRight size={32} />
       </button>
       
-      {/* Slide Indicators - Moved to very bottom to avoid overlapping buttons */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+      {/* Slide Indicators - Moved higher to avoid overlapping buttons */}
+      <div className="absolute bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
         {heroImages.map((_, index) => (
           <button
             key={index}
@@ -90,8 +90,8 @@ const Hero: React.FC = () => {
         ))}
       </div>
 
-      <div className="relative z-10 text-center px-4 max-w-5xl mx-auto pt-10">
-        <div className="mb-8 inline-block">
+      <div className="relative z-10 text-center px-4 max-w-5xl mx-auto pt-10 md:pt-10">
+        <div className="mb-8 inline-block mt-28 sm:mt-20 md:mt-0">
           <div className="py-2 px-6 border border-white/30 rounded-full text-bakery-50 text-sm md:text-base font-medium tracking-widest uppercase bg-black/40 backdrop-blur-md flex items-center gap-2 shadow-lg">
             <MapPin size={16} className="text-bakery-400" />
             <a 

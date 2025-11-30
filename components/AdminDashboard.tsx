@@ -12,6 +12,8 @@ import {
 
 interface AdminDashboardProps {
   onLogout: () => void;
+  christmasEnabled: boolean;
+  onChristmasToggle: (enabled: boolean) => void;
 }
 
 type AppFilter = 'all' | 'new' | 'starred' | 'rejected' | 'trashed';
@@ -42,7 +44,7 @@ const ConfirmModal = ({ isOpen, message, onConfirm, onCancel }: { isOpen: boolea
   );
 };
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnabled, onChristmasToggle }) => {
   const [activeTab, setActiveTab] = useState<'jobs' | 'applications'>('jobs');
   const [appFilter, setAppFilter] = useState<AppFilter>('all');
   
@@ -384,7 +386,23 @@ for delete using ( bucket_id = 'cvs' );
             <div className="w-10 h-10 bg-bakery-500 rounded-lg flex items-center justify-center font-bold text-xl">ODG</div>
             <span className="font-serif text-xl font-bold hidden sm:inline">Panou Administrare</span>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 items-center">
+            {/* Christmas Toggle */}
+            <div className="flex items-center gap-2 bg-stone-700 px-4 py-2 rounded-lg">
+              <span className="text-sm font-bold">🎄 Crăciun</span>
+              <button
+                onClick={() => onChristmasToggle(!christmasEnabled)}
+                className={`relative w-12 h-6 rounded-full transition-colors ${
+                  christmasEnabled ? 'bg-green-500' : 'bg-stone-500'
+                }`}
+              >
+                <div
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                    christmasEnabled ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
             <button onClick={() => setIsSettingsOpen(true)} className="flex items-center gap-2 bg-stone-700 hover:bg-stone-600 px-4 py-2 rounded-lg text-sm font-bold">
               <Settings size={16} /> Setări
             </button>

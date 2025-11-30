@@ -7,6 +7,7 @@ import JobsSection from './components/JobsSection';
 import MapSection from './components/MapSection';
 import Footer from './components/Footer';
 import AdminDashboard from './components/AdminDashboard';
+import ChristmasEffects from './components/ChristmasEffects';
 import { Lock, ArrowUp } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -14,6 +15,10 @@ const App: React.FC = () => {
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [christmasEnabled, setChristmasEnabled] = useState<boolean>(() => {
+    const saved = localStorage.getItem('christmasEffects');
+    return saved ? JSON.parse(saved) : true; // Default enabled
+  });
 
   // Show scroll-to-top button when scrolled down
   useEffect(() => {
@@ -53,10 +58,17 @@ const App: React.FC = () => {
 
   // Render Admin View
   if (view === 'admin') {
-    return <AdminDashboard onLogout={() => {
-      setView('public');
-      setLoginForm({ username: '', password: '' });
-    }} />;
+    return <AdminDashboard 
+      onLogout={() => {
+        setView('public');
+        setLoginForm({ username: '', password: '' });
+      }}
+      christmasEnabled={christmasEnabled}
+      onChristmasToggle={(enabled) => {
+        setChristmasEnabled(enabled);
+        localStorage.setItem('christmasEffects', JSON.stringify(enabled));
+      }}
+    />;
   }
 
   // Render Login View
@@ -116,6 +128,9 @@ const App: React.FC = () => {
   // Render Public Site
   return (
     <div className="font-sans antialiased text-stone-800 bg-stone-50 min-h-screen flex flex-col">
+      {/* Christmas Effects */}
+      {christmasEnabled && <ChristmasEffects />}
+      
       <Navbar />
       <main className="flex-grow">
         <Hero />

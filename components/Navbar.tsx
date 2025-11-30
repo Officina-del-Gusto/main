@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X, Phone, MapPin } from 'lucide-react';
+import ChristmasMusicControl from './ChristmasMusicControl';
 
 const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [christmasEnabled, setChristmasEnabled] = useState(() => {
+    return JSON.parse(localStorage.getItem('christmasEffects') || 'true');
+  });
 
   useEffect(() => {
     const handleScroll = () => {
@@ -11,6 +15,14 @@ const Navbar: React.FC = () => {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setChristmasEnabled(JSON.parse(localStorage.getItem('christmasEffects') || 'true'));
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const scrollToSection = (id: string) => {
@@ -23,6 +35,41 @@ const Navbar: React.FC = () => {
 
   return (
     <nav className={`fixed w-full z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md shadow-md py-2' : 'bg-transparent py-4'}`}>
+      {/* Christmas chimes tied right under header - only show when scrolled - hidden on mobile */}
+      {christmasEnabled && scrolled && (
+        <div className="hidden md:flex absolute left-0 right-0 top-full justify-around pointer-events-none opacity-70 transition-opacity duration-500">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-48 h-48 object-contain"
+            style={{ imageRendering: 'high-quality' }}
+          >
+            <source src="/animations/christmass/Christmass chimes - tied right under the header, multiply and enhance size like 3x.webm" type="video/webm" />
+          </video>
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-48 h-48 object-contain"
+            style={{ imageRendering: 'high-quality', animationDelay: '1s' }}
+          >
+            <source src="/animations/christmass/Christmass chimes - tied right under the header, multiply and enhance size like 3x.webm" type="video/webm" />
+          </video>
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-48 h-48 object-contain"
+            style={{ imageRendering: 'high-quality', animationDelay: '2s' }}
+          >
+            <source src="/animations/christmass/Christmass chimes - tied right under the header, multiply and enhance size like 3x.webm" type="video/webm" />
+          </video>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center">
           
@@ -49,6 +96,7 @@ const Navbar: React.FC = () => {
             ))}
             
             <div className="flex gap-2">
+              {christmasEnabled && <ChristmasMusicControl scrolled={scrolled} />}
               <a 
                 href="tel:+40754554194" 
                 className={`px-5 py-2.5 rounded-full font-bold transition-all shadow-md flex items-center gap-2 ${
@@ -76,7 +124,8 @@ const Navbar: React.FC = () => {
             </div>
           </div>
 
-          <div className="md:hidden flex items-center">
+          <div className="md:hidden flex items-center gap-2">
+            {christmasEnabled && <ChristmasMusicControl scrolled={scrolled} />}
             <button 
               onClick={() => setIsOpen(!isOpen)} 
               className={`p-2 transition-colors ${scrolled ? 'text-bakery-800' : 'text-white'}`}
