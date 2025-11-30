@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Volume2, VolumeX, Play, Pause, SkipForward, SkipBack } from 'lucide-react';
 
 interface ChristmasMusicControlProps {
   scrolled: boolean;
+  showControls?: boolean; // Whether to show music control buttons
+  showPopup?: boolean; // Whether to show popup (only one instance should)
 }
 
 const CHRISTMAS_SONGS = [
@@ -32,7 +35,7 @@ const shuffleArray = <T,>(array: T[]): T[] => {
   return shuffled;
 };
 
-const ChristmasMusicControl: React.FC<ChristmasMusicControlProps> = ({ scrolled }) => {
+const ChristmasMusicControl: React.FC<ChristmasMusicControlProps> = ({ scrolled, showControls = true, showPopup = true }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(0.2);
@@ -242,6 +245,7 @@ const ChristmasMusicControl: React.FC<ChristmasMusicControlProps> = ({ scrolled 
   return (
     <>
       {/* Compact music control in header - Desktop */}
+      {showControls && (
       <div className="hidden md:flex items-center gap-2 h-10">
         <button
           type="button"
@@ -294,8 +298,10 @@ const ChristmasMusicControl: React.FC<ChristmasMusicControlProps> = ({ scrolled 
           {isMuted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
         </button>
       </div>
+      )}
 
       {/* Compact music control in header - Mobile (with track controls) */}
+      {showControls && (
       <div className="flex md:hidden items-center gap-1.5 h-10">
         <button
           type="button"
@@ -336,9 +342,10 @@ const ChristmasMusicControl: React.FC<ChristmasMusicControlProps> = ({ scrolled 
           <SkipForward size={16} />
         </button>
       </div>
+      )}
 
       {/* Music consent prompt - full screen overlay */}
-      {showPrompt && !hasPopupBlocker && (
+      {showPopup && showPrompt && !hasPopupBlocker && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md pointer-events-auto overflow-hidden">
           <div className="bg-white rounded-3xl w-full max-w-md mx-4 p-8 shadow-2xl border border-bakery-100 transform">
             <div className="flex items-center gap-3 mb-6">
@@ -374,11 +381,12 @@ const ChristmasMusicControl: React.FC<ChristmasMusicControlProps> = ({ scrolled 
               Poți controla oricând muzica din header-ul paginii.
             </p>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Alternative notification for popup blocker users - no scroll blocking */}
-      {hasPopupBlocker && !isPlaying && (
+      {showPopup && hasPopupBlocker && !isPlaying && createPortal(
         <div className="fixed bottom-4 right-4 z-[100] pointer-events-auto">
           <div className="bg-white rounded-2xl p-4 shadow-2xl border border-bakery-200 max-w-xs">
             <div className="flex items-start gap-3">
@@ -402,7 +410,8 @@ const ChristmasMusicControl: React.FC<ChristmasMusicControlProps> = ({ scrolled 
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Hidden Audio Element with playlist */}

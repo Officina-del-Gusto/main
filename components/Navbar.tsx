@@ -105,8 +105,8 @@ const Navbar: React.FC = () => {
             ))}
             
             <div className="flex gap-2 items-center">
-              <div className={`transition-all duration-500 ${christmasEnabled ? 'opacity-100 scale-100' : 'opacity-0 scale-75 w-0 overflow-hidden'}`}>
-                {christmasEnabled && <ChristmasMusicControl scrolled={scrolled} />}
+              <div className={`transition-all duration-500 ${christmasEnabled ? 'opacity-100 scale-100' : 'opacity-0 scale-75 w-0'}`} style={!christmasEnabled ? {overflow: 'hidden'} : {}}>
+                {christmasEnabled && <ChristmasMusicControl scrolled={scrolled} showPopup={false} />}
               </div>
               <button
                 onClick={toggleChristmasMode}
@@ -151,8 +151,8 @@ const Navbar: React.FC = () => {
           </div>
 
           <div className="md:hidden flex items-center gap-2">
-            <div className={`transition-all duration-500 ${christmasEnabled ? 'opacity-100 scale-100' : 'opacity-0 scale-75 w-0 overflow-hidden'}`}>
-              {christmasEnabled && <ChristmasMusicControl scrolled={scrolled} />}
+            <div className={`transition-all duration-500 ${christmasEnabled ? 'opacity-100 scale-100' : 'opacity-0 scale-75 w-0'}`} style={!christmasEnabled ? {overflow: 'hidden'} : {}}>
+              {christmasEnabled && <ChristmasMusicControl scrolled={scrolled} showPopup={true} />}
             </div>
             <button 
               onClick={() => setIsOpen(!isOpen)} 
