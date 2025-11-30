@@ -8,6 +8,7 @@ import MapSection from './components/MapSection';
 import Footer from './components/Footer';
 import AdminDashboard from './components/AdminDashboard';
 import ChristmasEffects from './components/ChristmasEffects';
+import { ChristmasMusicProvider } from './contexts/ChristmasMusicContext';
 import { Lock, ArrowUp } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -145,33 +146,35 @@ const App: React.FC = () => {
 
   // Render Public Site
   return (
-    <div className="font-sans antialiased text-stone-800 bg-stone-50 min-h-screen flex flex-col relative">
-      {/* Christmas Effects with fade transition */}
-      <div className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-700 ${christmasEnabled ? 'opacity-100' : 'opacity-0'}`}>
-        {christmasEnabled && <ChristmasEffects />}
+    <ChristmasMusicProvider>
+      <div className="font-sans antialiased text-stone-800 bg-stone-50 min-h-screen flex flex-col relative">
+        {/* Christmas Effects with fade transition */}
+        <div className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-700 ${christmasEnabled ? 'opacity-100' : 'opacity-0'}`}>
+          {christmasEnabled && <ChristmasEffects />}
+        </div>
+        
+        <Navbar christmasAdminEnabled={christmasEnabled} />
+        <main className="flex-grow">
+          <Hero />
+          <InfoSection />
+          <ProductGallery />
+          <JobsSection />
+          <MapSection />
+        </main>
+        <Footer onAdminClick={() => setView('login')} />
+        
+        {/* Scroll to Top Button */}
+        <button
+          onClick={scrollToTop}
+          className={`fixed bottom-8 right-8 z-40 p-4 bg-bakery-500 hover:bg-bakery-600 text-white rounded-full shadow-lg transition-all duration-300 transform ${
+            showScrollTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16 pointer-events-none'
+          }`}
+          aria-label="Scroll to top"
+        >
+          <ArrowUp size={24} />
+        </button>
       </div>
-      
-      <Navbar christmasAdminEnabled={christmasEnabled} />
-      <main className="flex-grow">
-        <Hero />
-        <InfoSection />
-        <ProductGallery />
-        <JobsSection />
-        <MapSection />
-      </main>
-      <Footer onAdminClick={() => setView('login')} />
-      
-      {/* Scroll to Top Button */}
-      <button
-        onClick={scrollToTop}
-        className={`fixed bottom-8 right-8 z-40 p-4 bg-bakery-500 hover:bg-bakery-600 text-white rounded-full shadow-lg transition-all duration-300 transform ${
-          showScrollTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16 pointer-events-none'
-        }`}
-        aria-label="Scroll to top"
-      >
-        <ArrowUp size={24} />
-      </button>
-    </div>
+    </ChristmasMusicProvider>
   );
 };
 
