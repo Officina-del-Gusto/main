@@ -12,6 +12,7 @@ const ChristmasEffects: React.FC = () => {
   const [snowflakes, setSnowflakes] = useState<Snowflake[]>([]);
   const [santaPosition, setSantaPosition] = useState({ top: 55, left: 25 });
   const [snowmanPosition, setSnowmanPosition] = useState<'left' | 'right'>('left');
+  const [santaWalkingTop, setSantaWalkingTop] = useState(65); // Starting vertical position for walking Santa
 
   useEffect(() => {
     // Generate 50 snowflakes with random properties
@@ -37,9 +38,15 @@ const ChristmasEffects: React.FC = () => {
       setSnowmanPosition(prev => prev === 'left' ? 'right' : 'left');
     }, 6000);
 
+    // Change walking Santa vertical position every 45 seconds (duration of one walk cycle)
+    const santaWalkInterval = setInterval(() => {
+      setSantaWalkingTop(55 + Math.random() * 20); // 55-75% vertical position
+    }, 45000);
+
     return () => {
       clearInterval(interval);
       clearInterval(snowmanInterval);
+      clearInterval(santaWalkInterval);
     };
   }, []);
 
@@ -104,7 +111,13 @@ const ChristmasEffects: React.FC = () => {
         </div>
 
         {/* Santa Claus walking - right to left diagonally in random positions below middle */}
-        <div className="absolute animate-santa-walk-diagonal pointer-events-none opacity-100 md:opacity-85" style={{ top: `${55 + Math.random() * 20}%` }}>
+        <div 
+          className="absolute animate-santa-walk-diagonal pointer-events-none opacity-100 md:opacity-85" 
+          style={{ 
+            top: `${santaWalkingTop}%`,
+            transition: 'top 3s cubic-bezier(0.4, 0, 0.2, 1)'
+          }}
+        >
           <video
             autoPlay
             loop
@@ -175,14 +188,18 @@ const ChristmasEffects: React.FC = () => {
 
         {/* Happy Snowman - bigger, static on desktop, pops between left/right on mobile to avoid overlap - ALWAYS visible */}
         <div 
-          className={`absolute bottom-8 ${snowmanPosition === 'left' ? 'left-8' : 'right-8'} md:right-8 md:left-auto pointer-events-none opacity-85 animate-snowman-mobile md:animate-none transition-all duration-700`}
+          className="absolute bottom-8 left-8 md:right-8 md:left-auto pointer-events-none opacity-85 animate-snowman-mobile md:animate-none"
+          style={{
+            transform: snowmanPosition === 'right' ? 'translateX(calc(100vw - 10rem))' : 'translateX(0)',
+            transition: 'transform 1.5s cubic-bezier(0.4, 0, 0.2, 1)'
+          }}
         >
           <video
             autoPlay
             loop
             muted
             playsInline
-            className="w-32 h-32 md:w-56 md:h-56 object-contain"
+            className="w-32 h-32 md:w-56 md:h-56 object-contain md:!transform-none"
             style={{ imageRendering: 'auto' }}
           >
             <source src="/animations/christmass/happy snowman jumping - make bigger - static position - always.webm" type="video/webm" />
@@ -191,11 +208,12 @@ const ChristmasEffects: React.FC = () => {
 
         {/* Santa decorates the tree - pops in different places */}
         <div 
-          className="hidden md:block absolute animate-pop-random pointer-events-none opacity-85 transition-all duration-1000" 
+          className="hidden md:block absolute pointer-events-none opacity-85 animate-pop-random" 
           style={{ 
             top: `${santaPosition.top}%`, 
             left: `${santaPosition.left}%`,
-            transform: 'translate(-50%, -50%)'
+            transform: 'translate(-50%, -50%)',
+            transition: 'top 2s cubic-bezier(0.4, 0, 0.2, 1), left 2s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         >
           <video
