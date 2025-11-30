@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 const CHRISTMAS_SONGS = [
@@ -90,29 +90,11 @@ export const ChristmasMusicProvider: React.FC<ChristmasMusicProviderProps> = ({ 
       return;
     }
 
-    // Delay popup slightly to allow page to load and detect popup blockers
+    // Delay popup slightly to allow page to load
     promptTimeoutRef.current = setTimeout(() => {
-      // Detect popup blockers by checking if document is still focused after a delay
-      const checkPopupBlocker = () => {
-        try {
-          // Test if we can access localStorage and create elements
-          const test = document.createElement('div');
-          test.style.position = 'fixed';
-          test.style.zIndex = '99999';
-          document.body.appendChild(test);
-          document.body.removeChild(test);
-          
-          // If we reach here, no popup blocker detected
-          setHasPopupBlocker(false);
-          setShowPrompt(true);
-        } catch (error) {
-          // Popup blocker or strict browser settings detected
-          setHasPopupBlocker(true);
-          setShowPrompt(false);
-        }
-      };
-
-      checkPopupBlocker();
+      // Show the prompt after a short delay
+      setHasPopupBlocker(false);
+      setShowPrompt(true);
     }, 500);
 
     return () => {
@@ -149,21 +131,8 @@ export const ChristmasMusicProvider: React.FC<ChristmasMusicProviderProps> = ({ 
     };
   }, [showPrompt, hasPopupBlocker]);
 
-  // Handle track end with smooth transition
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const handleTrackEnd = () => {
-      playNextTrack();
-    };
-
-    audio.addEventListener('ended', handleTrackEnd);
-    return () => audio.removeEventListener('ended', handleTrackEnd);
-  }, [currentTrackIndex, playlist]);
-
   // Smooth volume fade for transitions
-  const fadeOutAndChangeTrack = (newIndex: number) => {
+  const fadeOutAndChangeTrack = useCallback((newIndex: number) => {
     const audio = audioRef.current;
     if (!audio || isTransitioning) return;
 
@@ -186,32 +155,50 @@ export const ChristmasMusicProvider: React.FC<ChristmasMusicProviderProps> = ({ 
         // Fade in new track
         setTimeout(() => {
           audio.volume = 0;
-          audio.play().then(() => {
-            let fadeInStep = 0;
-            const fadeInInterval = setInterval(() => {
-              fadeInStep++;
-              audio.volume = Math.min(originalVolume, (originalVolume / steps) * fadeInStep);
+          audio.play()
+            .then(() => {
+              let fadeInStep = 0;
+              const fadeInInterval = setInterval(() => {
+                fadeInStep++;
+                audio.volume = Math.min(originalVolume, (originalVolume / steps) * fadeInStep);
 
-              if (fadeInStep >= steps) {
-                clearInterval(fadeInInterval);
-                setIsTransitioning(false);
-              }
-            }, stepDuration);
-          });
+                if (fadeInStep >= steps) {
+                  clearInterval(fadeInInterval);
+                  setIsTransitioning(false);
+                }
+              }, stepDuration);
+            })
+            .catch(() => {
+              // Playback failed, reset transitioning state
+              setIsTransitioning(false);
+            });
         }, 100);
       }
     }, stepDuration);
-  };
+  }, [isTransitioning]);
 
-  const playNextTrack = () => {
+  const playNextTrack = useCallback(() => {
     const nextIndex = (currentTrackIndex + 1) % playlist.length;
     fadeOutAndChangeTrack(nextIndex);
-  };
+  }, [currentTrackIndex, playlist.length, fadeOutAndChangeTrack]);
 
-  const playPreviousTrack = () => {
+  const playPreviousTrack = useCallback(() => {
     const prevIndex = currentTrackIndex === 0 ? playlist.length - 1 : currentTrackIndex - 1;
     fadeOutAndChangeTrack(prevIndex);
-  };
+  }, [currentTrackIndex, playlist.length, fadeOutAndChangeTrack]);
+
+  // Handle track end with smooth transition
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleTrackEnd = () => {
+      playNextTrack();
+    };
+
+    audio.addEventListener('ended', handleTrackEnd);
+    return () => audio.removeEventListener('ended', handleTrackEnd);
+  }, [playNextTrack]);
 
   const togglePlay = () => {
     if (audioRef.current) {
