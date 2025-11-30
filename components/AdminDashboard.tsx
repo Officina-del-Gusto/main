@@ -710,11 +710,25 @@ for delete using ( bucket_id = 'cvs' );
                 return;
               }
               
-              // Update credentials
+              // Sanitize and validate inputs
               if (settingsForm.newUsername) {
-                localStorage.setItem('adminUsername', settingsForm.newUsername);
+                const sanitized = settingsForm.newUsername.trim();
+                if (sanitized.length < 3 || sanitized.length > 20) {
+                  setSettingsError('Numele de utilizator trebuie să aibă între 3 și 20 caractere!');
+                  return;
+                }
+                if (!/^[a-zA-Z0-9_-]+$/.test(sanitized)) {
+                  setSettingsError('Numele de utilizator poate conține doar litere, cifre, _ și -');
+                  return;
+                }
+                localStorage.setItem('adminUsername', sanitized);
               }
+              
               if (settingsForm.newPassword) {
+                if (settingsForm.newPassword.length < 6) {
+                  setSettingsError('Parola trebuie să aibă cel puțin 6 caractere!');
+                  return;
+                }
                 localStorage.setItem('adminPassword', settingsForm.newPassword);
               }
               

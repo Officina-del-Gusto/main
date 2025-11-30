@@ -10,6 +10,17 @@ const EMAILJS_TEMPLATE_ID = "template_hdk6gfp"; // Replace with your new templat
 const EMAILJS_PUBLIC_KEY = "tpzvd85CgW2Vc_aeG";
 const OWNER_EMAIL = "odgdragasani@gmail.com"; // Owner's email to receive notifications 
 
+// Rate limiting helper
+const checkRateLimit = (): boolean => {
+  const lastSubmission = localStorage.getItem('lastJobApplication');
+  if (lastSubmission) {
+    const timeSinceLastSubmit = Date.now() - parseInt(lastSubmission, 10);
+    const RATE_LIMIT_MS = 60000; // 1 minute between submissions
+    return timeSinceLastSubmit < RATE_LIMIT_MS;
+  }
+  return false;
+};
+
 const JobsSection: React.FC = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
@@ -79,6 +90,12 @@ const JobsSection: React.FC = () => {
     e.preventDefault();
     if (!selectedJob) return;
 
+    // Rate limiting check
+    if (checkRateLimit()) {
+      setSubmitError("Ai trimis recent o aplicație. Te rugăm să aștepți 1 minut înainte de a trimite alta.");
+      return;
+    }
+
     // Phone validation - Allow international numbers or Romanian format
     const cleanPhone = formData.phone.replace(/[\s\-\(\)]/g, ''); // Remove spaces, dashes, parentheses
     
@@ -125,6 +142,9 @@ const JobsSection: React.FC = () => {
       };
 
       await submitApplication(newApplication);
+
+      // Set rate limit timestamp
+      localStorage.setItem('lastJobApplication', Date.now().toString());
 
       // EmailJS Params - Send notification to owner
       const templateParams: any = {

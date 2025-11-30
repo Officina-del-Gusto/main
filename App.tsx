@@ -8,23 +8,45 @@ import MapSection from './components/MapSection';
 import Footer from './components/Footer';
 import AdminDashboard from './components/AdminDashboard';
 import ChristmasEffects from './components/ChristmasEffects';
+import { ChristmasMusicProvider } from './contexts/ChristmasMusicContext';
 import { Lock, ArrowUp } from 'lucide-react';
+
+// Safe localStorage helper
+const safeGetBooleanFromStorage = (key: string, defaultValue: boolean): boolean => {
+  try {
+    const value = localStorage.getItem(key);
+    if (value === null) return defaultValue;
+    const parsed = JSON.parse(value);
+    return typeof parsed === 'boolean' ? parsed : defaultValue;
+  } catch {
+    return defaultValue;
+  }
+};
 
 const App: React.FC = () => {
   const [view, setView] = useState<'public' | 'login' | 'admin'>('public');
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [christmasEnabled, setChristmasEnabled] = useState<boolean>(() => {
-    const saved = localStorage.getItem('christmasAdminEnabled');
-    return saved ? JSON.parse(saved) : true; // Default enabled
+  
+  // Admin-level Christmas control (can completely disable for all users)
+  const [christmasAdminEnabled, setChristmasAdminEnabled] = useState<boolean>(() => {
+    return safeGetBooleanFromStorage('christmasAdminEnabled', true);
+  });
+  
+  // User-level Christmas control (user can toggle on/off if admin allows)
+  const [christmasUserEnabled, setChristmasUserEnabled] = useState<boolean>(() => {
+    return safeGetBooleanFromStorage('christmasEffects', true);
   });
 
-  // Listen for christmas mode changes from admin
+  // Effective Christmas state: both admin AND user must have it enabled
+  const christmasEnabled = christmasAdminEnabled && christmasUserEnabled;
+
+  // Listen for christmas mode changes
   useEffect(() => {
     const handleStorageChange = () => {
-      const saved = localStorage.getItem('christmasAdminEnabled');
-      setChristmasEnabled(saved ? JSON.parse(saved) : true);
+      setChristmasAdminEnabled(safeGetBooleanFromStorage('christmasAdminEnabled', true));
+      setChristmasUserEnabled(safeGetBooleanFromStorage('christmasEffects', true));
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
@@ -64,6 +86,9 @@ const App: React.FC = () => {
     const savedPassword = localStorage.getItem('adminPassword') || 'mamaliga';
     
     if (loginForm.username === savedUsername && loginForm.password === savedPassword) {
+      // Generate session token for this login session
+      const sessionToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
+      sessionStorage.setItem('adminSession', sessionToken);
       setView('admin');
       setLoginError(false);
     } else {
@@ -73,14 +98,22 @@ const App: React.FC = () => {
 
   // Render Admin View
   if (view === 'admin') {
+    // Verify session token exists
+    if (!sessionStorage.getItem('adminSession')) {
+      setView('login');
+      return null;
+    }
+    
     return <AdminDashboard 
       onLogout={() => {
+        sessionStorage.removeItem('adminSession');
         setView('public');
         setLoginForm({ username: '', password: '' });
       }}
-      christmasEnabled={christmasEnabled}
+      christmasEnabled={christmasAdminEnabled}
       onChristmasToggle={(enabled) => {
-        setChristmasEnabled(enabled);
+        setChristmasAdminEnabled(enabled);
+        setChristmasUserEnabled(enabled);
         localStorage.setItem('christmasAdminEnabled', JSON.stringify(enabled));
         // Also update user preference when admin changes it
         localStorage.setItem('christmasEffects', JSON.stringify(enabled));
@@ -145,33 +178,33 @@ const App: React.FC = () => {
 
   // Render Public Site
   return (
-    <div className="font-sans antialiased text-stone-800 bg-stone-50 min-h-screen flex flex-col relative">
-      {/* Christmas Effects with fade transition */}
-      <div className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-700 ${christmasEnabled ? 'opacity-100' : 'opacity-0'}`}>
-        {christmasEnabled && <ChristmasEffects />}
+    <ChristmasMusicProvider enabled={christmasEnabled}>
+      <div className="font-sans antialiased text-stone-800 bg-stone-50 min-h-screen flex flex-col relative">
+        {/* Christmas Effects - always mounted for smooth transitions */}
+        <ChristmasEffects enabled={christmasEnabled} />
+        
+        <Navbar christmasAdminEnabled={christmasAdminEnabled} />
+        <main className="flex-grow">
+          <Hero />
+          <InfoSection />
+          <ProductGallery />
+          <JobsSection />
+          <MapSection />
+        </main>
+        <Footer onAdminClick={() => setView('login')} />
+        
+        {/* Scroll to Top Button */}
+        <button
+          onClick={scrollToTop}
+          className={`fixed bottom-8 right-8 z-40 p-4 bg-bakery-500 hover:bg-bakery-600 text-white rounded-full shadow-lg transition-all duration-300 transform ${
+            showScrollTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16 pointer-events-none'
+          }`}
+          aria-label="Scroll to top"
+        >
+          <ArrowUp size={24} />
+        </button>
       </div>
-      
-      <Navbar christmasAdminEnabled={christmasEnabled} />
-      <main className="flex-grow">
-        <Hero />
-        <InfoSection />
-        <ProductGallery />
-        <JobsSection />
-        <MapSection />
-      </main>
-      <Footer onAdminClick={() => setView('login')} />
-      
-      {/* Scroll to Top Button */}
-      <button
-        onClick={scrollToTop}
-        className={`fixed bottom-8 right-8 z-40 p-4 bg-bakery-500 hover:bg-bakery-600 text-white rounded-full shadow-lg transition-all duration-300 transform ${
-          showScrollTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16 pointer-events-none'
-        }`}
-        aria-label="Scroll to top"
-      >
-        <ArrowUp size={24} />
-      </button>
-    </div>
+    </ChristmasMusicProvider>
   );
 };
 

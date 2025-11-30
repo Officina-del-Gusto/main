@@ -2,6 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { Menu, X, Phone, MapPin, Snowflake } from 'lucide-react';
 import ChristmasMusicControl from './ChristmasMusicControl';
 
+// Safe localStorage helper
+const safeGetBooleanFromStorage = (key: string, defaultValue: boolean): boolean => {
+  try {
+    const value = localStorage.getItem(key);
+    if (value === null) return defaultValue;
+    const parsed = JSON.parse(value);
+    return typeof parsed === 'boolean' ? parsed : defaultValue;
+  } catch {
+    return defaultValue;
+  }
+};
+
 interface NavbarProps {
   christmasAdminEnabled?: boolean; // Whether admin has enabled Christmas mode globally
 }
@@ -10,7 +22,7 @@ const Navbar: React.FC<NavbarProps> = ({ christmasAdminEnabled = true }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [christmasEnabled, setChristmasEnabled] = useState(() => {
-    return JSON.parse(localStorage.getItem('christmasEffects') || 'true');
+    return safeGetBooleanFromStorage('christmasEffects', true);
   });
 
   useEffect(() => {
@@ -23,7 +35,7 @@ const Navbar: React.FC<NavbarProps> = ({ christmasAdminEnabled = true }) => {
 
   useEffect(() => {
     const handleStorageChange = () => {
-      setChristmasEnabled(JSON.parse(localStorage.getItem('christmasEffects') || 'true'));
+      setChristmasEnabled(safeGetBooleanFromStorage('christmasEffects', true));
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
@@ -41,6 +53,12 @@ const Navbar: React.FC<NavbarProps> = ({ christmasAdminEnabled = true }) => {
     const newValue = !christmasEnabled;
     setChristmasEnabled(newValue);
     localStorage.setItem('christmasEffects', JSON.stringify(newValue));
+    
+    // Reset music choice when re-enabling Christmas mode so popup shows again
+    if (newValue) {
+      localStorage.removeItem('christmasMusicChoice');
+    }
+    
     window.dispatchEvent(new Event('storage'));
   };
 
@@ -109,8 +127,8 @@ const Navbar: React.FC<NavbarProps> = ({ christmasAdminEnabled = true }) => {
             ))}
             
             <div className="flex gap-2 items-center">
-              <div className={`transition-all duration-500 ${christmasEnabled ? 'opacity-100 scale-100' : 'opacity-0 scale-75 w-0'}`} style={!christmasEnabled ? {overflow: 'hidden'} : {}}>
-                {christmasEnabled && <ChristmasMusicControl scrolled={scrolled} showPopup={false} />}
+              <div className={`transition-all duration-500 ease-in-out ${christmasEnabled ? 'opacity-100 scale-100 max-w-[200px]' : 'opacity-0 scale-75 max-w-0 overflow-hidden'}`}>
+                <ChristmasMusicControl scrolled={scrolled} />
               </div>
               {christmasAdminEnabled && (
                 <button
@@ -157,8 +175,8 @@ const Navbar: React.FC<NavbarProps> = ({ christmasAdminEnabled = true }) => {
           </div>
 
           <div className="md:hidden flex items-center gap-2">
-            <div className={`transition-all duration-500 ${christmasEnabled ? 'opacity-100 scale-100' : 'opacity-0 scale-75 w-0'}`} style={!christmasEnabled ? {overflow: 'hidden'} : {}}>
-              {christmasEnabled && <ChristmasMusicControl scrolled={scrolled} showPopup={true} />}
+            <div className={`transition-all duration-500 ease-in-out ${christmasEnabled ? 'opacity-100 scale-100 max-w-[150px]' : 'opacity-0 scale-75 max-w-0 overflow-hidden'}`}>
+              <ChristmasMusicControl scrolled={scrolled} />
             </div>
             <button 
               onClick={() => setIsOpen(!isOpen)} 

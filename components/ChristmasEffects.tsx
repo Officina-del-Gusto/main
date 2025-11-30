@@ -8,16 +8,26 @@ interface Snowflake {
   delay: number;
 }
 
-const ChristmasEffects: React.FC = () => {
+interface ChristmasEffectsProps {
+  enabled: boolean;
+}
+
+const ChristmasEffects: React.FC<ChristmasEffectsProps> = ({ enabled }) => {
   const [snowflakes, setSnowflakes] = useState<Snowflake[]>([]);
   const [snowmanPosition, setSnowmanPosition] = useState<'left' | 'right'>('left');
   const [santaWalkingTop, setSantaWalkingTop] = useState(65); // Starting vertical position for walking Santa
   const [isVisible, setIsVisible] = useState(false);
 
-  // Fade in effect on mount
+  // Smooth fade in/out based on enabled prop
   useEffect(() => {
-    setIsVisible(true);
-  }, []);
+    if (enabled) {
+      // Small delay before fade in for smoother transition
+      const timer = setTimeout(() => setIsVisible(true), 50);
+      return () => clearTimeout(timer);
+    } else {
+      setIsVisible(false);
+    }
+  }, [enabled]);
 
   useEffect(() => {
     // Generate 50 snowflakes with random properties
