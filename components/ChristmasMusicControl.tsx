@@ -1,23 +1,121 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Volume2, VolumeX, Play, Pause } from 'lucide-react';
+import { Volume2, VolumeX, Play, Pause, SkipForward, SkipBack } from 'lucide-react';
 
 interface ChristmasMusicControlProps {
   scrolled: boolean;
 }
+
+const CHRISTMAS_SONGS = [
+  '/audio/florile_dalbe.mp3',
+  '/audio/mos_craciun_cu_plete_dalbe.mp3',
+  '/audio/buna_dimineata_la_mos_ajun.mp3',
+  '/audio/astazi_s_a_nascut_hristos.mp3',
+  '/audio/o_brad_frumos.mp3',
+  '/audio/sus_boieri_nu_mai_dormiti.mp3',
+  '/audio/trei_pastori.mp3',
+  '/audio/joy_to_the_world.mp3',
+  '/audio/zurgalai.mp3',
+  '/audio/o_ce_veste_minunata.mp3',
+  '/audio/sorcova.mp3',
+  '/audio/jingle_bells.mp3',
+  '/audio/o_ce_veste_minunata_cor_de_copii.mp3',
+  '/audio/mos_craciun_mai_stai.mp3'
+];
+
+// Shuffle array function
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
 
 const ChristmasMusicControl: React.FC<ChristmasMusicControlProps> = ({ scrolled }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(0.2);
   const [showPrompt, setShowPrompt] = useState(true);
+  const [playlist, setPlaylist] = useState<string[]>([]);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // Initialize volume
+  // Initialize playlist and volume
   useEffect(() => {
+    // Create shuffled playlist
+    const shuffled = shuffleArray(CHRISTMAS_SONGS);
+    setPlaylist(shuffled);
+    
     if (audioRef.current) {
       audioRef.current.volume = 0.2;
     }
   }, []);
+
+  // Handle track end with smooth transition
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleTrackEnd = () => {
+      playNextTrack();
+    };
+
+    audio.addEventListener('ended', handleTrackEnd);
+    return () => audio.removeEventListener('ended', handleTrackEnd);
+  }, [currentTrackIndex, playlist]);
+
+  // Smooth volume fade for transitions
+  const fadeOutAndChangeTrack = (newIndex: number) => {
+    const audio = audioRef.current;
+    if (!audio || isTransitioning) return;
+
+    setIsTransitioning(true);
+    const originalVolume = audio.volume;
+    const fadeOutDuration = 1000; // 1 second fade out
+    const steps = 20;
+    const stepDuration = fadeOutDuration / steps;
+    const volumeStep = originalVolume / steps;
+
+    let currentStep = 0;
+    const fadeOutInterval = setInterval(() => {
+      currentStep++;
+      audio.volume = Math.max(0, originalVolume - (volumeStep * currentStep));
+
+      if (currentStep >= steps) {
+        clearInterval(fadeOutInterval);
+        setCurrentTrackIndex(newIndex);
+        
+        // Fade in new track
+        setTimeout(() => {
+          audio.volume = 0;
+          audio.play().then(() => {
+            let fadeInStep = 0;
+            const fadeInInterval = setInterval(() => {
+              fadeInStep++;
+              audio.volume = Math.min(originalVolume, (originalVolume / steps) * fadeInStep);
+
+              if (fadeInStep >= steps) {
+                clearInterval(fadeInInterval);
+                setIsTransitioning(false);
+              }
+            }, stepDuration);
+          });
+        }, 100);
+      }
+    }, stepDuration);
+  };
+
+  const playNextTrack = () => {
+    const nextIndex = (currentTrackIndex + 1) % playlist.length;
+    fadeOutAndChangeTrack(nextIndex);
+  };
+
+  const playPreviousTrack = () => {
+    const prevIndex = currentTrackIndex === 0 ? playlist.length - 1 : currentTrackIndex - 1;
+    fadeOutAndChangeTrack(prevIndex);
+  };
 
   const togglePlay = () => {
     if (audioRef.current) {
@@ -55,8 +153,21 @@ const ChristmasMusicControl: React.FC<ChristmasMusicControlProps> = ({ scrolled 
 
   return (
     <>
-      {/* Compact music control in header */}
-      <div className="flex items-center gap-2">
+      {/* Compact music control in header - Desktop */}
+      <div className="hidden md:flex items-center gap-2">
+        <button
+          type="button"
+          onClick={playPreviousTrack}
+          disabled={isTransitioning}
+          className={`p-2 rounded-full transition-all ${
+            scrolled 
+              ? 'bg-bakery-100 hover:bg-bakery-200 text-bakery-800' 
+              : 'bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm'
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
+          title="Previous Song"
+        >
+          <SkipBack size={18} />
+        </button>
         <button
           type="button"
           onClick={togglePlay}
@@ -71,6 +182,19 @@ const ChristmasMusicControl: React.FC<ChristmasMusicControlProps> = ({ scrolled 
         </button>
         <button
           type="button"
+          onClick={playNextTrack}
+          disabled={isTransitioning}
+          className={`p-2 rounded-full transition-all ${
+            scrolled 
+              ? 'bg-bakery-100 hover:bg-bakery-200 text-bakery-800' 
+              : 'bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm'
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
+          title="Next Song"
+        >
+          <SkipForward size={18} />
+        </button>
+        <button
+          type="button"
           onClick={toggleMute}
           className={`p-2 rounded-full transition-all ${
             scrolled 
@@ -80,6 +204,22 @@ const ChristmasMusicControl: React.FC<ChristmasMusicControlProps> = ({ scrolled 
           title={isMuted ? 'Unmute' : 'Mute'}
         >
           {isMuted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
+        </button>
+      </div>
+
+      {/* Compact music control in header - Mobile (Play/Pause only) */}
+      <div className="flex md:hidden items-center gap-2">
+        <button
+          type="button"
+          onClick={togglePlay}
+          className={`p-2 rounded-full transition-all ${
+            scrolled 
+              ? 'bg-bakery-100 hover:bg-bakery-200 text-bakery-800' 
+              : 'bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm'
+          }`}
+          title={isPlaying ? 'Pause Christmas Music' : 'Play Christmas Music'}
+        >
+          {isPlaying ? <Pause size={18} /> : <Play size={18} />}
         </button>
       </div>
 
@@ -117,13 +257,14 @@ const ChristmasMusicControl: React.FC<ChristmasMusicControlProps> = ({ scrolled 
         </div>
       )}
 
-      {/* Hidden Audio Element with local Christmas music */}
-      <audio
-        ref={audioRef}
-        src="/audio/7379.mp3"
-        loop
-        preload="auto"
-      />
+      {/* Hidden Audio Element with playlist */}
+      {playlist.length > 0 && (
+        <audio
+          ref={audioRef}
+          src={playlist[currentTrackIndex]}
+          preload="auto"
+        />
+      )}
     </>
   );
 };
