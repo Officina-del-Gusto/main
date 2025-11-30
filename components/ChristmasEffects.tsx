@@ -12,6 +12,12 @@ const ChristmasEffects: React.FC = () => {
   const [snowflakes, setSnowflakes] = useState<Snowflake[]>([]);
   const [snowmanPosition, setSnowmanPosition] = useState<'left' | 'right'>('left');
   const [santaWalkingTop, setSantaWalkingTop] = useState(65); // Starting vertical position for walking Santa
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Fade in effect on mount
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
 
   useEffect(() => {
     // Generate 50 snowflakes with random properties
@@ -42,7 +48,7 @@ const ChristmasEffects: React.FC = () => {
 
   return (
     <>
-      <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+      <div className={`fixed inset-0 pointer-events-none z-50 overflow-hidden transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
         {/* Snowflakes */}
         {snowflakes.map((flake) => (
           <div

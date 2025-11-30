@@ -36,11 +36,13 @@ const ChristmasMusicControl: React.FC<ChristmasMusicControlProps> = ({ scrolled 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(0.2);
-  const [showPrompt, setShowPrompt] = useState(true);
+  const [showPrompt, setShowPrompt] = useState(false); // Start with false, check in useEffect
   const [playlist, setPlaylist] = useState<string[]>([]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [hasPopupBlocker, setHasPopupBlocker] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const promptTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize playlist and volume
   useEffect(() => {
@@ -51,7 +53,74 @@ const ChristmasMusicControl: React.FC<ChristmasMusicControlProps> = ({ scrolled 
     if (audioRef.current) {
       audioRef.current.volume = 0.2;
     }
+
+    // Check if user chose 'never ask again'
+    const musicChoice = localStorage.getItem('christmasMusicChoice');
+    if (musicChoice === 'never') {
+      setShowPrompt(false);
+      setHasPopupBlocker(false);
+      return;
+    }
+
+    // Delay popup slightly to allow page to load and detect popup blockers
+    promptTimeoutRef.current = setTimeout(() => {
+      // Detect popup blockers by checking if document is still focused after a delay
+      // If user has popup blocker, they likely can't interact with overlays
+      const checkPopupBlocker = () => {
+        try {
+          // Test if we can access localStorage and create elements
+          const test = document.createElement('div');
+          test.style.position = 'fixed';
+          test.style.zIndex = '99999';
+          document.body.appendChild(test);
+          document.body.removeChild(test);
+          
+          // If we reach here, no popup blocker detected
+          setHasPopupBlocker(false);
+          setShowPrompt(true);
+        } catch (error) {
+          // Popup blocker or strict browser settings detected
+          setHasPopupBlocker(true);
+          setShowPrompt(false);
+        }
+      };
+
+      checkPopupBlocker();
+    }, 500);
+
+    return () => {
+      if (promptTimeoutRef.current) {
+        clearTimeout(promptTimeoutRef.current);
+      }
+    };
   }, []);
+
+  // Block body scroll and position when prompt is shown
+  useEffect(() => {
+    if (showPrompt && !hasPopupBlocker) {
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+    } else {
+      const scrollY = document.body.style.top;
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
+    }
+
+    return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+    };
+  }, [showPrompt, hasPopupBlocker]);
 
   // Handle track end with smooth transition
   useEffect(() => {
@@ -137,6 +206,7 @@ const ChristmasMusicControl: React.FC<ChristmasMusicControlProps> = ({ scrolled 
 
   const handleAcceptMusic = () => {
     setShowPrompt(false);
+    setHasPopupBlocker(false);
     if (audioRef.current) {
       audioRef.current.volume = 0.2;
       audioRef.current.muted = false;
@@ -148,13 +218,31 @@ const ChristmasMusicControl: React.FC<ChristmasMusicControlProps> = ({ scrolled 
 
   const handleDeclineMusic = () => {
     setShowPrompt(false);
+    setHasPopupBlocker(false);
     setIsPlaying(false);
+  };
+
+  const handleNeverAskAgain = () => {
+    localStorage.setItem('christmasMusicChoice', 'never');
+    setShowPrompt(false);
+    setHasPopupBlocker(false);
+    setIsPlaying(false);
+  };
+
+  const handleManualMusicToggle = () => {
+    if (audioRef.current && !isPlaying) {
+      audioRef.current.volume = 0.2;
+      audioRef.current.muted = false;
+      audioRef.current.play()
+        .then(() => setIsPlaying(true))
+        .catch(() => {});
+    }
   };
 
   return (
     <>
       {/* Compact music control in header - Desktop */}
-      <div className="hidden md:flex items-center gap-2">
+      <div className="hidden md:flex items-center gap-2 h-10">
         <button
           type="button"
           onClick={playPreviousTrack}
@@ -207,52 +295,112 @@ const ChristmasMusicControl: React.FC<ChristmasMusicControlProps> = ({ scrolled 
         </button>
       </div>
 
-      {/* Compact music control in header - Mobile (Play/Pause only) */}
-      <div className="flex md:hidden items-center gap-2">
+      {/* Compact music control in header - Mobile (with track controls) */}
+      <div className="flex md:hidden items-center gap-1.5 h-10">
+        <button
+          type="button"
+          onClick={playPreviousTrack}
+          disabled={isTransitioning}
+          className={`p-1.5 rounded-full transition-all ${
+            scrolled 
+              ? 'bg-bakery-100 hover:bg-bakery-200 text-bakery-800' 
+              : 'bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm'
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
+          title="Previous Song"
+        >
+          <SkipBack size={16} />
+        </button>
         <button
           type="button"
           onClick={togglePlay}
-          className={`p-2 rounded-full transition-all ${
+          className={`p-1.5 rounded-full transition-all ${
             scrolled 
               ? 'bg-bakery-100 hover:bg-bakery-200 text-bakery-800' 
               : 'bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm'
           }`}
           title={isPlaying ? 'Pause Christmas Music' : 'Play Christmas Music'}
         >
-          {isPlaying ? <Pause size={18} /> : <Play size={18} />}
+          {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+        </button>
+        <button
+          type="button"
+          onClick={playNextTrack}
+          disabled={isTransitioning}
+          className={`p-1.5 rounded-full transition-all ${
+            scrolled 
+              ? 'bg-bakery-100 hover:bg-bakery-200 text-bakery-800' 
+              : 'bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm'
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
+          title="Next Song"
+        >
+          <SkipForward size={16} />
         </button>
       </div>
 
-      {/* Music consent prompt */}
-      {showPrompt && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-auto">
-          <div className="bg-white rounded-3xl max-w-sm w-full mx-4 p-6 shadow-2xl border border-bakery-100">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-3xl">🎄🎵</span>
+      {/* Music consent prompt - full screen overlay */}
+      {showPrompt && !hasPopupBlocker && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md pointer-events-auto overflow-hidden">
+          <div className="bg-white rounded-3xl w-full max-w-md mx-4 p-8 shadow-2xl border border-bakery-100 transform">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="text-4xl">🎄🎵</span>
               <div>
-                <h3 className="text-lg font-serif font-bold text-bakery-900">Pornește muzica de Crăciun?</h3>
-                <p className="text-sm text-bakery-700">
+                <h3 className="text-xl font-serif font-bold text-bakery-900">Pornește muzica de Crăciun?</h3>
+                <p className="text-sm text-bakery-700 mt-1">
                   Avem un fundal discret cu colinde la ~20% volum. Vrei să îl auzi?
                 </p>
               </div>
             </div>
-            <div className="flex gap-3 mt-4">
+            <div className="flex gap-3 mt-6">
               <button
                 onClick={handleAcceptMusic}
-                className="flex-1 py-2.5 rounded-xl bg-bakery-500 hover:bg-bakery-600 text-white font-bold text-sm shadow-md transition-colors"
+                className="flex-1 py-3 rounded-xl bg-bakery-500 hover:bg-bakery-600 text-white font-bold text-base shadow-lg transition-all hover:scale-105"
               >
                 Da, pornește muzica
               </button>
               <button
                 onClick={handleDeclineMusic}
-                className="flex-1 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-bakery-800 font-bold text-sm transition-colors"
+                className="flex-1 py-3 rounded-xl bg-stone-100 hover:bg-stone-200 text-bakery-800 font-bold text-base transition-all hover:scale-105"
               >
                 Nu acum
               </button>
             </div>
-            <p className="mt-3 text-[11px] text-bakery-500 text-center">
+            <button
+              onClick={handleNeverAskAgain}
+              className="w-full mt-4 py-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 font-medium text-sm transition-all hover:scale-105 border border-red-200"
+            >
+              Nu mă mai întreba niciodată
+            </button>
+            <p className="mt-4 text-xs text-bakery-500 text-center">
               Poți controla oricând muzica din header-ul paginii.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Alternative notification for popup blocker users - no scroll blocking */}
+      {hasPopupBlocker && !isPlaying && (
+        <div className="fixed bottom-4 right-4 z-[100] pointer-events-auto">
+          <div className="bg-white rounded-2xl p-4 shadow-2xl border border-bakery-200 max-w-xs">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">🎵</span>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-bakery-900 mb-2">
+                  Muzică de Crăciun disponibilă!
+                </p>
+                <button
+                  onClick={handleManualMusicToggle}
+                  className="w-full py-2 rounded-lg bg-bakery-500 hover:bg-bakery-600 text-white text-sm font-bold transition-colors"
+                >
+                  Pornește muzica
+                </button>
+                <button
+                  onClick={() => setHasPopupBlocker(false)}
+                  className="w-full mt-2 py-1.5 text-xs text-bakery-600 hover:text-bakery-800 transition-colors"
+                >
+                  Închide
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

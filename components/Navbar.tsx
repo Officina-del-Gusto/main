@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Phone, MapPin } from 'lucide-react';
+import { Menu, X, Phone, MapPin, Snowflake } from 'lucide-react';
 import ChristmasMusicControl from './ChristmasMusicControl';
 
 const Navbar: React.FC = () => {
@@ -33,43 +33,52 @@ const Navbar: React.FC = () => {
     }
   };
 
+  const toggleChristmasMode = () => {
+    const newValue = !christmasEnabled;
+    setChristmasEnabled(newValue);
+    localStorage.setItem('christmasEffects', JSON.stringify(newValue));
+    window.dispatchEvent(new Event('storage'));
+  };
+
   return (
     <nav className={`fixed w-full z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md shadow-md py-2' : 'bg-transparent py-4'}`}>
       {/* Christmas chimes tied right under header - only show when scrolled - hidden on mobile */}
-      {christmasEnabled && scrolled && (
-        <div className="hidden md:flex absolute left-0 right-0 top-full justify-around pointer-events-none opacity-70 transition-opacity duration-500">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-48 h-48 object-contain"
-            style={{ imageRendering: 'auto' }}
-          >
-            <source src="/animations/christmass/Christmass chimes - tied right under the header, multiply and enhance size like 3x.webm" type="video/webm" />
-          </video>
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-48 h-48 object-contain"
-            style={{ imageRendering: 'auto', animationDelay: '1s' }}
-          >
-            <source src="/animations/christmass/Christmass chimes - tied right under the header, multiply and enhance size like 3x.webm" type="video/webm" />
-          </video>
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-48 h-48 object-contain"
-            style={{ imageRendering: 'auto', animationDelay: '2s' }}
-          >
-            <source src="/animations/christmass/Christmass chimes - tied right under the header, multiply and enhance size like 3x.webm" type="video/webm" />
-          </video>
-        </div>
-      )}
+      <div className={`hidden md:flex absolute left-0 right-0 top-full justify-around pointer-events-none transition-all duration-700 ${christmasEnabled && scrolled ? 'opacity-70 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
+        {christmasEnabled && scrolled && (
+          <>
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-48 h-48 object-contain"
+              style={{ imageRendering: 'auto' }}
+            >
+              <source src="/animations/christmass/Christmass chimes - tied right under the header, multiply and enhance size like 3x.webm" type="video/webm" />
+            </video>
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-48 h-48 object-contain"
+              style={{ imageRendering: 'auto', animationDelay: '1s' }}
+            >
+              <source src="/animations/christmass/Christmass chimes - tied right under the header, multiply and enhance size like 3x.webm" type="video/webm" />
+            </video>
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-48 h-48 object-contain"
+              style={{ imageRendering: 'auto', animationDelay: '2s' }}
+            >
+              <source src="/animations/christmass/Christmass chimes - tied right under the header, multiply and enhance size like 3x.webm" type="video/webm" />
+            </video>
+          </>
+        )}
+      </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center">
           
@@ -95,8 +104,25 @@ const Navbar: React.FC = () => {
               </button>
             ))}
             
-            <div className="flex gap-2">
-              {christmasEnabled && <ChristmasMusicControl scrolled={scrolled} />}
+            <div className="flex gap-2 items-center">
+              <div className={`transition-all duration-500 ${christmasEnabled ? 'opacity-100 scale-100' : 'opacity-0 scale-75 w-0 overflow-hidden'}`}>
+                {christmasEnabled && <ChristmasMusicControl scrolled={scrolled} />}
+              </div>
+              <button
+                onClick={toggleChristmasMode}
+                className={`p-2 rounded-full transition-all duration-300 hover:scale-110 active:scale-95 h-10 w-10 flex items-center justify-center ${
+                  scrolled 
+                    ? christmasEnabled
+                      ? 'bg-red-100 hover:bg-red-200 text-red-600'
+                      : 'bg-stone-100 hover:bg-stone-200 text-stone-600'
+                    : christmasEnabled
+                      ? 'bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm'
+                      : 'bg-white/10 hover:bg-white/20 text-white/60 backdrop-blur-sm'
+                }`}
+                title={christmasEnabled ? 'Dezactivează modul Crăciun' : 'Activează modul Crăciun'}
+              >
+                <Snowflake size={18} className={`transition-transform duration-500 ${christmasEnabled ? 'rotate-0' : 'rotate-180'}`} />
+              </button>
               <a 
                 href="tel:+40754554194" 
                 className={`px-5 py-2.5 rounded-full font-bold transition-all shadow-md flex items-center gap-2 ${
@@ -125,7 +151,9 @@ const Navbar: React.FC = () => {
           </div>
 
           <div className="md:hidden flex items-center gap-2">
-            {christmasEnabled && <ChristmasMusicControl scrolled={scrolled} />}
+            <div className={`transition-all duration-500 ${christmasEnabled ? 'opacity-100 scale-100' : 'opacity-0 scale-75 w-0 overflow-hidden'}`}>
+              {christmasEnabled && <ChristmasMusicControl scrolled={scrolled} />}
+            </div>
             <button 
               onClick={() => setIsOpen(!isOpen)} 
               className={`p-2 transition-colors ${scrolled ? 'text-bakery-800' : 'text-white'}`}
@@ -151,6 +179,17 @@ const Navbar: React.FC = () => {
             </button>
             <button onClick={() => scrollToSection('contact')} className="block w-full text-left px-4 py-3 text-bakery-800 hover:bg-bakery-50 rounded-lg text-lg font-medium border-l-4 border-transparent hover:border-bakery-500 transition-all">
               Locație & Program
+            </button>
+            <button 
+              onClick={toggleChristmasMode}
+              className={`w-full text-left px-4 py-3 rounded-lg text-lg font-medium border-l-4 transition-all flex items-center gap-3 ${
+                christmasEnabled
+                  ? 'text-red-700 bg-red-50 hover:bg-red-100 border-red-500'
+                  : 'text-stone-700 bg-stone-50 hover:bg-stone-100 border-stone-500'
+              }`}
+            >
+              <Snowflake size={20} />
+              {christmasEnabled ? 'Dezactivează modul Crăciun' : 'Activează modul Crăciun'}
             </button>
             <div className="pt-4 flex flex-col gap-3">
               <a href="tel:+40754554194" className="w-full text-center bg-bakery-500 text-white px-4 py-4 rounded-xl font-bold hover:bg-bakery-600 flex items-center justify-center gap-2 shadow-sm">

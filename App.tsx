@@ -20,6 +20,21 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : true; // Default enabled
   });
 
+  // Listen for christmas mode changes from navbar
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const saved = localStorage.getItem('christmasEffects');
+      setChristmasEnabled(saved ? JSON.parse(saved) : true);
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Scroll to top on page load/refresh
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // Show scroll-to-top button when scrolled down
   useEffect(() => {
     const handleScroll = () => {
@@ -127,9 +142,11 @@ const App: React.FC = () => {
 
   // Render Public Site
   return (
-    <div className="font-sans antialiased text-stone-800 bg-stone-50 min-h-screen flex flex-col">
-      {/* Christmas Effects */}
-      {christmasEnabled && <ChristmasEffects />}
+    <div className="font-sans antialiased text-stone-800 bg-stone-50 min-h-screen flex flex-col relative">
+      {/* Christmas Effects with fade transition */}
+      <div className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-700 ${christmasEnabled ? 'opacity-100' : 'opacity-0'}`}>
+        {christmasEnabled && <ChristmasEffects />}
+      </div>
       
       <Navbar />
       <main className="flex-grow">
