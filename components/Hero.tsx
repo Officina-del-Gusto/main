@@ -123,7 +123,7 @@ const Hero: React.FC = () => {
           Magia gustului autentic
         </p>
 
-        <p className="text-lg md:text-xl text-white mb-12 max-w-2xl mx-auto font-medium leading-relaxed drop-shadow-[0_3px_5px_rgba(0,0,0,0.9)] bg-black/10 backdrop-blur-[2px] rounded-xl p-2">
+        <p className="text-lg md:text-xl text-white mb-12 max-w-2xl mx-auto font-medium leading-relaxed drop-shadow-[0_4px_6px_rgba(0,0,0,1)] bg-black/20 backdrop-blur-sm rounded-xl p-3">
           Te trezești cu mirosul covrigilor calzi? Noi suntem deja aici de la ora 6:00, 
           pregătind cele mai bune merdenele, pizza și plăcinte pentru tine.
         </p>

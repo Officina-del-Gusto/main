@@ -550,6 +550,7 @@ for delete using ( bucket_id = 'cvs' );
                                 <th className="p-4 text-stone-500 font-bold text-sm w-10">#</th>
                                 <th className="p-4 text-stone-500 font-bold text-sm">Nume Aplicant</th>
                                 <th className="p-4 text-stone-500 font-bold text-sm">Job</th>
+                                <th className="p-4 text-stone-500 font-bold text-sm">Locație Dorită</th>
                                 <th className="p-4 text-stone-500 font-bold text-sm">Contact</th>
                                 <th className="p-4 text-stone-500 font-bold text-sm">Mesaj / CV</th>
                                 <th className="p-4 text-stone-500 font-bold text-sm text-right">Acțiuni</th>
@@ -566,9 +567,18 @@ for delete using ( bucket_id = 'cvs' );
                                   </td>
                                   <td className="p-4 font-bold text-stone-800">{app.applicantName}<div className="text-xs text-stone-400 font-normal">{new Date(app.dateApplied).toLocaleDateString()}</div></td>
                                   <td className="p-4 text-stone-600">{app.jobTitle}</td>
-                                  <td className="p-4 text-stone-600 text-sm"><div className="flex flex-col"><span>{app.phone}</span><span className="text-blue-500">{app.email}</span></div></td>
+                                  <td className="p-4 text-stone-700 font-medium">{(() => {
+                                    const locationMatch = app.message?.match(/\[Locație Dorită: (.+?)\]/);
+                                    return locationMatch ? locationMatch[1] : 'N/A';
+                                  })()}</td>
+                                  <td className="p-4 text-stone-600 text-sm">
+                                    <div className="flex flex-col">
+                                      <a href={`tel:${app.phone}`} className="text-bakery-600 hover:text-bakery-700 font-medium hover:underline">{app.phone}</a>
+                                      {app.email && <a href={`mailto:${app.email}`} className="text-blue-500 hover:text-blue-600 hover:underline">{app.email}</a>}
+                                    </div>
+                                  </td>
                                   <td className="p-4">
-                                    {app.message && <div className="text-sm italic text-stone-500 mb-1 line-clamp-2 max-w-[200px]">"{app.message}"</div>}
+                                    {app.message && <div className="text-sm italic text-stone-500 mb-1 line-clamp-2 max-w-[200px]">"{app.message.replace(/\[Locație Dorită: .+?\]\n\n/, '')}"</div>}
                                     {app.cvUrl ? (
                                       <a href={app.cvUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-bakery-500 hover:bg-bakery-600 px-3 py-1.5 rounded-lg shadow-sm transition-colors mt-1"><Eye size={14} /> {app.cvFileName || "Vezi CV"}</a>
                                     ) : <span className="text-xs text-stone-400">Fără CV</span>}
@@ -577,14 +587,14 @@ for delete using ( bucket_id = 'cvs' );
                                     <div className="flex justify-end gap-1">
                                       {app.status !== 'trashed' ? (
                                         <>
-                                          <button onClick={() => handleAppStatus(app.id, app.status === 'starred' ? 'new' : 'starred')} className={`p-2 rounded hover:bg-stone-200 ${app.status === 'starred' ? 'text-yellow-500' : 'text-stone-400 hover:text-yellow-500'}`}><Star size={18} fill={app.status === 'starred' ? 'currentColor' : 'none'} /></button>
-                                          <button onClick={() => handleAppStatus(app.id, app.status === 'rejected' ? 'new' : 'rejected')} className={`p-2 rounded hover:bg-stone-200 ${app.status === 'rejected' ? 'text-red-500' : 'text-stone-400 hover:text-red-500'}`}><Archive size={18} /></button>
-                                          <button onClick={() => handleAppStatus(app.id, 'trashed')} className="p-2 rounded hover:bg-stone-200 text-stone-400 hover:text-stone-600"><Trash2 size={18} /></button>
+                                          <button onClick={() => handleAppStatus(app.id, app.status === 'starred' ? 'new' : 'starred')} className={`p-2 rounded hover:bg-stone-200 ${app.status === 'starred' ? 'text-yellow-500' : 'text-stone-400 hover:text-yellow-500'}`} title={app.status === 'starred' ? 'Elimină din favorite' : 'Adaugă la favorite'}><Star size={18} fill={app.status === 'starred' ? 'currentColor' : 'none'} /></button>
+                                          <button onClick={() => handleAppStatus(app.id, app.status === 'rejected' ? 'new' : 'rejected')} className={`p-2 rounded hover:bg-stone-200 ${app.status === 'rejected' ? 'text-red-500' : 'text-stone-400 hover:text-red-500'}`} title={app.status === 'rejected' ? 'Anulează respingerea' : 'Marchează ca respins'}><Archive size={18} /></button>
+                                          <button onClick={() => handleAppStatus(app.id, 'trashed')} className="p-2 rounded hover:bg-stone-200 text-stone-400 hover:text-stone-600" title="Mută în coșul de gunoi"><Trash2 size={18} /></button>
                                         </>
                                       ) : (
                                         <>
-                                          <button onClick={() => handleAppStatus(app.id, 'new')} className="p-2 rounded hover:bg-green-100 text-green-600"><RotateCcw size={18} /></button>
-                                          <button onClick={() => handlePermanentDeleteApp(app.id, app.cvUrl)} className="p-2 rounded hover:bg-red-100 text-red-600"><X size={18} /></button>
+                                          <button onClick={() => handleAppStatus(app.id, 'new')} className="p-2 rounded hover:bg-green-100 text-green-600" title="Restaurează aplicația"><RotateCcw size={18} /></button>
+                                          <button onClick={() => handlePermanentDeleteApp(app.id, app.cvUrl)} className="p-2 rounded hover:bg-red-100 text-red-600" title="Șterge definitiv (ireversibil)"><X size={18} /></button>
                                         </>
                                       )}
                                     </div>

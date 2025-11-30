@@ -3,7 +3,7 @@ import { Clock, Wheat, Heart, Coffee } from 'lucide-react';
 
 const InfoSection: React.FC = () => {
   return (
-    <section id="about" className="py-24 bg-cream relative">
+    <section id="about" className="py-24 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 relative">
       <div className="absolute top-0 left-0 w-full h-16 bg-gradient-to-b from-bakery-900/10 to-transparent"></div>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
