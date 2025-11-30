@@ -36,7 +36,7 @@ const Hero: React.FC = () => {
   };
 
   return (
-    <section id="home" className="relative h-[90vh] min-h-[600px] flex items-center justify-center overflow-hidden group">
+    <section id="home" className="relative h-[90vh] min-h-[700px] flex items-center justify-center overflow-hidden group">
       
       {/* Background Slider */}
       <div className="absolute inset-0 z-0 bg-neutral-900">
@@ -75,20 +75,6 @@ const Hero: React.FC = () => {
       >
         <ChevronRight size={32} />
       </button>
-      
-      {/* Slide Indicators - Moved higher to avoid overlapping buttons */}
-      <div className="absolute bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-        {heroImages.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => setCurrentImageIndex(index)}
-            className={`h-1.5 rounded-full transition-all duration-300 shadow-sm ${
-              index === currentImageIndex ? 'bg-bakery-400 w-8' : 'bg-white/50 hover:bg-white/80 w-4'
-            }`}
-            aria-label={`Go to slide ${index + 1}`}
-          />
-        ))}
-      </div>
 
       <div className="relative z-10 text-center px-4 max-w-5xl mx-auto pt-10 md:pt-10">
         <div className="mb-8 inline-block mt-28 sm:mt-20 md:mt-0">
@@ -123,12 +109,12 @@ const Hero: React.FC = () => {
           Magia gustului autentic
         </p>
 
-        <p className="text-lg md:text-xl text-white mb-12 max-w-2xl mx-auto font-medium leading-relaxed drop-shadow-[0_4px_6px_rgba(0,0,0,1)] bg-black/20 backdrop-blur-sm rounded-xl p-3">
+        <p className="text-lg md:text-xl text-white mb-8 max-w-2xl mx-auto font-medium leading-relaxed drop-shadow-[0_4px_6px_rgba(0,0,0,1)] bg-black/20 backdrop-blur-sm rounded-xl p-3">
           Te trezești cu mirosul covrigilor calzi? Noi suntem deja aici de la ora 6:00, 
           pregătind cele mai bune merdenele, pizza și plăcinte pentru tine.
         </p>
         
-        <div className="flex flex-col sm:flex-row gap-5 justify-center">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6 px-4">
           <button 
             onClick={scrollToProducts}
             className="px-10 py-4 bg-bakery-500 hover:bg-bakery-600 text-white rounded-full font-serif font-bold text-lg transition-all transform hover:scale-105 shadow-[0_4px_14px_rgba(0,0,0,0.5)] flex items-center justify-center gap-2 border-2 border-transparent"
@@ -142,6 +128,20 @@ const Hero: React.FC = () => {
             <MapPin size={20} />
             Locațiile Noastre
           </a>
+        </div>
+
+        {/* Slide Indicators - Under buttons */}
+        <div className="flex gap-2 justify-center">
+          {heroImages.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentImageIndex(index)}
+              className={`h-1.5 rounded-full transition-all duration-300 shadow-sm ${
+                index === currentImageIndex ? 'bg-bakery-400 w-8' : 'bg-white/50 hover:bg-white/80 w-4'
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
         </div>
       </div>
     </section>

@@ -118,7 +118,7 @@ const ChristmasEffects: React.FC = () => {
         </div>
 
         {/* Sleigh - 3x size, animated horizontally and diagonally randomly, no transparency */}
-        <div className="hidden md:block absolute animate-sleigh-diagonal pointer-events-none opacity-100">
+        {/* <div className="hidden md:block absolute animate-sleigh-diagonal pointer-events-none opacity-100">
           <video
             autoPlay
             loop
@@ -129,10 +129,10 @@ const ChristmasEffects: React.FC = () => {
           >
             <source src="/animations/christmass/sleigh - size enhance like 3x and animate horizontally and diagonally randomly - no transparency.webm" type="video/webm" />
           </video>
-        </div>
+        </div> */}
 
         {/* Christmas text santa - pop in and out randomly - ALTERNATE with merry text */}
-        <div className="hidden md:block absolute animate-pop-alternate-1 pointer-events-none opacity-90" style={{ top: '25%', right: '15%' }}>
+        {/* <div className="hidden md:block absolute animate-pop-alternate-1 pointer-events-none opacity-90" style={{ top: '25%', right: '15%' }}>
           <video
             autoPlay
             loop
@@ -143,10 +143,10 @@ const ChristmasEffects: React.FC = () => {
           >
             <source src="/animations/christmass/christmass text santa - pop in and out randomly - alternate.webm" type="video/webm" />
           </video>
-        </div>
+        </div> */}
 
         {/* Merry Christmas text - pop in and out in random locations - ALTERNATE with santa text */}
-        <div className="hidden md:block absolute animate-pop-alternate-2 pointer-events-none opacity-90" style={{ top: '45%', left: '12%' }}>
+        {/* <div className="hidden md:block absolute animate-pop-alternate-2 pointer-events-none opacity-90" style={{ top: '45%', left: '12%' }}>
           <video
             autoPlay
             loop
@@ -157,7 +157,7 @@ const ChristmasEffects: React.FC = () => {
           >
             <source src="/animations/christmass/merry christmass text - pop in and out in random locations - alternate.webm" type="video/webm" />
           </video>
-        </div>
+        </div> */}
 
         {/* Christmas Tree - static position - ALWAYS visible */}
         <div className="hidden md:block absolute bottom-8 left-8 pointer-events-none opacity-85">
