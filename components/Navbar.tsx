@@ -44,7 +44,7 @@ const Navbar: React.FC = () => {
             muted
             playsInline
             className="w-48 h-48 object-contain"
-            style={{ imageRendering: 'high-quality' }}
+            style={{ imageRendering: 'auto' }}
           >
             <source src="/animations/christmass/Christmass chimes - tied right under the header, multiply and enhance size like 3x.webm" type="video/webm" />
           </video>
@@ -54,7 +54,7 @@ const Navbar: React.FC = () => {
             muted
             playsInline
             className="w-48 h-48 object-contain"
-            style={{ imageRendering: 'high-quality', animationDelay: '1s' }}
+            style={{ imageRendering: 'auto', animationDelay: '1s' }}
           >
             <source src="/animations/christmass/Christmass chimes - tied right under the header, multiply and enhance size like 3x.webm" type="video/webm" />
           </video>
@@ -64,7 +64,7 @@ const Navbar: React.FC = () => {
             muted
             playsInline
             className="w-48 h-48 object-contain"
-            style={{ imageRendering: 'high-quality', animationDelay: '2s' }}
+            style={{ imageRendering: 'auto', animationDelay: '2s' }}
           >
             <source src="/animations/christmass/Christmass chimes - tied right under the header, multiply and enhance size like 3x.webm" type="video/webm" />
           </video>

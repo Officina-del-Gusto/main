@@ -111,7 +111,7 @@ const ChristmasEffects: React.FC = () => {
             muted
             playsInline
             className="w-32 h-32 md:w-48 md:h-48 object-contain"
-            style={{ imageRendering: 'high-quality', willChange: 'transform' }}
+            style={{ imageRendering: 'auto', willChange: 'transform' }}
           >
             <source src="/animations/christmass/Santa Claus walking - animate walking from right to left in random positions.webm" type="video/webm" />
           </video>
@@ -125,7 +125,7 @@ const ChristmasEffects: React.FC = () => {
             muted
             playsInline
             className="w-[28rem] h-[28rem] object-contain"
-            style={{ imageRendering: 'high-quality', willChange: 'transform' }}
+            style={{ imageRendering: 'auto', willChange: 'transform' }}
           >
             <source src="/animations/christmass/sleigh - size enhance like 3x and animate horizontally and diagonally randomly - no transparency.webm" type="video/webm" />
           </video>
@@ -139,7 +139,7 @@ const ChristmasEffects: React.FC = () => {
             muted
             playsInline
             className="w-64 h-64 object-contain"
-            style={{ imageRendering: 'high-quality', willChange: 'transform' }}
+            style={{ imageRendering: 'auto', willChange: 'transform' }}
           >
             <source src="/animations/christmass/christmass text santa - pop in and out randomly - alternate.webm" type="video/webm" />
           </video>
@@ -153,7 +153,7 @@ const ChristmasEffects: React.FC = () => {
             muted
             playsInline
             className="w-72 h-72 object-contain"
-            style={{ imageRendering: 'high-quality', willChange: 'transform' }}
+            style={{ imageRendering: 'auto', willChange: 'transform' }}
           >
             <source src="/animations/christmass/merry christmass text - pop in and out in random locations - alternate.webm" type="video/webm" />
           </video>
@@ -167,7 +167,7 @@ const ChristmasEffects: React.FC = () => {
             muted
             playsInline
             className="w-48 h-48 object-contain"
-            style={{ imageRendering: 'high-quality' }}
+            style={{ imageRendering: 'auto' }}
           >
             <source src="/animations/christmass/christmass tree - static position - always.webm" type="video/webm" />
           </video>
@@ -183,7 +183,7 @@ const ChristmasEffects: React.FC = () => {
             muted
             playsInline
             className="w-32 h-32 md:w-56 md:h-56 object-contain"
-            style={{ imageRendering: 'high-quality' }}
+            style={{ imageRendering: 'auto' }}
           >
             <source src="/animations/christmass/happy snowman jumping - make bigger - static position - always.webm" type="video/webm" />
           </video>
@@ -205,10 +205,7 @@ const ChristmasEffects: React.FC = () => {
             playsInline
             className="w-72 h-72 object-contain"
             style={{ 
-              imageRendering: 'crisp-edges',
-              imageRendering: '-webkit-optimize-contrast',
-              imageRendering: 'pixelated',
-              imageRendering: 'high-quality',
+              imageRendering: 'auto',
               filter: 'contrast(1.1) brightness(1.05)',
               willChange: 'transform'
             }}
