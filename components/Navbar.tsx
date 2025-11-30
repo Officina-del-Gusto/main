@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Menu, X, Phone, MapPin, Snowflake } from 'lucide-react';
 import ChristmasMusicControl from './ChristmasMusicControl';
 
-const Navbar: React.FC = () => {
+interface NavbarProps {
+  christmasAdminEnabled?: boolean; // Whether admin has enabled Christmas mode globally
+}
+
+const Navbar: React.FC<NavbarProps> = ({ christmasAdminEnabled = true }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [christmasEnabled, setChristmasEnabled] = useState(() => {
@@ -108,9 +112,10 @@ const Navbar: React.FC = () => {
               <div className={`transition-all duration-500 ${christmasEnabled ? 'opacity-100 scale-100' : 'opacity-0 scale-75 w-0'}`} style={!christmasEnabled ? {overflow: 'hidden'} : {}}>
                 {christmasEnabled && <ChristmasMusicControl scrolled={scrolled} showPopup={false} />}
               </div>
-              <button
-                onClick={toggleChristmasMode}
-                className={`p-2 rounded-full transition-all duration-300 hover:scale-110 active:scale-95 h-10 w-10 flex items-center justify-center ${
+              {christmasAdminEnabled && (
+                <button
+                  onClick={toggleChristmasMode}
+                  className={`p-2 rounded-full transition-all duration-300 hover:scale-110 active:scale-95 h-10 w-10 flex items-center justify-center ${
                   scrolled 
                     ? christmasEnabled
                       ? 'bg-red-100 hover:bg-red-200 text-red-600'
@@ -120,9 +125,10 @@ const Navbar: React.FC = () => {
                       : 'bg-white/10 hover:bg-white/20 text-white/60 backdrop-blur-sm'
                 }`}
                 title={christmasEnabled ? 'Dezactivează modul Crăciun' : 'Activează modul Crăciun'}
-              >
-                <Snowflake size={18} className={`transition-transform duration-500 ${christmasEnabled ? 'rotate-0' : 'rotate-180'}`} />
-              </button>
+                >
+                  <Snowflake size={18} className={`transition-transform duration-500 ${christmasEnabled ? 'rotate-0' : 'rotate-180'}`} />
+                </button>
+              )}
               <a 
                 href="tel:+40754554194" 
                 className={`px-5 py-2.5 rounded-full font-bold transition-all shadow-md flex items-center gap-2 ${
@@ -180,7 +186,8 @@ const Navbar: React.FC = () => {
             <button onClick={() => scrollToSection('contact')} className="block w-full text-left px-4 py-3 text-bakery-800 hover:bg-bakery-50 rounded-lg text-lg font-medium border-l-4 border-transparent hover:border-bakery-500 transition-all">
               Locație & Program
             </button>
-            <button 
+            {christmasAdminEnabled && (
+              <button 
               onClick={toggleChristmasMode}
               className={`w-full text-left px-4 py-3 rounded-lg text-lg font-medium border-l-4 transition-all flex items-center gap-3 ${
                 christmasEnabled
@@ -188,9 +195,10 @@ const Navbar: React.FC = () => {
                   : 'text-stone-700 bg-stone-50 hover:bg-stone-100 border-stone-500'
               }`}
             >
-              <Snowflake size={20} />
-              {christmasEnabled ? 'Dezactivează modul Crăciun' : 'Activează modul Crăciun'}
-            </button>
+                <Snowflake size={20} />
+                {christmasEnabled ? 'Dezactivează modul Crăciun' : 'Activează modul Crăciun'}
+              </button>
+            )}
             <div className="pt-4 flex flex-col gap-3">
               <a href="tel:+40754554194" className="w-full text-center bg-bakery-500 text-white px-4 py-4 rounded-xl font-bold hover:bg-bakery-600 flex items-center justify-center gap-2 shadow-sm">
                 <Phone size={20} /> Sună Acum

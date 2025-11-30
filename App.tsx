@@ -16,14 +16,14 @@ const App: React.FC = () => {
   const [loginError, setLoginError] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [christmasEnabled, setChristmasEnabled] = useState<boolean>(() => {
-    const saved = localStorage.getItem('christmasEffects');
+    const saved = localStorage.getItem('christmasAdminEnabled');
     return saved ? JSON.parse(saved) : true; // Default enabled
   });
 
-  // Listen for christmas mode changes from navbar
+  // Listen for christmas mode changes from admin
   useEffect(() => {
     const handleStorageChange = () => {
-      const saved = localStorage.getItem('christmasEffects');
+      const saved = localStorage.getItem('christmasAdminEnabled');
       setChristmasEnabled(saved ? JSON.parse(saved) : true);
     };
     window.addEventListener('storage', handleStorageChange);
@@ -81,7 +81,10 @@ const App: React.FC = () => {
       christmasEnabled={christmasEnabled}
       onChristmasToggle={(enabled) => {
         setChristmasEnabled(enabled);
+        localStorage.setItem('christmasAdminEnabled', JSON.stringify(enabled));
+        // Also update user preference when admin changes it
         localStorage.setItem('christmasEffects', JSON.stringify(enabled));
+        window.dispatchEvent(new Event('storage'));
       }}
     />;
   }
@@ -148,7 +151,7 @@ const App: React.FC = () => {
         {christmasEnabled && <ChristmasEffects />}
       </div>
       
-      <Navbar />
+      <Navbar christmasAdminEnabled={christmasEnabled} />
       <main className="flex-grow">
         <Hero />
         <InfoSection />
