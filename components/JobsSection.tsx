@@ -128,14 +128,13 @@ const JobsSection: React.FC = () => {
 
       // EmailJS Params - Send notification to owner
       const templateParams: any = {
-        to_email: OWNER_EMAIL,
-        applicant_name: formData.name,
         job_title: selectedJob.title,
-        applicant_phone: formData.phone,
-        applicant_email: formData.email || "",
-        message: formData.message || "",
+        applicant_name: formData.name,
         preferred_location: formData.preferredLocation,
-        cv_link: downloadUrl || ""
+        applicant_phone: formData.phone,
+        applicant_email: formData.email || "Nu a fost furnizat",
+        message: formData.message || "Fără mesaj",
+        cv_link: downloadUrl || "Nu a fost încărcat CV"
       };
 
       // Add reply_to if applicant provided email
