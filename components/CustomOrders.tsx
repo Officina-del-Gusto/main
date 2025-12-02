@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Phone, Mail, Sparkles, PartyPopper, Gift, Calendar, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { getCarouselImages, DEFAULT_CAROUSEL_IMAGES } from '../utils/mockData';
 
-const orderImages = [
-  '/comenzi/WhatsApp Image 2025-12-01 at 22.38.42_602d6a64.jpg',
-  '/comenzi/WhatsApp Image 2025-12-01 at 22.39.37_3243dc8f.jpg',
-  '/comenzi/WhatsApp Image 2025-12-01 at 22.40.07_ebb8f61c.jpg',
-  '/comenzi/WhatsApp Image 2025-12-01 at 22.40.09_e7abdd0e.jpg',
-];
+const logWarning = (...args: unknown[]) => {
+  if (import.meta.env.DEV) {
+    console.warn(...args);
+  }
+};
 
 const featureIcons = [PartyPopper, Gift, Calendar, Sparkles];
 
@@ -17,9 +17,25 @@ const CustomOrders: React.FC = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [orderImages, setOrderImages] = useState<string[]>(DEFAULT_CAROUSEL_IMAGES.map(img => img.image_url));
   const scrollRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number | null>(null);
   const scrollPositionRef = useRef(0);
+
+  // Fetch carousel images from database
+  useEffect(() => {
+    const loadImages = async () => {
+      try {
+        const images = await getCarouselImages();
+        if (images && images.length > 0) {
+          setOrderImages(images.map(img => img.image_url));
+        }
+      } catch (error) {
+        logWarning('Failed to load carousel images, using defaults', error);
+      }
+    };
+    loadImages();
+  }, []);
 
   const openLightbox = (index: number) => {
     // Get actual image index from duplicated array
@@ -34,22 +50,25 @@ const CustomOrders: React.FC = () => {
 
   const goToPrevious = useCallback(() => {
     setCurrentImageIndex((prev) => (prev === 0 ? orderImages.length - 1 : prev - 1));
-  }, []);
+  }, [orderImages.length]);
 
   const goToNext = useCallback(() => {
     setCurrentImageIndex((prev) => (prev === orderImages.length - 1 ? 0 : prev + 1));
-  }, []);
+  }, [orderImages.length]);
 
   // Continuous smooth scroll animation
   useEffect(() => {
     const scrollContainer = scrollRef.current;
-    if (!scrollContainer) return;
+    if (!scrollContainer || orderImages.length === 0) return;
+
+    let isMounted = true;
 
     const cardWidth = 288; // w-72 = 18rem = 288px
     const gap = 24; // gap-6 = 1.5rem = 24px
     const totalWidth = (cardWidth + gap) * orderImages.length;
 
     const animate = () => {
+      if (!isMounted) return;
       if (!isPaused && !lightboxOpen) {
         scrollPositionRef.current += 0.5; // Speed: lower = slower
         
@@ -68,11 +87,12 @@ const CustomOrders: React.FC = () => {
     animationRef.current = requestAnimationFrame(animate);
 
     return () => {
+      isMounted = false;
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [isPaused, lightboxOpen]);
+  }, [isPaused, lightboxOpen, orderImages.length]);
 
   // Handle keyboard navigation for lightbox
   useEffect(() => {
@@ -137,7 +157,7 @@ const CustomOrders: React.FC = () => {
             >
               {duplicatedImages.map((image, index) => (
                 <button
-                  key={index}
+                  key={`${image}-${index}`}
                   onClick={() => openLightbox(index)}
                   className="relative flex-shrink-0 w-72 h-80 rounded-2xl overflow-hidden shadow-xl cursor-pointer focus:outline-none group hover:shadow-2xl transition-shadow duration-300"
                 >

@@ -1,13 +1,16 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   LayoutDashboard, Users, Plus, Edit, Trash2, Power, PowerOff,
-  Star, Archive, Check, X, LogOut, Home, RotateCcw, Eye, Layers, AlertTriangle, Copy, ArrowRight, Settings
+  Star, Archive, Check, X, LogOut, Home, RotateCcw, Eye, Layers, AlertTriangle, Copy, ArrowRight, Settings,
+  Image, ShoppingBag, Upload, GripVertical, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { 
-  Job, Application, 
+  Job, Application, CarouselImage, Product,
   getJobs, saveJob, deleteJob, toggleJobStatus, activateAllJobs, deactivateAllJobs, deleteAllJobs, resetDatabase, checkDbConnection,
-  getApplications, updateApplicationStatus, deleteApplication 
+  getApplications, updateApplicationStatus, deleteApplication,
+  getCarouselImages, uploadCarouselImage, addCarouselImage, deleteCarouselImage, reorderCarouselImages,
+  getProducts, uploadProductImage, saveProduct, deleteProduct, toggleProductActive, reorderProducts
 } from '../utils/mockData';
 
 interface AdminDashboardProps {
@@ -17,6 +20,7 @@ interface AdminDashboardProps {
 }
 
 type AppFilter = 'all' | 'new' | 'starred' | 'rejected' | 'trashed';
+type AdminTab = 'jobs' | 'applications' | 'carousel' | 'products';
 
 // Custom Notification Component
 const NotificationToast = ({ message, type, onClose }: { message: string, type: 'success' | 'error', onClose: () => void }) => (
@@ -45,12 +49,18 @@ const ConfirmModal = ({ isOpen, message, onConfirm, onCancel }: { isOpen: boolea
 };
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnabled, onChristmasToggle }) => {
-  const [activeTab, setActiveTab] = useState<'jobs' | 'applications'>('jobs');
+  const [activeTab, setActiveTab] = useState<AdminTab>('jobs');
   const [appFilter, setAppFilter] = useState<AppFilter>('all');
   
   const [jobs, setJobs] = useState<Job[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [carouselImages, setCarouselImages] = useState<CarouselImage[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // File upload refs
+  const carouselFileRef = useRef<HTMLInputElement>(null);
+  const productFileRef = useRef<HTMLInputElement>(null);
   
   // Settings State
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -70,6 +80,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnab
   // Job Form State
   const [isEditingJob, setIsEditingJob] = useState(false);
   const [currentJob, setCurrentJob] = useState<Partial<Job>>({});
+  
+  // Product Form State
+  const [isEditingProduct, setIsEditingProduct] = useState(false);
+  const [currentProduct, setCurrentProduct] = useState<Partial<Product>>({});
+  const [isUploadingCarousel, setIsUploadingCarousel] = useState(false);
+  const [isUploadingProduct, setIsUploadingProduct] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -94,6 +110,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnab
     setJobs(fetchedJobs);
     const fetchedApps = await getApplications();
     setApplications(fetchedApps);
+    const fetchedCarousel = await getCarouselImages();
+    setCarouselImages(fetchedCarousel);
+    const fetchedProducts = await getProducts();
+    setProducts(fetchedProducts);
   };
 
   const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
@@ -349,7 +369,39 @@ create policy "Public Read Apps" on public.applications for select using (true);
 create policy "Public Update Apps" on public.applications for update using (true);
 create policy "Public Delete Apps" on public.applications for delete using (true);
 
--- 5. Create Storage Bucket for CVs
+-- 5. Create Carousel Images Table
+create table if not exists public.carousel_images (
+  id uuid default gen_random_uuid() primary key,
+  image_url text not null,
+  display_order integer not null,
+  created_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+alter table public.carousel_images enable row level security;
+create policy "Public Read Carousel" on public.carousel_images for select using (true);
+create policy "Public Insert Carousel" on public.carousel_images for insert with check (true);
+create policy "Public Update Carousel" on public.carousel_images for update using (true);
+create policy "Public Delete Carousel" on public.carousel_images for delete using (true);
+
+-- 6. Create Products Table
+create table if not exists public.products (
+  id uuid default gen_random_uuid() primary key,
+  image_url text not null,
+  name text not null,
+  description text not null,
+  tag text,
+  display_order integer not null,
+  is_active boolean default true,
+  created_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+alter table public.products enable row level security;
+create policy "Public Read Products" on public.products for select using (true);
+create policy "Public Insert Products" on public.products for insert with check (true);
+create policy "Public Update Products" on public.products for update using (true);
+create policy "Public Delete Products" on public.products for delete using (true);
+
+-- 7. Create Storage Bucket for CVs
 insert into storage.buckets (id, name, public) 
 values ('cvs', 'cvs', true)
 on conflict (id) do nothing;
@@ -362,6 +414,20 @@ for select using ( bucket_id = 'cvs' );
 
 create policy "Public Delete CVs" on storage.objects 
 for delete using ( bucket_id = 'cvs' );
+
+-- 8. Create Storage Bucket for Images (Products & Carousel)
+insert into storage.buckets (id, name, public) 
+values ('images', 'images', true)
+on conflict (id) do nothing;
+
+create policy "Public Upload Images" on storage.objects 
+for insert with check ( bucket_id = 'images' );
+
+create policy "Public View Images" on storage.objects 
+for select using ( bucket_id = 'images' );
+
+create policy "Public Delete Images" on storage.objects 
+for delete using ( bucket_id = 'images' );
 `;
 
   return (
@@ -448,13 +514,19 @@ for delete using ( bucket_id = 'cvs' );
         )}
 
         {/* Main Tab Switcher */}
-        <div className="flex gap-4 mb-8">
-          <button onClick={() => setActiveTab('jobs')} className={`flex-1 py-4 rounded-xl flex items-center justify-center gap-3 font-bold text-lg shadow-sm transition-all ${activeTab === 'jobs' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
-            <LayoutDashboard /> Anunțuri Joburi
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+          <button onClick={() => setActiveTab('jobs')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'jobs' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
+            <LayoutDashboard size={18} /> Joburi
           </button>
-          <button onClick={() => setActiveTab('applications')} className={`flex-1 py-4 rounded-xl flex items-center justify-center gap-3 font-bold text-lg shadow-sm transition-all ${activeTab === 'applications' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
-            <Users /> Aplicații
+          <button onClick={() => setActiveTab('applications')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'applications' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
+            <Users size={18} /> Aplicații
             {counts.new > 0 && <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{counts.new}</span>}
+          </button>
+          <button onClick={() => setActiveTab('carousel')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'carousel' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
+            <Image size={18} /> Carusel
+          </button>
+          <button onClick={() => setActiveTab('products')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'products' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
+            <ShoppingBag size={18} /> Produse
           </button>
         </div>
 
@@ -626,6 +698,301 @@ for delete using ( bucket_id = 'cvs' );
                     </div>
                   </div>
                 )}
+
+                {/* --- CAROUSEL TAB --- */}
+                {activeTab === 'carousel' && (
+                  <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                      <h2 className="text-2xl font-bold text-stone-800">Imagini Carusel (Comenzi)</h2>
+                      <button 
+                        onClick={() => carouselFileRef.current?.click()}
+                        disabled={isUploadingCarousel}
+                        className="bg-bakery-500 hover:bg-bakery-600 disabled:bg-stone-400 text-white px-6 py-3 rounded-xl font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95"
+                      >
+                        {isUploadingCarousel ? (
+                          <span className="animate-pulse">Se încarcă...</span>
+                        ) : (
+                          <><Upload size={20} /> Adaugă Imagine</>
+                        )}
+                      </button>
+                      <input 
+                        type="file" 
+                        ref={carouselFileRef}
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setIsUploadingCarousel(true);
+                          try {
+                            const url = await uploadCarouselImage(file);
+                            await addCarouselImage(url);
+                            await refreshData();
+                            showNotification('Imagine adăugată cu succes!');
+                          } catch (err: any) {
+                            showNotification('Eroare la încărcare: ' + (err.message || 'Necunoscută'), 'error');
+                          }
+                          setIsUploadingCarousel(false);
+                          e.target.value = '';
+                        }}
+                      />
+                    </div>
+
+                    <p className="text-stone-500 text-sm">
+                      Aceste imagini apar în caruselul din secțiunea "Comenzi Personalizate". Trage pentru a reordona.
+                    </p>
+
+                    {carouselImages.length === 0 ? (
+                      <div className="text-center p-10 bg-white rounded-2xl border border-dashed border-stone-300">
+                        <Image size={48} className="mx-auto text-stone-300 mb-4" />
+                        <p className="text-stone-500">Nicio imagine în carusel.</p>
+                        <p className="text-stone-400 text-sm">Apasă "Adaugă Imagine" pentru a începe.</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {carouselImages.map((img, index) => (
+                          <div 
+                            key={img.id} 
+                            className={`relative group bg-white rounded-xl overflow-hidden shadow-sm border-2 ${img.id.startsWith('default-') ? 'border-yellow-300' : 'border-transparent'}`}
+                          >
+                            <img 
+                              src={img.image_url} 
+                              alt={`Carousel ${index + 1}`}
+                              className="w-full h-48 object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                              <button
+                                onClick={async () => {
+                                  if (index > 0) {
+                                    const newOrder = [...carouselImages];
+                                    [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
+                                    setCarouselImages(newOrder);
+                                    await reorderCarouselImages(newOrder.map((img, i) => ({ id: img.id, display_order: i + 1 })));
+                                    await refreshData();
+                                    showNotification(`Imagine mutată la poziția #${index}`);
+                                  }
+                                }}
+                                disabled={index === 0}
+                                className={`p-2 bg-white rounded-lg transition-colors ${index === 0 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
+                                title="Mută la stânga"
+                              >
+                                <ChevronLeft size={20} />
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (index < carouselImages.length - 1) {
+                                    const newOrder = [...carouselImages];
+                                    [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+                                    setCarouselImages(newOrder);
+                                    await reorderCarouselImages(newOrder.map((img, i) => ({ id: img.id, display_order: i + 1 })));
+                                    await refreshData();
+                                    showNotification(`Imagine mutată la poziția #${index + 2}`);
+                                  }
+                                }}
+                                disabled={index === carouselImages.length - 1}
+                                className={`p-2 bg-white rounded-lg transition-colors ${index === carouselImages.length - 1 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
+                                title="Mută la dreapta"
+                              >
+                                <ChevronRight size={20} />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setConfirmConfig({
+                                    isOpen: true,
+                                    message: 'Sigur vrei să ștergi această imagine?',
+                                    onConfirm: async () => {
+                                      try {
+                                        await deleteCarouselImage(img.id, img.image_url);
+                                        await refreshData();
+                                        showNotification('Imagine ștearsă!');
+                                      } catch (err: any) {
+                                        showNotification(err.message || 'Eroare la ștergere', 'error');
+                                      }
+                                      setConfirmConfig(null);
+                                    }
+                                  });
+                                }}
+                                className="p-2 bg-red-500 rounded-lg text-white hover:bg-red-600"
+                                title="Șterge"
+                              >
+                                <Trash2 size={20} />
+                              </button>
+                            </div>
+                            <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-bold">
+                              #{index + 1}
+                            </div>
+                            {img.id.startsWith('default-') && (
+                              <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 text-xs px-2 py-1 rounded font-bold">
+                                Default
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* --- PRODUCTS TAB --- */}
+                {activeTab === 'products' && (
+                  <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                      <h2 className="text-2xl font-bold text-stone-800">Produse</h2>
+                      <button 
+                        onClick={() => {
+                          setCurrentProduct({
+                            name_ro: '',
+                            description_ro: '',
+                            tag_ro: '',
+                            is_active: true
+                          });
+                          setIsEditingProduct(true);
+                        }}
+                        className="bg-bakery-500 hover:bg-bakery-600 text-white px-6 py-3 rounded-xl font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95"
+                      >
+                        <Plus size={20} /> Adaugă Produs
+                      </button>
+                    </div>
+
+                    <p className="text-stone-500 text-sm">
+                      Aceste produse apar în galeria principală. Poți edita numele, descrierea și imaginea.
+                    </p>
+
+                    {products.length === 0 ? (
+                      <div className="text-center p-10 bg-white rounded-2xl border border-dashed border-stone-300">
+                        <ShoppingBag size={48} className="mx-auto text-stone-300 mb-4" />
+                        <p className="text-stone-500">Niciun produs.</p>
+                        <p className="text-stone-400 text-sm">Apasă "Adaugă Produs" pentru a începe.</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {products.map((product, index) => (
+                          <div 
+                            key={product.id} 
+                            className={`relative bg-white rounded-xl overflow-hidden shadow-sm border-2 ${!product.is_active ? 'opacity-50' : ''} ${product.id.startsWith('default-') ? 'border-yellow-300' : 'border-transparent'}`}
+                          >
+                            <div className="relative h-40 overflow-hidden group">
+                              <img 
+                                src={product.image_url} 
+                                alt={product.name_ro}
+                                className="w-full h-full object-cover"
+                              />
+                              {/* Reorder buttons on hover */}
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                <button
+                                  onClick={async () => {
+                                    if (index > 0) {
+                                      const newOrder = [...products];
+                                      [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
+                                      setProducts(newOrder);
+                                      await reorderProducts(newOrder.map((p, i) => ({ id: p.id, display_order: i + 1 })));
+                                      await refreshData();
+                                      showNotification(`Produs mutat la poziția #${index}`);
+                                    }
+                                  }}
+                                  disabled={index === 0}
+                                  className={`p-2 bg-white rounded-lg transition-colors ${index === 0 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
+                                  title="Mută la stânga"
+                                >
+                                  <ChevronLeft size={20} />
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (index < products.length - 1) {
+                                      const newOrder = [...products];
+                                      [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+                                      setProducts(newOrder);
+                                      await reorderProducts(newOrder.map((p, i) => ({ id: p.id, display_order: i + 1 })));
+                                      await refreshData();
+                                      showNotification(`Produs mutat la poziția #${index + 2}`);
+                                    }
+                                  }}
+                                  disabled={index === products.length - 1}
+                                  className={`p-2 bg-white rounded-lg transition-colors ${index === products.length - 1 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
+                                  title="Mută la dreapta"
+                                >
+                                  <ChevronRight size={20} />
+                                </button>
+                              </div>
+                              {/* Position badge */}
+                              <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-bold">
+                                #{index + 1}
+                              </div>
+                              {product.tag_ro && (
+                                <span className="absolute top-2 right-2 bg-bakery-500 text-white text-xs px-2 py-1 rounded font-bold">
+                                  {product.tag_ro}
+                                </span>
+                              )}
+                              {product.id.startsWith('default-') && (
+                                <span className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 text-xs px-2 py-1 rounded font-bold">
+                                  Default
+                                </span>
+                              )}
+                            </div>
+                            <div className="p-4">
+                              <h3 className="font-bold text-stone-800 mb-1">{product.name_ro}</h3>
+                              <p className="text-stone-500 text-sm line-clamp-2">{product.description_ro}</p>
+                            </div>
+                            <div className="p-3 border-t border-stone-100 flex justify-between items-center">
+                              <span className={`text-xs font-bold px-2 py-1 rounded ${product.is_active ? 'bg-green-100 text-green-700' : 'bg-stone-200 text-stone-600'}`}>
+                                {product.is_active ? 'Activ' : 'Inactiv'}
+                              </span>
+                              <div className="flex gap-1">
+                                <button 
+                                  onClick={async () => {
+                                    try {
+                                      await toggleProductActive(product.id, product.is_active);
+                                      await refreshData();
+                                      showNotification(product.is_active ? 'Produs dezactivat!' : 'Produs activat!');
+                                    } catch (err: any) {
+                                      showNotification(err.message || 'Eroare', 'error');
+                                    }
+                                  }}
+                                  className="p-2 rounded hover:bg-stone-100 text-stone-500"
+                                  title={product.is_active ? 'Dezactivează' : 'Activează'}
+                                >
+                                  <Power size={16} />
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    setCurrentProduct(product);
+                                    setIsEditingProduct(true);
+                                  }}
+                                  className="p-2 rounded hover:bg-blue-50 text-blue-600"
+                                  title="Editează"
+                                >
+                                  <Edit size={16} />
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    setConfirmConfig({
+                                      isOpen: true,
+                                      message: 'Sigur vrei să ștergi acest produs?',
+                                      onConfirm: async () => {
+                                        try {
+                                          await deleteProduct(product.id, product.image_url);
+                                          await refreshData();
+                                          showNotification('Produs șters!');
+                                        } catch (err: any) {
+                                          showNotification(err.message || 'Eroare la ștergere', 'error');
+                                        }
+                                        setConfirmConfig(null);
+                                      }
+                                    });
+                                  }}
+                                  className="p-2 rounded hover:bg-red-50 text-red-600"
+                                  title="Șterge"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
             </>
         )}
       </div>
@@ -664,6 +1031,141 @@ for delete using ( bucket_id = 'cvs' );
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setIsEditingJob(false)} className="flex-1 py-3 bg-stone-200 hover:bg-stone-300 rounded-xl font-bold text-stone-600">Anulează</button>
                 <button type="submit" className="flex-1 py-3 bg-bakery-500 hover:bg-bakery-600 rounded-xl font-bold text-white shadow-md">Salvează</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* PRODUCT EDIT MODAL */}
+      {isEditingProduct && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 animate-fade-in max-h-[90vh] overflow-y-auto">
+            <h3 className="text-2xl font-bold mb-6 text-stone-800">{currentProduct.id ? 'Editează Produs' : 'Produs Nou'}</h3>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                await saveProduct(currentProduct as Product);
+                setIsEditingProduct(false);
+                await refreshData();
+                showNotification('Produs salvat cu succes!');
+              } catch (err: any) {
+                showNotification(err.message || 'Eroare la salvare', 'error');
+              }
+            }} className="space-y-4">
+              
+              {/* Image Upload/Preview */}
+              <div>
+                <label className="block font-bold text-sm text-stone-600 mb-2">Imagine</label>
+                <div className="relative">
+                  {currentProduct.image_url ? (
+                    <div className="relative">
+                      <img 
+                        src={currentProduct.image_url} 
+                        alt="Preview" 
+                        className="w-full h-40 object-cover rounded-lg border border-stone-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => productFileRef.current?.click()}
+                        className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold rounded-lg opacity-0 hover:opacity-100 transition-opacity"
+                      >
+                        <Upload size={24} className="mr-2" /> Schimbă imaginea
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => productFileRef.current?.click()}
+                      className="w-full h-40 border-2 border-dashed border-stone-300 rounded-lg flex flex-col items-center justify-center text-stone-400 hover:border-bakery-400 hover:text-bakery-500 transition-colors"
+                    >
+                      <Upload size={32} className="mb-2" />
+                      <span className="font-bold">Click pentru a încărca</span>
+                    </button>
+                  )}
+                  <input 
+                    type="file" 
+                    ref={productFileRef}
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setIsUploadingProduct(true);
+                      try {
+                        const url = await uploadProductImage(file);
+                        setCurrentProduct({ ...currentProduct, image_url: url });
+                        showNotification('Imagine încărcată!');
+                      } catch (err: any) {
+                        showNotification('Eroare la încărcare: ' + (err.message || 'Necunoscută'), 'error');
+                      }
+                      setIsUploadingProduct(false);
+                      e.target.value = '';
+                    }}
+                  />
+                  {isUploadingProduct && (
+                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-lg">
+                      <span className="animate-pulse font-bold text-bakery-500">Se încarcă...</span>
+                    </div>
+                  )}
+                </div>
+                {!currentProduct.image_url && !currentProduct.id && (
+                  <p className="text-xs text-stone-400 mt-1">Sau lipește un URL direct mai jos:</p>
+                )}
+                <input 
+                  type="url" 
+                  value={currentProduct.image_url || ''} 
+                  onChange={e => setCurrentProduct({...currentProduct, image_url: e.target.value})}
+                  className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none placeholder-stone-400 mt-2 text-sm"
+                  placeholder="https://example.com/imagine.jpg"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-sm text-stone-600 mb-1">Nume Produs *</label>
+                <input 
+                  type="text" 
+                  required 
+                  value={currentProduct.name_ro || ''} 
+                  onChange={e => setCurrentProduct({...currentProduct, name_ro: e.target.value})} 
+                  className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none placeholder-stone-400" 
+                  placeholder="ex: Covrigi cu susan" 
+                />
+              </div>
+              
+              <div>
+                <label className="block font-bold text-sm text-stone-600 mb-1">Descriere *</label>
+                <textarea 
+                  required 
+                  rows={3} 
+                  value={currentProduct.description_ro || ''} 
+                  onChange={e => setCurrentProduct({...currentProduct, description_ro: e.target.value})} 
+                  className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none placeholder-stone-400" 
+                  placeholder="Descriere scurtă a produsului..." 
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-sm text-stone-600 mb-1">Etichetă (opțional)</label>
+                <input 
+                  type="text" 
+                  value={currentProduct.tag_ro || ''} 
+                  onChange={e => setCurrentProduct({...currentProduct, tag_ro: e.target.value})} 
+                  className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none placeholder-stone-400" 
+                  placeholder="ex: Popular, Nou, Favorit" 
+                />
+                <p className="text-xs text-stone-400 mt-1">Apare ca badge pe imagine (lasă gol pentru nicio etichetă)</p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setIsEditingProduct(false)} className="flex-1 py-3 bg-stone-200 hover:bg-stone-300 rounded-xl font-bold text-stone-600">Anulează</button>
+                <button 
+                  type="submit" 
+                  disabled={!currentProduct.image_url || !currentProduct.name_ro || !currentProduct.description_ro}
+                  className="flex-1 py-3 bg-bakery-500 hover:bg-bakery-600 disabled:bg-stone-400 rounded-xl font-bold text-white shadow-md"
+                >
+                  Salvează
+                </button>
               </div>
             </form>
           </div>

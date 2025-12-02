@@ -25,6 +25,24 @@ export interface Application {
   dateApplied: string;
 }
 
+export interface CarouselImage {
+  id: string;
+  image_url: string;
+  display_order: number;
+  created_at: string;
+}
+
+export interface Product {
+  id: string;
+  image_url: string;
+  name_ro: string;
+  description_ro: string;
+  tag_ro?: string;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
 // --- DEFAULT DATA (Fallback when DB is empty/missing) ---
 const DEFAULT_JOBS: Job[] = [
   {
@@ -82,7 +100,6 @@ export const getJobs = async (): Promise<Job[]> => {
 
     if (error) {
       if (error.code === '42P01' || error.message.includes('Could not find the table')) {
-        console.warn("Database tables not found. Using default jobs (Demo Mode).");
         return DEFAULT_JOBS;
       }
       throw error;
@@ -138,7 +155,6 @@ export const saveJob = async (job: Partial<Job>) => {
       if (error) throw error;
     }
   } catch (error: any) {
-    console.error("DB Save failed:", error.message || error);
     throw error;
   }
 };
@@ -151,7 +167,6 @@ export const deleteJob = async (id: string) => {
     const { error } = await supabase.from('jobs').delete().eq('id', id);
     if (error) throw error;
   } catch (e: any) { 
-    console.error("DB Delete failed", e.message || e);
     throw e;
   }
 };
@@ -182,7 +197,6 @@ export const toggleJobStatus = async (id: string, currentStatus: boolean) => {
     const { error } = await supabase.from('jobs').update({ active: !currentStatus }).eq('id', id);
     if (error) throw error;
   } catch (e: any) { 
-    console.error("DB Toggle failed", e.message || e);
     throw e;
   }
 };
@@ -224,7 +238,6 @@ export const activateAllJobs = async () => {
     const { error: updateError } = await supabase.from('jobs').update({ active: true }).not('id', 'is', null);
     if (updateError) throw updateError;
   } catch (error: any) {
-    console.error("Error activating all jobs:", error.message || error);
     throw error;
   }
 };
@@ -266,7 +279,6 @@ export const deactivateAllJobs = async () => {
     const { error: updateError } = await supabase.from('jobs').update({ active: false }).not('id', 'is', null);
     if (updateError) throw updateError;
   } catch (error: any) {
-    console.error("Error deactivating all jobs:", error.message || error);
     throw error;
   }
 };
@@ -282,7 +294,6 @@ export const deleteAllJobs = async () => {
     const { error } = await supabase.from('jobs').delete().not('id', 'is', null);
     if (error) throw error;
   } catch (error: any) {
-    console.error("Error deleting all jobs:", error.message || error);
     throw error;
   }
 };
@@ -310,10 +321,9 @@ export const resetDatabase = async () => {
         await supabase.storage.from('cvs').remove(fileNames);
       }
     } catch (storageError: any) {
-      console.warn("Could not clear CVs storage:", storageError.message);
+      // Optional: handle storage cleanup errors silently
     }
   } catch (error: any) {
-    console.error("Error resetting database:", error.message || error);
     throw error;
   }
 };
@@ -352,17 +362,40 @@ export const getApplications = async (): Promise<Application[]> => {
   }
 };
 
+// File upload validation constants
+const CV_ALLOWED_EXTENSIONS = ['.pdf', '.doc', '.docx'];
+const CV_MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const IMAGE_ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+const IMAGE_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+const validateFile = (file: File, allowedExtensions: string[], maxSize: number): void => {
+  // Validate file size
+  if (file.size > maxSize) {
+    throw new Error(`Fișierul este prea mare. Maxim ${Math.round(maxSize / 1024 / 1024)}MB.`);
+  }
+  
+  // Validate file extension
+  const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+  if (!allowedExtensions.includes(ext)) {
+    throw new Error(`Tip de fișier invalid. Tipuri permise: ${allowedExtensions.join(', ')}`);
+  }
+};
+
 export const uploadCV = async (file: File): Promise<string> => {
+  // Validate file before upload
+  validateFile(file, CV_ALLOWED_EXTENSIONS, CV_MAX_FILE_SIZE);
+  
   try {
-    const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-    const { error } = await supabase.storage.from('cvs').upload(fileName, file);
+    // Sanitize filename - remove special characters
+    const safeFileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const { error } = await supabase.storage.from('cvs').upload(safeFileName, file);
     if (error) throw error;
     
-    const { data } = supabase.storage.from('cvs').getPublicUrl(fileName);
+    const { data } = supabase.storage.from('cvs').getPublicUrl(safeFileName);
     return data.publicUrl;
-  } catch (error: any) {
-    console.error("CV Upload failed:", error.message || error);
-    throw error;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Upload failed';
+    throw new Error(message);
   }
 };
 
@@ -381,7 +414,6 @@ export const submitApplication = async (appData: Omit<Application, 'id'>) => {
     }]);
     if (error) throw error;
   } catch (error: any) {
-    console.error("DB Submit failed:", error.message || error);
     throw error;
   }
 };
@@ -391,7 +423,7 @@ export const updateApplicationStatus = async (id: string, status: 'new' | 'starr
   try {
     const { error } = await supabase.from('applications').update({ status }).eq('id', id);
     if (error) throw error;
-  } catch (e: any) { console.error("DB Status Update failed", e.message || e) }
+  } catch (e: any) { /* no-op */ }
 };
 
 export const deleteApplication = async (id: string, cvUrl?: string) => {
@@ -405,5 +437,279 @@ export const deleteApplication = async (id: string, cvUrl?: string) => {
          await supabase.storage.from('cvs').remove([fileName]);
       }
     }
-  } catch (e: any) { console.error("DB Delete failed", e.message || e) }
+  } catch (e: any) { /* no-op */ }
+};
+
+// --- DEFAULT CAROUSEL IMAGES (Fallback) ---
+export const DEFAULT_CAROUSEL_IMAGES: CarouselImage[] = [
+  { id: 'default-1', image_url: '/comenzi/WhatsApp Image 2025-12-01 at 22.38.42_602d6a64.jpg', display_order: 1, created_at: new Date().toISOString() },
+  { id: 'default-2', image_url: '/comenzi/WhatsApp Image 2025-12-01 at 22.39.37_3243dc8f.jpg', display_order: 2, created_at: new Date().toISOString() },
+  { id: 'default-3', image_url: '/comenzi/WhatsApp Image 2025-12-01 at 22.40.07_ebb8f61c.jpg', display_order: 3, created_at: new Date().toISOString() },
+  { id: 'default-4', image_url: '/comenzi/WhatsApp Image 2025-12-01 at 22.40.09_e7abdd0e.jpg', display_order: 4, created_at: new Date().toISOString() },
+];
+
+// --- DEFAULT PRODUCTS (Fallback) ---
+export const DEFAULT_PRODUCTS: Product[] = [
+  { id: 'default-p1', image_url: 'https://simonatrusca.com/wp-content/uploads/2023/10/img_1197-1.jpg', name_ro: 'Merdenele', description_ro: 'Merdenele pufoase cu brânză dulce sau sărată, rețetă tradițională.', tag_ro: 'Popular', display_order: 1, is_active: true, created_at: new Date().toISOString() },
+  { id: 'default-p2', image_url: 'https://www.jidlonacestach.cz/wp-content/uploads/2022/08/IMG_20220823_151420-scaled.jpg', name_ro: 'Covrigi', description_ro: 'Covrigi calzi cu sare sau susan, preparați în fiecare dimineață.', tag_ro: '', display_order: 2, is_active: true, created_at: new Date().toISOString() },
+  { id: 'default-p3', image_url: 'https://savoriurbane.com/wp-content/uploads/2017/07/Pizza-cu-blat-pufos-cu-de-toate-pizza-romaneasca-8.jpg', name_ro: 'Pizza', description_ro: 'Pizza cu blat pufos și toppinguri proaspete, coaptă în cuptor.', tag_ro: 'Favorit', display_order: 3, is_active: true, created_at: new Date().toISOString() },
+  { id: 'default-p4', image_url: 'https://thumbor.unica.ro/unsafe/1200x800/smart/filters:format(webp):contrast(8):quality(75)/https://retete.unica.ro/wp-content/uploads/2017/10/placinta-cu-mere1-e1507731037783.jpg', name_ro: 'Plăcinte', description_ro: 'Plăcinte cu mere, brânză sau dovleac – gustul copilăriei.', tag_ro: '', display_order: 4, is_active: true, created_at: new Date().toISOString() },
+  { id: 'default-p5', image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRr7mL15x6h8aTBLC4hXOnNgAys65Eq6uiDcw&s', name_ro: 'Cornuri', description_ro: 'Cornuri fragede cu ciocolată sau gem, ideale pentru micul dejun.', tag_ro: '', display_order: 5, is_active: true, created_at: new Date().toISOString() },
+  { id: 'default-p6', image_url: 'https://upload.wikimedia.org/wikipedia/commons/4/40/Strudel.jpg', name_ro: 'Ștrudel', description_ro: 'Ștrudel vienez cu mere și scorțișoară, foi subțiri și crocante.', tag_ro: '', display_order: 6, is_active: true, created_at: new Date().toISOString() },
+  { id: 'default-p7', image_url: 'https://www.petitchef.ro/imgupl/recipe/foietaj-cu-ciocolata--lg-457846p714421.webp', name_ro: 'Foietaj', description_ro: 'Produse din foietaj cu diverse umpluturi dulci sau sărate.', tag_ro: '', display_order: 7, is_active: true, created_at: new Date().toISOString() },
+  { id: 'default-p8', image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQrGvZUTO1xAcahiBNgm-SUMOFgLLJ7b9Us4w&s', name_ro: 'Prăjituri', description_ro: 'Prăjituri de casă pentru ocazii speciale sau răsfăț zilnic.', tag_ro: 'Nou', display_order: 8, is_active: true, created_at: new Date().toISOString() },
+];
+
+// --- CAROUSEL IMAGES OPERATIONS ---
+
+export const getCarouselImages = async (): Promise<CarouselImage[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('carousel_images')
+      .select('*')
+      .order('display_order', { ascending: true });
+
+    if (error) {
+      if (error.code === '42P01' || error.message.includes('does not exist')) {
+        return DEFAULT_CAROUSEL_IMAGES;
+      }
+      throw error;
+    }
+
+    return data && data.length > 0 ? data : DEFAULT_CAROUSEL_IMAGES;
+  } catch (err: any) {
+    return DEFAULT_CAROUSEL_IMAGES;
+  }
+};
+
+export const uploadCarouselImage = async (file: File): Promise<string> => {
+  // Validate file before upload
+  validateFile(file, IMAGE_ALLOWED_EXTENSIONS, IMAGE_MAX_FILE_SIZE);
+  
+  const safeFileName = `carousel_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+  const { error } = await supabase.storage.from('images').upload(safeFileName, file);
+  if (error) throw error;
+  
+  const { data } = supabase.storage.from('images').getPublicUrl(safeFileName);
+  return data.publicUrl;
+};
+
+export const addCarouselImage = async (imageUrl: string): Promise<void> => {
+  // Get current max order
+  const { data: existing } = await supabase
+    .from('carousel_images')
+    .select('display_order')
+    .order('display_order', { ascending: false })
+    .limit(1);
+  
+  const nextOrder = existing && existing.length > 0 ? existing[0].display_order + 1 : 1;
+  
+  const { error } = await supabase.from('carousel_images').insert([{
+    image_url: imageUrl,
+    display_order: nextOrder
+  }]);
+  if (error) throw error;
+};
+
+export const deleteCarouselImage = async (id: string, imageUrl: string): Promise<void> => {
+  if (id.startsWith('default-')) {
+    throw new Error("Cannot delete default images. Add your own images first.");
+  }
+  
+  // Delete from database
+  const { error } = await supabase.from('carousel_images').delete().eq('id', id);
+  if (error) throw error;
+  
+  // Try to delete from storage if it's a Supabase URL
+  if (imageUrl.includes('supabase')) {
+    try {
+      const urlParts = imageUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      if (fileName) {
+        await supabase.storage.from('images').remove([fileName]);
+      }
+    } catch (e) {
+      // Storage delete is optional
+    }
+  }
+};
+
+export const reorderCarouselImages = async (images: { id: string; display_order: number }[]): Promise<void> => {
+  // Check if any items are defaults - if so, we need to migrate all to DB
+  const hasDefaults = images.some(img => img.id.startsWith('default-'));
+  
+  if (hasDefaults) {
+    // Get full image data from defaults
+    const allCarouselData = images.map(img => {
+      const defaultImg = DEFAULT_CAROUSEL_IMAGES.find(d => d.id === img.id);
+      return {
+        image_url: defaultImg?.image_url || '',
+        display_order: img.display_order
+      };
+    }).filter(item => item.image_url); // Only valid items
+    
+    // Delete all existing and insert fresh with new order
+    await supabase.from('carousel_images').delete().not('id', 'is', null);
+    
+    if (allCarouselData.length > 0) {
+      const { error } = await supabase.from('carousel_images').insert(allCarouselData);
+      if (error) throw error;
+    }
+  } else {
+    // All items are already in DB, just update order
+    for (const img of images) {
+      await supabase.from('carousel_images').update({ display_order: img.display_order }).eq('id', img.id);
+    }
+  }
+};
+
+// --- PRODUCTS OPERATIONS ---
+
+export const getProducts = async (): Promise<Product[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('display_order', { ascending: true });
+
+    if (error) {
+      if (error.code === '42P01' || error.message.includes('does not exist')) {
+        return DEFAULT_PRODUCTS;
+      }
+      throw error;
+    }
+
+    return data && data.length > 0 ? data : DEFAULT_PRODUCTS;
+  } catch (err: any) {
+    return DEFAULT_PRODUCTS;
+  }
+};
+
+export const uploadProductImage = async (file: File): Promise<string> => {
+  // Validate file before upload
+  validateFile(file, IMAGE_ALLOWED_EXTENSIONS, IMAGE_MAX_FILE_SIZE);
+  
+  const safeFileName = `product_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+  const { error } = await supabase.storage.from('images').upload(safeFileName, file);
+  if (error) throw error;
+  
+  const { data } = supabase.storage.from('images').getPublicUrl(safeFileName);
+  return data.publicUrl;
+};
+
+export const saveProduct = async (product: Partial<Product>): Promise<void> => {
+  if (product.id?.startsWith('default-')) {
+    // Converting default product to real one
+    const { data: existing } = await supabase
+      .from('products')
+      .select('display_order')
+      .order('display_order', { ascending: false })
+      .limit(1);
+    
+    const nextOrder = existing && existing.length > 0 ? existing[0].display_order + 1 : 1;
+    
+    const { error } = await supabase.from('products').insert([{
+      image_url: product.image_url,
+      name_ro: product.name_ro,
+      description_ro: product.description_ro,
+      tag_ro: product.tag_ro || null,
+      display_order: nextOrder,
+      is_active: product.is_active !== undefined ? product.is_active : true
+    }]);
+    if (error) throw error;
+  } else if (product.id) {
+    // Update existing
+    const { error } = await supabase.from('products').update({
+      image_url: product.image_url,
+      name_ro: product.name_ro,
+      description_ro: product.description_ro,
+      tag_ro: product.tag_ro || null,
+      is_active: product.is_active
+    }).eq('id', product.id);
+    if (error) throw error;
+  } else {
+    // New product
+    const { data: existing } = await supabase
+      .from('products')
+      .select('display_order')
+      .order('display_order', { ascending: false })
+      .limit(1);
+    
+    const nextOrder = existing && existing.length > 0 ? existing[0].display_order + 1 : 1;
+    
+    const { error } = await supabase.from('products').insert([{
+      image_url: product.image_url,
+      name_ro: product.name_ro,
+      description_ro: product.description_ro,
+      tag_ro: product.tag_ro || null,
+      display_order: nextOrder,
+      is_active: true
+    }]);
+    if (error) throw error;
+  }
+};
+
+export const deleteProduct = async (id: string, imageUrl: string): Promise<void> => {
+  if (id.startsWith('default-')) {
+    throw new Error("Cannot delete default products. Add your own products first.");
+  }
+  
+  const { error } = await supabase.from('products').delete().eq('id', id);
+  if (error) throw error;
+  
+  // Try to delete from storage if it's a Supabase URL
+  if (imageUrl.includes('supabase')) {
+    try {
+      const urlParts = imageUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      if (fileName) {
+        await supabase.storage.from('images').remove([fileName]);
+      }
+    } catch (e) {
+      // Storage delete is optional
+    }
+  }
+};
+
+export const toggleProductActive = async (id: string, currentStatus: boolean): Promise<void> => {
+  if (id.startsWith('default-')) {
+    throw new Error("Cannot toggle default products. Add your own products first.");
+  }
+  
+  const { error } = await supabase.from('products').update({ is_active: !currentStatus }).eq('id', id);
+  if (error) throw error;
+};
+
+export const reorderProducts = async (products: { id: string; display_order: number }[]): Promise<void> => {
+  // Check if any items are defaults - if so, we need to migrate all to DB
+  const hasDefaults = products.some(p => p.id.startsWith('default-'));
+  
+  if (hasDefaults) {
+    // Get full product data from defaults
+    const allProductData = products.map(p => {
+      const defaultProd = DEFAULT_PRODUCTS.find(d => d.id === p.id);
+      if (!defaultProd) return null;
+      return {
+        image_url: defaultProd.image_url,
+        name_ro: defaultProd.name_ro,
+        description_ro: defaultProd.description_ro,
+        tag_ro: defaultProd.tag_ro || null,
+        display_order: p.display_order,
+        is_active: defaultProd.is_active
+      };
+    }).filter(item => item !== null);
+    
+    // Delete all existing and insert fresh with new order
+    await supabase.from('products').delete().not('id', 'is', null);
+    
+    if (allProductData.length > 0) {
+      const { error } = await supabase.from('products').insert(allProductData);
+      if (error) throw error;
+    }
+  } else {
+    // All items are already in DB, just update order
+    for (const prod of products) {
+      await supabase.from('products').update({ display_order: prod.display_order }).eq('id', prod.id);
+    }
+  }
 };

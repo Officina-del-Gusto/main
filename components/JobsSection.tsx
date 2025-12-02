@@ -1,14 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Briefcase, MapPin, Clock, X, Upload, CheckCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { Job, getJobs, submitApplication, uploadCV } from '../utils/mockData';
 import emailjs from '@emailjs/browser';
 import { useLanguage } from '../contexts/LanguageContext';
 
-// EmailJS Credentials - use environment variables if available, fallback to defaults
-const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || "service_7kfjg5q"; 
-const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || "template_hdk6gfp";
-const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "tpzvd85CgW2Vc_aeG";
-const OWNER_EMAIL = "odgdragasani@gmail.com"; // Owner's email to receive notifications 
+// EmailJS Credentials - MUST be set in environment variables
+const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || '';
+const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || '';
+const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || '';
+
+const logWarning = (...args: unknown[]) => {
+  if (import.meta.env.DEV) {
+    console.warn(...args);
+  }
+};
+
+// Simple text sanitizer to prevent XSS
+const sanitizeText = (text: string): string => {
+  return text
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .trim();
+}; 
 
 // Rate limiting helper
 const checkRateLimit = (): boolean => {
@@ -46,6 +61,7 @@ const JobsSection: React.FC = () => {
     preferredLocation: 'Drăgășani'
   });
   const [cvFile, setCvFile] = useState<File | null>(null);
+  const successTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     const loadJobs = async () => {
@@ -54,12 +70,20 @@ const JobsSection: React.FC = () => {
         const allJobs = await getJobs();
         setJobs(allJobs.filter(j => j.active));
       } catch (error) {
-        console.warn("Failed to load jobs", error);
+        logWarning('Failed to load jobs', error);
       } finally {
         setIsFetching(false);
       }
     };
     loadJobs();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) {
+        window.clearTimeout(successTimeoutRef.current);
+      }
+    };
   }, []);
 
   const handleApplyClick = (job: Job) => {
@@ -148,45 +172,48 @@ const JobsSection: React.FC = () => {
       // Set rate limit timestamp
       localStorage.setItem('lastJobApplication', Date.now().toString());
 
-      // EmailJS Params - Send notification to owner
-      const templateParams: any = {
-        job_title: selectedJob.title,
-        applicant_name: formData.name,
-        preferred_location: formData.preferredLocation,
-        applicant_phone: formData.phone,
-        applicant_email: formData.email || "Nu a fost furnizat",
-        message: formData.message || "Fără mesaj",
+      // EmailJS Params - Send notification to owner (sanitized)
+      const templateParams: Record<string, string> = {
+        job_title: sanitizeText(selectedJob.title),
+        applicant_name: sanitizeText(formData.name),
+        preferred_location: sanitizeText(formData.preferredLocation),
+        applicant_phone: sanitizeText(formData.phone),
+        applicant_email: formData.email ? sanitizeText(formData.email) : "Nu a fost furnizat",
+        message: formData.message ? sanitizeText(formData.message) : "Fără mesaj",
         cv_link: downloadUrl || "Nu a fost încărcat CV"
       };
 
       // Add reply_to if applicant provided email
       if (formData.email) {
-        templateParams.reply_to = formData.email;
+        templateParams.reply_to = sanitizeText(formData.email);
       }
 
-      try {
-        await emailjs.send(
-          EMAILJS_SERVICE_ID,
-          EMAILJS_TEMPLATE_ID,
-          templateParams,
-          EMAILJS_PUBLIC_KEY
-        );
-        console.log("✅ Email notification sent to owner successfully!");
-      } catch (emailError) {
-        console.error("❌ Email sending failed:", emailError);
-        // Don't block application submission if email fails
+      // Only send email if credentials are configured
+      if (EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY) {
+        try {
+          await emailjs.send(
+            EMAILJS_SERVICE_ID,
+            EMAILJS_TEMPLATE_ID,
+            templateParams,
+            EMAILJS_PUBLIC_KEY
+          );
+        } catch (_emailError) {
+          // Don't block application submission if email fails
+        }
       }
 
       setShowSuccess(true);
-      
-      setTimeout(() => {
+      if (successTimeoutRef.current) {
+        window.clearTimeout(successTimeoutRef.current);
+      }
+      successTimeoutRef.current = window.setTimeout(() => {
         handleCloseModal();
         setIsLoading(false);
         setShowSuccess(false);
+        successTimeoutRef.current = null;
       }, 3000);
 
-    } catch (error) {
-      console.error("Submission failed", error);
+    } catch (_error) {
       setSubmitError(jobsText.submitError);
       setIsLoading(false);
     }

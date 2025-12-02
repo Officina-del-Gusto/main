@@ -1,25 +1,34 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { getProducts, DEFAULT_PRODUCTS, Product } from '../utils/mockData';
 
-const productMedia = [
-  "https://www.jidlonacestach.cz/wp-content/uploads/2022/08/IMG_20220823_151420-scaled.jpg",
-  "https://simonatrusca.com/wp-content/uploads/2023/10/img_1197-1.jpg",
-  "https://savoriurbane.com/wp-content/uploads/2017/07/Pizza-cu-blat-pufos-cu-de-toate-pizza-romaneasca-8.jpg",
-  "https://thumbor.unica.ro/unsafe/1200x800/smart/filters:format(webp):contrast(8):quality(75)/https://retete.unica.ro/wp-content/uploads/2017/10/placinta-cu-mere1-e1507731037783.jpg",
-  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRr7mL15x6h8aTBLC4hXOnNgAys65Eq6uiDcw&s",
-  "https://upload.wikimedia.org/wikipedia/commons/4/40/Strudel.jpg",
-  "https://www.petitchef.ro/imgupl/recipe/foietaj-cu-ciocolata--lg-457846p714421.webp",
-  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQrGvZUTO1xAcahiBNgm-SUMOFgLLJ7b9Us4w&s"
-];
+const logWarning = (...args: unknown[]) => {
+  if (import.meta.env.DEV) {
+    console.warn(...args);
+  }
+};
 
 const ProductGallery: React.FC = () => {
   const { dictionary } = useLanguage();
-  const translatedProducts = dictionary.productGallery.products.map((product, index) => ({
-    id: index + 1,
-    image: productMedia[index] ?? '',
-    ...product,
-  }));
+  const [products, setProducts] = useState<Product[]>(DEFAULT_PRODUCTS);
+  const [isLoading, setIsLoading] = useState(true);
 
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const dbProducts = await getProducts();
+        if (dbProducts.length > 0) {
+          setProducts(dbProducts);
+        }
+      } catch (error) {
+        logWarning('Error loading products, fallback to defaults', error);
+        // Keep default products on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadProducts();
+  }, []);
   return (
     <section id="products" className="py-24 bg-bakery-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -31,40 +40,46 @@ const ProductGallery: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12">
-          {translatedProducts.map((product) => (
-            <div key={product.id} className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-              <div className="relative h-64 overflow-hidden">
-                <img 
-                  src={product.image} 
-                  alt={product.name} 
-                  className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-bakery-900/60 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
-                {product.tag && (
-                  <div className="absolute top-4 right-4 bg-bakery-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg uppercase tracking-wide">
-                    {product.tag}
-                  </div>
-                )}
-              </div>
-              <div className="p-6 relative">
-                {/* Decorative element */}
-                <div className="absolute -top-6 right-6 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg group-hover:bg-bakery-500 group-hover:text-white transition-colors duration-300">
-                  <span className="font-serif font-bold text-xl">OdG</span>
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bakery-500"></div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12">
+            {products.filter(p => p.is_active).map((product) => (
+              <div key={product.id} className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+                <div className="relative h-64 overflow-hidden">
+                  <img 
+                    src={product.image_url} 
+                    alt={product.name_ro} 
+                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-bakery-900/60 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
+                  {product.tag_ro && (
+                    <div className="absolute top-4 right-4 bg-bakery-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg uppercase tracking-wide">
+                      {product.tag_ro}
+                    </div>
+                  )}
                 </div>
-                
-                <h3 className="text-2xl font-serif font-bold text-bakery-800 mb-3 group-hover:text-bakery-600 transition-colors">
-                  {product.name}
-                </h3>
-                <p className="text-bakery-600 text-sm leading-relaxed mb-4">
-                  {product.description}
-                </p>
-                <div className="w-full h-px bg-bakery-100 group-hover:bg-bakery-200 transition-colors"></div>
+                <div className="p-6 relative">
+                  {/* Decorative element */}
+                  <div className="absolute -top-6 right-6 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg group-hover:bg-bakery-500 group-hover:text-white transition-colors duration-300">
+                    <span className="font-serif font-bold text-xl">OdG</span>
+                  </div>
+                  
+                  <h3 className="text-2xl font-serif font-bold text-bakery-800 mb-3 group-hover:text-bakery-600 transition-colors">
+                    {product.name_ro}
+                  </h3>
+                  <p className="text-bakery-600 text-sm leading-relaxed mb-4">
+                    {product.description_ro}
+                  </p>
+                  <div className="w-full h-px bg-bakery-100 group-hover:bg-bakery-200 transition-colors"></div>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
