@@ -534,19 +534,18 @@ export const deleteCarouselImage = async (id: string, imageUrl: string): Promise
   }
 };
 
-export const reorderCarouselImages = async (images: { id: string; display_order: number }[]): Promise<void> => {
+export const reorderCarouselImages = async (images: { id: string; display_order: number; image_url?: string }[]): Promise<void> => {
   // Check if any items are defaults - if so, we need to migrate all to DB
   const hasDefaults = images.some(img => img.id.startsWith('default-'));
   
   if (hasDefaults) {
-    // Get full image data from defaults
-    const allCarouselData = images.map(img => {
-      const defaultImg = DEFAULT_CAROUSEL_IMAGES.find(d => d.id === img.id);
-      return {
-        image_url: defaultImg?.image_url || '',
-        display_order: img.display_order
-      };
-    }).filter(item => item.image_url); // Only valid items
+    // Rebuild payload directly from in-memory data to preserve custom uploads
+    const allCarouselData = images
+      .map((img, index) => ({
+        image_url: img.image_url || DEFAULT_CAROUSEL_IMAGES.find(d => d.id === img.id)?.image_url || '',
+        display_order: index + 1,
+      }))
+      .filter(item => item.image_url);
     
     // Delete all existing and insert fresh with new order
     await supabase.from('carousel_images').delete().not('id', 'is', null);
@@ -680,24 +679,24 @@ export const toggleProductActive = async (id: string, currentStatus: boolean): P
   if (error) throw error;
 };
 
-export const reorderProducts = async (products: { id: string; display_order: number }[]): Promise<void> => {
+export const reorderProducts = async (products: { id: string; display_order: number; image_url?: string; name_ro?: string; description_ro?: string; tag_ro?: string | null; is_active?: boolean }[]): Promise<void> => {
   // Check if any items are defaults - if so, we need to migrate all to DB
   const hasDefaults = products.some(p => p.id.startsWith('default-'));
   
   if (hasDefaults) {
-    // Get full product data from defaults
-    const allProductData = products.map(p => {
-      const defaultProd = DEFAULT_PRODUCTS.find(d => d.id === p.id);
-      if (!defaultProd) return null;
+    // Preserve existing product data (either default or user-generated)
+    const allProductData = products.map((p, index) => {
+      const source = DEFAULT_PRODUCTS.find(d => d.id === p.id) || (p as Product);
+      if (!source) return null;
       return {
-        image_url: defaultProd.image_url,
-        name_ro: defaultProd.name_ro,
-        description_ro: defaultProd.description_ro,
-        tag_ro: defaultProd.tag_ro || null,
-        display_order: p.display_order,
-        is_active: defaultProd.is_active
+        image_url: source.image_url,
+        name_ro: source.name_ro,
+        description_ro: source.description_ro,
+        tag_ro: source.tag_ro || null,
+        display_order: index + 1,
+        is_active: source.is_active ?? true,
       };
-    }).filter(item => item !== null);
+    }).filter((item): item is Exclude<typeof item, null> => item !== null);
     
     // Delete all existing and insert fresh with new order
     await supabase.from('products').delete().not('id', 'is', null);
