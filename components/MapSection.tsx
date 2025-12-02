@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { MapPin, Navigation, Phone, ExternalLink, Mail } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 type LocationKey = 'dragasani' | 'babeni';
 
@@ -27,6 +28,8 @@ const locations = {
 const MapSection: React.FC = () => {
   const [activeLocation, setActiveLocation] = useState<LocationKey>('dragasani');
   const currentLocation = locations[activeLocation];
+  const { dictionary } = useLanguage();
+  const mapText = dictionary.mapSection;
 
   return (
     <section id="contact" className="py-24 bg-neutral-900 text-stone-50 relative overflow-hidden">
@@ -35,7 +38,8 @@ const MapSection: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-serif font-bold mb-4 text-bakery-400">Te așteptăm pe la noi!</h2>
+          <h2 className="text-4xl md:text-5xl font-serif font-bold mb-4 text-bakery-400">{mapText.title}</h2>
+          <p className="text-stone-400 max-w-2xl mx-auto">{mapText.description}</p>
           <div className="flex justify-center gap-4 mt-8">
             <button
               onClick={() => setActiveLocation('dragasani')}
@@ -45,7 +49,7 @@ const MapSection: React.FC = () => {
                   : 'bg-stone-800 text-stone-400 hover:bg-stone-700'
               }`}
             >
-              Drăgășani
+              {mapText.dragasaniButton}
             </button>
             <button
               onClick={() => setActiveLocation('babeni')}
@@ -55,7 +59,7 @@ const MapSection: React.FC = () => {
                   : 'bg-stone-800 text-stone-400 hover:bg-stone-700'
               }`}
             >
-              Băbeni
+              {mapText.babeniButton}
             </button>
           </div>
         </div>
@@ -66,8 +70,7 @@ const MapSection: React.FC = () => {
             <div>
               <div className="w-20 h-1 bg-bakery-500 rounded-full mb-6"></div>
               <p className="text-stone-300 text-lg leading-relaxed">
-                Fie că ești în drum spre serviciu sau vrei să iei ceva bun pentru acasă, 
-                oprește-te la noi în <strong>{currentLocation.title}</strong>. Mirosul de patiserie caldă te va ghida.
+                {mapText.intro} <strong>{currentLocation.title}</strong>.
               </p>
             </div>
 
@@ -77,7 +80,9 @@ const MapSection: React.FC = () => {
                   <MapPin className="text-bakery-300" size={24} />
                 </div>
                 <div>
-                  <h4 className="font-serif font-bold text-xl text-white mb-1">Adresa {currentLocation.title}</h4>
+                  <h4 className="font-serif font-bold text-xl text-white mb-1">
+                    {mapText.addressLabel} {currentLocation.title}
+                  </h4>
                   <p className="text-stone-400">{currentLocation.addressLine1}</p>
                   <p className="text-stone-400">{currentLocation.addressLine2}</p>
                 </div>
@@ -88,7 +93,7 @@ const MapSection: React.FC = () => {
                   <Phone className="text-bakery-300" size={24} />
                 </div>
                 <div>
-                  <h4 className="font-serif font-bold text-xl text-white mb-1">Comenzi Telefonice</h4>
+                  <h4 className="font-serif font-bold text-xl text-white mb-1">{mapText.phoneLabel}</h4>
                   <a href="tel:+40754554194" className="text-stone-400 hover:text-bakery-300 transition-colors text-lg font-medium block mt-1">
                     0754 554 194
                   </a>
@@ -100,7 +105,7 @@ const MapSection: React.FC = () => {
                   <Mail className="text-bakery-300" size={24} />
                 </div>
                 <div>
-                  <h4 className="font-serif font-bold text-xl text-white mb-1">Email</h4>
+                  <h4 className="font-serif font-bold text-xl text-white mb-1">{mapText.emailLabel}</h4>
                   <a href="mailto:odgdragasani@gmail.com" className="text-stone-400 hover:text-bakery-300 transition-colors text-lg font-medium block mt-1">
                     odgdragasani@gmail.com
                   </a>
@@ -116,7 +121,7 @@ const MapSection: React.FC = () => {
                 className="flex-1 inline-flex items-center justify-center gap-3 bg-bakery-500 hover:bg-bakery-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-bakery-500/30 transition-all transform hover:-translate-y-1"
               >
                 <Navigation size={20} />
-                Navighează
+                {mapText.callCta}
               </a>
               <a 
                 href="https://www.facebook.com/ODGOfficinaDelGusto" 
@@ -125,7 +130,7 @@ const MapSection: React.FC = () => {
                 className="flex-1 inline-flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium py-4 px-6 rounded-xl transition-all"
               >
                 <ExternalLink size={20} />
-                Facebook
+                {mapText.facebookCta}
               </a>
             </div>
           </div>
@@ -134,7 +139,7 @@ const MapSection: React.FC = () => {
              {/* Map Overlay for interactivity suggestion */}
              <div className="absolute inset-0 bg-black/30 pointer-events-none group-hover:bg-transparent transition-colors z-10 flex items-center justify-center">
                 <span className="bg-white/90 text-neutral-900 px-4 py-2 rounded-lg font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                  Click pentru a interacționa
+                  {mapText.mapOverlay}
                 </span>
              </div>
              
@@ -146,8 +151,9 @@ const MapSection: React.FC = () => {
               style={{ border: 0 }} 
               src={currentLocation.mapSrc}
               allowFullScreen
-              title={`Locatie Officina del Gusto ${currentLocation.title}`}
+              title={`Hartă locație Officina del Gusto ${currentLocation.title} - patiserie și pizzerie`}
               loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
               className="grayscale-[20%] hover:grayscale-0 transition-all duration-500 w-full h-full"
             ></iframe>
           </div>

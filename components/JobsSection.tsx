@@ -1,13 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import { Briefcase, MapPin, Clock, X, Upload, CheckCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { Job, getJobs, submitApplication, uploadCV } from '../utils/mockData';
 import emailjs from '@emailjs/browser';
+import { useLanguage } from '../contexts/LanguageContext';
 
-// EmailJS Credentials
-const EMAILJS_SERVICE_ID = "service_7kfjg5q"; 
-const EMAILJS_TEMPLATE_ID = "template_hdk6gfp"; // Replace with your new template ID
-const EMAILJS_PUBLIC_KEY = "tpzvd85CgW2Vc_aeG";
+// EmailJS Credentials - use environment variables if available, fallback to defaults
+const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || "service_7kfjg5q"; 
+const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || "template_hdk6gfp";
+const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "tpzvd85CgW2Vc_aeG";
 const OWNER_EMAIL = "odgdragasani@gmail.com"; // Owner's email to receive notifications 
 
 // Rate limiting helper
@@ -26,6 +26,8 @@ const JobsSection: React.FC = () => {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const { dictionary } = useLanguage();
+  const jobsText = dictionary.jobs;
   
   // Loading States
   const [isLoading, setIsLoading] = useState(false); // For form submission
@@ -92,7 +94,7 @@ const JobsSection: React.FC = () => {
 
     // Rate limiting check
     if (checkRateLimit()) {
-      setSubmitError("Ai trimis recent o aplicație. Te rugăm să aștepți 1 minut înainte de a trimite alta.");
+      setSubmitError(jobsText.rateLimit);
       return;
     }
 
@@ -104,14 +106,14 @@ const JobsSection: React.FC = () => {
     const romanianRegex = /^(0040|0)(7[0-9]{8}|[23][0-9]{8})$/; // Romanian format
     
     if (!internationalRegex.test(cleanPhone) && !romanianRegex.test(cleanPhone)) {
-      setSubmitError("Te rugăm să introduci un număr de telefon valid (ex: 0712 345 678 sau +39 123 456 789)");
+      setSubmitError(jobsText.phoneInvalid);
       return;
     }
 
     // Additional check: prevent obvious fake numbers like 123456, 111111, etc.
     const digitsOnly = cleanPhone.replace(/^\+?[0-9]{1,3}/, ''); // Remove country code
     if (/^(0+|1+|2+|3+|4+|5+|6+|7+|8+|9+|123456|654321)$/.test(digitsOnly)) {
-      setSubmitError("Acest număr de telefon nu pare valid. Te rugăm să introduci un număr real.");
+      setSubmitError(jobsText.phoneFake);
       return;
     }
 
@@ -126,7 +128,7 @@ const JobsSection: React.FC = () => {
       }
 
       // Prepend location preference to message for DB storage
-      const fullMessage = `[Locație Dorită: ${formData.preferredLocation}]\n\n${formData.message}`;
+      const fullMessage = `[${jobsText.locationPrefix}: ${formData.preferredLocation}]\n\n${formData.message}`;
 
       const newApplication = {
         jobId: selectedJob.id,
@@ -185,7 +187,7 @@ const JobsSection: React.FC = () => {
 
     } catch (error) {
       console.error("Submission failed", error);
-      setSubmitError("A apărut o eroare la trimitere. Te rugăm să încerci din nou.");
+      setSubmitError(jobsText.submitError);
       setIsLoading(false);
     }
   };
@@ -204,10 +206,10 @@ const JobsSection: React.FC = () => {
     <section id="jobs" className="py-24 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <span className="font-cursive text-3xl text-bakery-500 block mb-2">Alătură-te echipei</span>
-          <h2 className="text-4xl md:text-5xl font-serif font-bold text-bakery-900 mb-6">Cariere la Officina</h2>
+          <span className="font-cursive text-3xl text-bakery-500 block mb-2">{jobsText.eyebrow}</span>
+          <h2 className="text-4xl md:text-5xl font-serif font-bold text-bakery-900 mb-6">{jobsText.title}</h2>
           <p className="text-bakery-700 max-w-2xl mx-auto text-lg mb-8">
-            Căutăm oameni pasionați, harnici și cu zâmbetul pe buze. Dacă vrei să lucrezi într-un mediu cald (la propriu și la figurat), te așteptăm!
+            {jobsText.description}
           </p>
 
           {/* Location Tabs */}
@@ -220,7 +222,7 @@ const JobsSection: React.FC = () => {
                   : 'bg-stone-100 text-bakery-800 hover:bg-stone-200'
               }`}
             >
-              Toate
+              {jobsText.filters.all}
             </button>
             <button
               onClick={() => setLocationFilter('Drăgășani')}
@@ -230,7 +232,7 @@ const JobsSection: React.FC = () => {
                   : 'bg-stone-100 text-bakery-800 hover:bg-stone-200'
               }`}
             >
-              Drăgășani
+              {jobsText.filters.dragasani}
             </button>
             <button
               onClick={() => setLocationFilter('Băbeni')}
@@ -240,7 +242,7 @@ const JobsSection: React.FC = () => {
                   : 'bg-stone-100 text-bakery-800 hover:bg-stone-200'
               }`}
             >
-              Băbeni
+              {jobsText.filters.babeni}
             </button>
           </div>
         </div>
@@ -248,17 +250,17 @@ const JobsSection: React.FC = () => {
         {isFetching ? (
           <div className="text-center p-10 bg-bakery-50 rounded-2xl border border-bakery-100 flex flex-col items-center justify-center">
             <Loader2 className="animate-spin text-bakery-500 mb-2" size={32} />
-            <p className="text-bakery-700 text-xl font-medium">Se încarcă lista...</p>
+            <p className="text-bakery-700 text-xl font-medium">{jobsText.loading}</p>
           </div>
         ) : jobs.length === 0 ? (
           <div className="text-center p-10 bg-bakery-50 rounded-2xl border border-bakery-100">
-            <p className="text-bakery-700 text-xl font-medium">Nu sunt joburi active momentan.</p>
-            <p className="text-bakery-500 mt-2">Revino curând pentru noi oportunități!</p>
+            <p className="text-bakery-700 text-xl font-medium">{jobsText.none}</p>
+            <p className="text-bakery-500 mt-2">{dictionary.jobs.description}</p>
           </div>
         ) : filteredJobs.length === 0 ? (
           <div className="text-center p-10 bg-bakery-50 rounded-2xl border border-bakery-100">
             <p className="text-bakery-700 text-lg font-medium">
-              Nu sunt joburi active momentan în {locationFilter}.
+              {jobsText.noneFiltered} {locationFilter !== 'all' ? locationFilter : ''}
             </p>
           </div>
         ) : (
@@ -284,7 +286,7 @@ const JobsSection: React.FC = () => {
                   onClick={() => handleApplyClick(job)}
                   className="w-full py-3 bg-bakery-500 hover:bg-bakery-600 text-white font-bold rounded-xl transition-colors shadow-md mt-auto"
                 >
-                  Aplică Acum
+                  {jobsText.applyButton}
                 </button>
               </div>
             ))}
@@ -316,12 +318,12 @@ const JobsSection: React.FC = () => {
                 <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mb-6">
                   <CheckCircle size={40} />
                 </div>
-                <h3 className="text-2xl font-serif font-bold text-bakery-900 mb-2">Mulțumim!</h3>
-                <p className="text-bakery-700">Am primit aplicația ta. Te vom contacta în curând dacă profilul tău se potrivește.</p>
+                <h3 className="text-2xl font-serif font-bold text-bakery-900 mb-2">{jobsText.successTitle}</h3>
+                <p className="text-bakery-700">{jobsText.successMessage}</p>
               </div>
             ) : (
               <div className="p-8">
-                <h3 className="text-2xl font-serif font-bold text-bakery-900 mb-1">Aplică pentru postul:</h3>
+                <h3 className="text-2xl font-serif font-bold text-bakery-900 mb-1">{jobsText.modalTitle}</h3>
                 <p className="text-bakery-500 font-medium text-lg mb-6">{selectedJob?.title}</p>
                 
                 {submitError && (
@@ -333,7 +335,7 @@ const JobsSection: React.FC = () => {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-bold text-bakery-800 mb-1">Nume și Prenume *</label>
+                    <label className="block text-sm font-bold text-bakery-800 mb-1">{jobsText.form.name.label}</label>
                     <input 
                       type="text" 
                       required
@@ -341,12 +343,12 @@ const JobsSection: React.FC = () => {
                       value={formData.name}
                       onChange={e => setFormData({...formData, name: e.target.value})}
                       className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bakery-400 focus:ring-2 focus:ring-bakery-200 outline-none transition-all disabled:opacity-70 bg-white text-black placeholder-gray-500 font-medium"
-                      placeholder="Ex: Popescu Maria"
+                      placeholder={jobsText.form.name.placeholder}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-bakery-800 mb-1">Număr de Telefon *</label>
+                    <label className="block text-sm font-bold text-bakery-800 mb-1">{jobsText.form.phone.label}</label>
                     <input 
                       type="tel" 
                       required
@@ -354,15 +356,15 @@ const JobsSection: React.FC = () => {
                       value={formData.phone}
                       onChange={e => setFormData({...formData, phone: e.target.value})}
                       className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bakery-400 focus:ring-2 focus:ring-bakery-200 outline-none transition-all disabled:opacity-70 bg-white text-black placeholder-gray-500 font-medium"
-                      placeholder="Ex: 0712 345 678 sau +39 123 456 789"
+                      placeholder={jobsText.form.phone.placeholder}
                     />
-                    <p className="text-xs text-bakery-600 mt-1">Acceptăm numere românești sau internaționale</p>
+                    <p className="text-xs text-bakery-600 mt-1">{jobsText.form.phone.helper}</p>
                   </div>
 
                   {/* Location Dropdown */}
                   <div>
                     <label className="block text-sm font-bold text-bakery-800 mb-1">
-                      Locație Dorită {isLocked && <span className="text-bakery-500 font-normal">(Stabilită de job)</span>} *
+                      {jobsText.form.location.label} {isLocked && <span className="text-bakery-500 font-normal">{jobsText.lockedLocationNote}</span>}
                     </label>
                     <select 
                       required
@@ -377,9 +379,9 @@ const JobsSection: React.FC = () => {
                     >
                       {!isLocked ? (
                         <>
-                          <option value="Drăgășani">Drăgășani</option>
-                          <option value="Băbeni">Băbeni</option>
-                          <option value="Oricare">Oricare</option>
+                          <option value="Drăgășani">{jobsText.form.location.options.dragasani}</option>
+                          <option value="Băbeni">{jobsText.form.location.options.babeni}</option>
+                          <option value="Oricare">{jobsText.form.location.options.either}</option>
                         </>
                       ) : (
                         <option value={selectedJob?.location}>{selectedJob?.location}</option>
@@ -388,31 +390,31 @@ const JobsSection: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-bakery-800 mb-1">Email (Opțional)</label>
+                    <label className="block text-sm font-bold text-bakery-800 mb-1">{jobsText.form.email.label}</label>
                     <input 
                       type="email" 
                       disabled={isLoading}
                       value={formData.email}
                       onChange={e => setFormData({...formData, email: e.target.value})}
                       className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bakery-400 focus:ring-2 focus:ring-bakery-200 outline-none transition-all disabled:opacity-70 bg-white text-black placeholder-gray-500 font-medium"
-                      placeholder="Ex: maria@email.com"
+                      placeholder={jobsText.form.email.placeholder}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-bakery-800 mb-1">Mesaj (Opțional)</label>
+                    <label className="block text-sm font-bold text-bakery-800 mb-1">{jobsText.form.message.label}</label>
                     <textarea 
                       rows={3}
                       disabled={isLoading}
                       value={formData.message}
                       onChange={e => setFormData({...formData, message: e.target.value})}
                       className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bakery-400 focus:ring-2 focus:ring-bakery-200 outline-none transition-all disabled:opacity-70 bg-white text-black placeholder-gray-500 font-medium"
-                      placeholder="Spune-ne câteva cuvinte despre tine..."
+                      placeholder={jobsText.form.message.placeholder}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-bakery-800 mb-1">Încarcă CV (Opțional)</label>
+                    <label className="block text-sm font-bold text-bakery-800 mb-1">{jobsText.form.cv.label}</label>
                     <div className={`relative border-2 border-dashed border-gray-300 rounded-xl p-6 text-center transition-colors cursor-pointer ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-bakery-50'}`}>
                       <input 
                         type="file" 
@@ -426,7 +428,7 @@ const JobsSection: React.FC = () => {
                         {cvFile ? (
                           <span className="text-bakery-800 font-bold">{cvFile.name}</span>
                         ) : (
-                          <span className="text-gray-500 text-sm">Apasă pentru a încărca (PDF, Imagine)</span>
+                          <span className="text-gray-500 text-sm">{jobsText.form.cv.placeholder}</span>
                         )}
                       </div>
                     </div>
@@ -439,9 +441,9 @@ const JobsSection: React.FC = () => {
                   >
                     {isLoading ? (
                       <>
-                        <Loader2 className="animate-spin" /> Se trimite...
+                        <Loader2 className="animate-spin" /> {jobsText.form.submit.loading}
                       </>
-                    ) : "Trimite Aplicația"}
+                    ) : jobsText.form.submit.idle}
                   </button>
                 </form>
               </div>

@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import InfoSection from './components/InfoSection';
 import ProductGallery from './components/ProductGallery';
+import CustomOrders from './components/CustomOrders';
 import JobsSection from './components/JobsSection';
 import MapSection from './components/MapSection';
 import Footer from './components/Footer';
@@ -10,6 +11,7 @@ import AdminDashboard from './components/AdminDashboard';
 import ChristmasEffects from './components/ChristmasEffects';
 import { ChristmasMusicProvider } from './contexts/ChristmasMusicContext';
 import { Lock, ArrowUp } from 'lucide-react';
+import { useLanguage } from './contexts/LanguageContext';
 
 // Safe localStorage helper
 const safeGetBooleanFromStorage = (key: string, defaultValue: boolean): boolean => {
@@ -24,6 +26,7 @@ const safeGetBooleanFromStorage = (key: string, defaultValue: boolean): boolean 
 };
 
 const App: React.FC = () => {
+  const { dictionary } = useLanguage();
   const [view, setView] = useState<'public' | 'login' | 'admin'>('public');
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState(false);
@@ -156,17 +159,17 @@ const App: React.FC = () => {
           <div className="flex justify-center mb-6 text-bakery-500">
             <Lock size={48} />
           </div>
-          <h2 className="text-2xl font-serif font-bold text-center mb-6 text-stone-800">Acces Administrare</h2>
+          <h2 className="text-2xl font-serif font-bold text-center mb-6 text-stone-800">{dictionary.login.title}</h2>
           
           {loginError && (
             <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-center text-sm font-bold">
-              User sau parolă incorecte!
+              {dictionary.login.error}
             </div>
           )}
 
           <form onSubmit={handleAdminLogin} className="space-y-4">
             <div>
-              <label className="block text-sm font-bold text-stone-600 mb-1">Utilizator</label>
+              <label className="block text-sm font-bold text-stone-600 mb-1">{dictionary.login.userLabel}</label>
               <input 
                 type="text" 
                 value={loginForm.username}
@@ -175,7 +178,7 @@ const App: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-bold text-stone-600 mb-1">Parolă</label>
+              <label className="block text-sm font-bold text-stone-600 mb-1">{dictionary.login.passLabel}</label>
               <input 
                 type="password" 
                 value={loginForm.password}
@@ -187,14 +190,14 @@ const App: React.FC = () => {
               type="submit"
               className="w-full py-4 bg-bakery-500 hover:bg-bakery-600 text-white font-bold rounded-xl mt-4 shadow-lg transition-transform active:scale-95"
             >
-              Autentificare
+              {dictionary.login.submit}
             </button>
             <button 
               type="button"
               onClick={() => setView('public')}
               className="w-full py-2 text-stone-400 hover:text-stone-600 text-sm font-medium"
             >
-              Înapoi la site
+              {dictionary.login.back}
             </button>
           </form>
         </div>
@@ -214,6 +217,7 @@ const App: React.FC = () => {
           <Hero />
           <InfoSection />
           <ProductGallery />
+          <CustomOrders />
           <JobsSection />
           <MapSection />
         </main>

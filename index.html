@@ -2,11 +2,65 @@
 <html lang="ro">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Officina del Gusto - Patiserie Drăgășani</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    
+    <!-- Primary Meta Tags -->
+    <title>Officina del Gusto | Patiserie Artizanală Drăgășani & Băbeni</title>
+    <meta name="title" content="Officina del Gusto | Patiserie Artizanală Drăgășani & Băbeni" />
+    <meta name="description" content="Patiserie artizanală în Drăgășani și Băbeni. Produse proaspete de patiserie, pizza, cozonaci și prăjituri făcute cu pasiune. Comandă acum sau vizitează-ne!" />
+    <meta name="keywords" content="patiserie, Drăgășani, Băbeni, Vâlcea, pizza, cozonac, prăjituri, torturi, brutărie, produse de patiserie, Officina del Gusto" />
+    <meta name="author" content="Officina del Gusto" />
+    <meta name="robots" content="index, follow" />
+    <meta name="googlebot" content="index, follow" />
+    <link rel="canonical" href="https://officinadelgusto.ro/" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://officinadelgusto.ro/" />
+    <meta property="og:title" content="Officina del Gusto | Patiserie Artizanală Drăgășani & Băbeni" />
+    <meta property="og:description" content="Patiserie artizanală în Drăgășani și Băbeni. Produse proaspete de patiserie, pizza, cozonaci și prăjituri făcute cu pasiune." />
+    <meta property="og:image" content="https://officinadelgusto.ro/og-image.jpg" />
+    <meta property="og:locale" content="ro_RO" />
+    <meta property="og:site_name" content="Officina del Gusto" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://officinadelgusto.ro/" />
+    <meta property="twitter:title" content="Officina del Gusto | Patiserie Artizanală Drăgășani & Băbeni" />
+    <meta property="twitter:description" content="Patiserie artizanală în Drăgășani și Băbeni. Produse proaspete de patiserie, pizza, cozonaci și prăjituri făcute cu pasiune." />
+    <meta property="twitter:image" content="https://officinadelgusto.ro/og-image.jpg" />
+
+    <!-- Geo Tags for Local SEO -->
+    <meta name="geo.region" content="RO-VL" />
+    <meta name="geo.placename" content="Drăgășani" />
+    <meta name="geo.position" content="44.6611;24.2547" />
+    <meta name="ICBM" content="44.6611, 24.2547" />
+
+    <!-- Favicon & App Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="theme-color" content="#9c6644" />
+    <meta name="msapplication-TileColor" content="#9c6644" />
+
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+    <!-- Preconnect to external domains for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://vhuxtlfacydfkiiuhffv.supabase.co" />
+    
+    <!-- DNS Prefetch -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://maps.google.com" />
+
+    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lato:wght@300;400;700&family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         theme: {
@@ -22,10 +76,10 @@
                 100: '#f2e8e5',
                 200: '#eaddd7',
                 300: '#e0c097',
-                400: '#b88a44', // Gold bread crust
-                500: '#9c6644', // Baked
-                600: '#7f5539', // Darker dough
-                700: '#603d30', // Coffee bean
+                400: '#b88a44',
+                500: '#9c6644',
+                600: '#7f5539',
+                700: '#603d30',
                 800: '#4a3028',
                 900: '#38251f',
               },
@@ -36,21 +90,159 @@
         }
       }
     </script>
-  <script type="importmap">
-{
-  "imports": {
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
-    "@emailjs/browser": "https://aistudiocdn.com/@emailjs/browser@^4.4.1",
-    "@supabase/supabase-js": "https://aistudiocdn.com/@supabase/supabase-js@^2.86.0"
-  }
-}
-</script>
+
+    <!-- Structured Data / Schema.org for Local Business -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Bakery",
+      "name": "Officina del Gusto",
+      "alternateName": "Officina del Gusto Drăgășani",
+      "description": "Patiserie artizanală cu produse proaspete de panificație, patiserie și pizza în Drăgășani și Băbeni, județul Vâlcea.",
+      "url": "https://officinadelgusto.ro",
+      "logo": "https://officinadelgusto.ro/logo.png",
+      "image": "https://officinadelgusto.ro/og-image.jpg",
+      "telephone": "+40754554194",
+      "email": "odgdragasani@gmail.com",
+      "priceRange": "$$",
+      "servesCuisine": ["Romanian", "Italian", "Bakery", "Pizza"],
+      "address": [
+        {
+          "@type": "PostalAddress",
+          "streetAddress": "Str. Gib Mihăescu, Nr. 34",
+          "addressLocality": "Drăgășani",
+          "addressRegion": "Vâlcea",
+          "postalCode": "245700",
+          "addressCountry": "RO"
+        },
+        {
+          "@type": "PostalAddress",
+          "streetAddress": "Str. Tudor Vladimirescu",
+          "addressLocality": "Băbeni",
+          "addressRegion": "Vâlcea",
+          "postalCode": "245100",
+          "addressCountry": "RO"
+        }
+      ],
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 44.6611,
+        "longitude": 24.2547
+      },
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+          "opens": "06:00",
+          "closes": "20:00"
+        }
+      ],
+      "sameAs": [
+        "https://www.facebook.com/profile.php?id=100057523567498"
+      ],
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Produse Patiserie",
+        "itemListElement": [
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Product",
+              "name": "Pizza",
+              "category": "Pizza"
+            }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Product",
+              "name": "Cozonac",
+              "category": "Panificație"
+            }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Product",
+              "name": "Prăjituri",
+              "category": "Patiserie"
+            }
+          }
+        ]
+      }
+    }
+    </script>
+
+    <!-- Organization Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Officina del Gusto",
+      "url": "https://officinadelgusto.ro",
+      "logo": "https://officinadelgusto.ro/logo.png",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+40754554194",
+        "contactType": "customer service",
+        "availableLanguage": ["Romanian", "English", "Italian"]
+      }
+    }
+    </script>
+
+    <!-- BreadcrumbList Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Acasă",
+          "item": "https://officinadelgusto.ro/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Produse",
+          "item": "https://officinadelgusto.ro/#products"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Contact",
+          "item": "https://officinadelgusto.ro/#contact"
+        }
+      ]
+    }
+    </script>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+        "react/": "https://aistudiocdn.com/react@^19.2.0/",
+        "react": "https://aistudiocdn.com/react@^19.2.0",
+        "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
+        "@emailjs/browser": "https://aistudiocdn.com/@emailjs/browser@^4.4.1",
+        "@supabase/supabase-js": "https://aistudiocdn.com/@supabase/supabase-js@^2.86.0"
+      }
+    }
+    </script>
   </head>
   <body class="bg-bakery-50 text-bakery-900">
+    <!-- Noscript fallback for SEO -->
+    <noscript>
+      <div style="padding: 20px; text-align: center; font-family: sans-serif;">
+        <h1>Officina del Gusto - Patiserie Artizanală</h1>
+        <p>Patiserie artizanală în Drăgășani și Băbeni. Pentru cea mai bună experiență, vă rugăm să activați JavaScript.</p>
+        <p>Telefon: <a href="tel:+40754554194">0754 554 194</a></p>
+        <p>Email: <a href="mailto:odgdragasani@gmail.com">odgdragasani@gmail.com</a></p>
+        <p>Adresă: Str. Gib Mihăescu, Nr. 34, Drăgășani, Vâlcea</p>
+      </div>
+    </noscript>
     <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
-</body>
+    <script type="module" src="/index.tsx"></script>
+  </body>
 </html>

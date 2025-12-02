@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const heroImages = [
   "https://i.ibb.co/jkGvV4ys/transparent-Photoroom.jpg",
@@ -8,8 +9,16 @@ const heroImages = [
   "https://i.ibb.co/36XPpSf/Whats-App-Image-2025-11-29-at-01-46-19-4cb8cb4a.jpg"
 ];
 
+const heroImageAlts = [
+  "Produse de patiserie artizanală Officina del Gusto Drăgășani",
+  "Pizza proaspătă făcută în cuptor tradițional la Officina del Gusto",
+  "Prăjituri și deserturi fine de la patiseria Officina del Gusto Băbeni",
+  "Cozonaci și produse de panificație tradițională românească"
+];
+
 const Hero: React.FC = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const { dictionary } = useLanguage();
 
   // Auto-play slider
   useEffect(() => {
@@ -49,8 +58,9 @@ const Hero: React.FC = () => {
           >
             <img 
               src={img} 
-              alt={`Officina del Gusto Slide ${index + 1}`} 
+              alt={heroImageAlts[index]} 
               className="w-full h-full object-cover"
+              loading={index === 0 ? "eager" : "lazy"}
             />
           </div>
         ))}
@@ -84,7 +94,7 @@ const Hero: React.FC = () => {
               href="https://maps.app.goo.gl/3tqYZfiPDNWVssdT6" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="hover:text-bakery-300 transition-colors underline decoration-transparent hover:decoration-bakery-300"
+              className="hover:text-bakery-300 transition-colors font-semibold tracking-tight"
             >
               Drăgășani
             </a>
@@ -93,7 +103,7 @@ const Hero: React.FC = () => {
               href="https://maps.app.goo.gl/EvRhmPqz1rA1H1b28" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="hover:text-bakery-300 transition-colors underline decoration-transparent hover:decoration-bakery-300"
+              className="hover:text-bakery-300 transition-colors font-semibold tracking-tight"
             >
               Băbeni
             </a>
@@ -102,16 +112,15 @@ const Hero: React.FC = () => {
         
         {/* Text shadows increased to compensate for lighter background */}
         <h1 className="text-5xl md:text-7xl lg:text-8xl font-serif font-bold text-white mb-4 leading-tight drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]">
-          Officina del Gusto
+          {dictionary.hero.heading}
         </h1>
         
         <p className="font-cursive text-3xl md:text-5xl text-bakery-300 mb-8 drop-shadow-[0_4px_8px_rgba(0,0,0,1)] [text-shadow:_0_0_30px_rgb(0_0_0_/_80%),_0_2px_4px_rgb(0_0_0_/_100%)]">
-          Magia gustului autentic
+          {dictionary.hero.subheading}
         </p>
 
         <p className="text-lg md:text-xl text-white mb-8 max-w-2xl mx-auto font-medium leading-relaxed drop-shadow-[0_4px_6px_rgba(0,0,0,1)] bg-black/20 backdrop-blur-sm rounded-xl p-3">
-          Te trezești cu mirosul covrigilor calzi? Noi suntem deja aici de la ora 6:00, 
-          pregătind cele mai bune merdenele, pizza și plăcinte pentru tine.
+          {dictionary.hero.description}
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6 px-4">
@@ -119,14 +128,14 @@ const Hero: React.FC = () => {
             onClick={scrollToProducts}
             className="px-10 py-4 bg-bakery-500 hover:bg-bakery-600 text-white rounded-full font-serif font-bold text-lg transition-all transform hover:scale-105 shadow-[0_4px_14px_rgba(0,0,0,0.5)] flex items-center justify-center gap-2 border-2 border-transparent"
           >
-            Vezi Bunătățile
+            {dictionary.hero.primaryCta}
           </button>
           <a 
             href="#contact" 
             className="px-10 py-4 bg-black/40 hover:bg-black/60 text-white border-2 border-bakery-200/50 rounded-full font-serif font-bold text-lg transition-all flex items-center justify-center gap-2 backdrop-blur-md shadow-lg"
           >
             <MapPin size={20} />
-            Locațiile Noastre
+            {dictionary.hero.secondaryCta}
           </a>
         </div>
 

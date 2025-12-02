@@ -4,8 +4,24 @@ import { createClient } from '@supabase/supabase-js';
 // ------------------------------------------------------------------
 // CONFIGURATION
 // ------------------------------------------------------------------
-// Use environment variables with fallback to hardcoded values for development
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://vhuxtlfacydfkiiuhffv.supabase.co'; 
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZodXh0bGZhY3lkZmtpaXVoZmZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0Mjk0NDEsImV4cCI6MjA4MDAwNTQ0MX0.iaEoVH-G4xZgu0gA1ZH13VbowH8UFSftHP4FELo_Gpc';
+// Use environment variables - NEVER commit real keys to source control
+// For production, set these in your hosting platform's environment variables
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''; 
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Validate configuration
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('Supabase credentials not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.');
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'officina-del-gusto-web',
+    },
+  },
+});
