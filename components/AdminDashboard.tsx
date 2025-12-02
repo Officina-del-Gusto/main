@@ -767,7 +767,7 @@ for delete using ( bucket_id = 'images' );
                                     const newOrder = [...carouselImages];
                                     [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
                                     setCarouselImages(newOrder);
-                                    await reorderCarouselImages(newOrder.map((img, i) => ({ id: img.id, display_order: i + 1 })));
+                                    await reorderCarouselImages(newOrder.map((img, i) => ({ id: img.id, display_order: i + 1, image_url: img.image_url })));
                                     await refreshData();
                                     showNotification(`Imagine mutată la poziția #${index}`);
                                   }
@@ -784,7 +784,7 @@ for delete using ( bucket_id = 'images' );
                                     const newOrder = [...carouselImages];
                                     [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
                                     setCarouselImages(newOrder);
-                                    await reorderCarouselImages(newOrder.map((img, i) => ({ id: img.id, display_order: i + 1 })));
+                                    await reorderCarouselImages(newOrder.map((img, i) => ({ id: img.id, display_order: i + 1, image_url: img.image_url })));
                                     await refreshData();
                                     showNotification(`Imagine mutată la poziția #${index + 2}`);
                                   }
@@ -885,7 +885,15 @@ for delete using ( bucket_id = 'images' );
                                       const newOrder = [...products];
                                       [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
                                       setProducts(newOrder);
-                                      await reorderProducts(newOrder.map((p, i) => ({ id: p.id, display_order: i + 1 })));
+                                      await reorderProducts(newOrder.map((p, i) => ({ 
+                                        id: p.id, 
+                                        display_order: i + 1,
+                                        image_url: p.image_url,
+                                        name_ro: p.name_ro,
+                                        description_ro: p.description_ro,
+                                        tag_ro: p.tag_ro,
+                                        is_active: p.is_active
+                                      })));
                                       await refreshData();
                                       showNotification(`Produs mutat la poziția #${index}`);
                                     }
@@ -902,7 +910,15 @@ for delete using ( bucket_id = 'images' );
                                       const newOrder = [...products];
                                       [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
                                       setProducts(newOrder);
-                                      await reorderProducts(newOrder.map((p, i) => ({ id: p.id, display_order: i + 1 })));
+                                      await reorderProducts(newOrder.map((p, i) => ({ 
+                                        id: p.id, 
+                                        display_order: i + 1,
+                                        image_url: p.image_url,
+                                        name_ro: p.name_ro,
+                                        description_ro: p.description_ro,
+                                        tag_ro: p.tag_ro,
+                                        is_active: p.is_active
+                                      })));
                                       await refreshData();
                                       showNotification(`Produs mutat la poziția #${index + 2}`);
                                     }

@@ -684,19 +684,18 @@ export const reorderProducts = async (products: { id: string; display_order: num
   const hasDefaults = products.some(p => p.id.startsWith('default-'));
   
   if (hasDefaults) {
-    // Preserve existing product data (either default or user-generated)
+    // Preserve existing product data - prefer passed data, fallback to defaults
     const allProductData = products.map((p, index) => {
-      const source = DEFAULT_PRODUCTS.find(d => d.id === p.id) || (p as Product);
-      if (!source) return null;
+      const defaultProd = DEFAULT_PRODUCTS.find(d => d.id === p.id);
       return {
-        image_url: source.image_url,
-        name_ro: source.name_ro,
-        description_ro: source.description_ro,
-        tag_ro: source.tag_ro || null,
+        image_url: p.image_url || defaultProd?.image_url || '',
+        name_ro: p.name_ro || defaultProd?.name_ro || '',
+        description_ro: p.description_ro || defaultProd?.description_ro || '',
+        tag_ro: p.tag_ro || defaultProd?.tag_ro || null,
         display_order: index + 1,
-        is_active: source.is_active ?? true,
+        is_active: p.is_active ?? defaultProd?.is_active ?? true,
       };
-    }).filter((item): item is Exclude<typeof item, null> => item !== null);
+    }).filter(item => item.image_url && item.name_ro);
     
     // Delete all existing and insert fresh with new order
     await supabase.from('products').delete().not('id', 'is', null);
