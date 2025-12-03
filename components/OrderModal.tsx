@@ -4,9 +4,9 @@ import emailjs from '@emailjs/browser';
 import { getProducts, getCarouselImages, submitOrder, Product, CarouselImage, OrderItem } from '../utils/mockData';
 import { useLanguage } from '../contexts/LanguageContext';
 
-const EMAILJS_SERVICE_ID = 'service_7kfjg5q';
-const EMAILJS_TEMPLATE_ID = 'template_2nfnq8o';
-const EMAILJS_PUBLIC_KEY = 'tpzvd85CgW2Vc_aeG';
+const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 
 interface OrderModalProps {
     isOpen: boolean;
@@ -59,7 +59,7 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
             if (!currentItem && delta > 0) {
                 newCart.set(id, {
                     id,
-                    name: 'name_ro' in item ? item.name_ro : `Custom Order #${item.display_order}`,
+                    name: 'name_ro' in item ? item.name_ro : `${dictionary.orderModal.customOrder} #${item.display_order}`,
                     image_url: item.image_url,
                     quantity: 1,
                     type
@@ -92,6 +92,13 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
             });
 
             // 2. Send Email via EmailJS
+            const itemsList = Array.from(cart.values());
+            const itemsHtml = itemsList.map(item =>
+                `<div style="display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px dashed #eee; padding-bottom: 5px;">
+                    <span>${item.quantity}x ${item.name}</span>
+                </div>`
+            ).join('');
+
             const templateParams = {
                 customer_name: formData.name || 'Client',
                 phone_number: formData.phone,
@@ -99,7 +106,8 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                 delivery_type_label: formData.deliveryType === 'delivery' ? 'Livrare la Domiciliu' : 'Ridicare Personală',
                 delivery_type_class: formData.deliveryType === 'delivery' ? 'badge-delivery' : 'badge-pickup',
                 delivery_address: formData.deliveryType === 'delivery' ? formData.address : '',
-                items: Array.from(cart.values()).map(item => ({
+                items_html: itemsHtml, // Pre-formatted HTML string for safety
+                items: itemsList.map(item => ({ // Original array for templates that support it
                     name: item.name,
                     quantity: item.quantity
                 }))
@@ -112,15 +120,13 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                     templateParams,
                     EMAILJS_PUBLIC_KEY
                 );
-                console.log('Email sent successfully');
             } catch (emailError) {
                 console.error('Failed to send email:', emailError);
-                // Don't block the success flow if email fails, but maybe log it
             }
 
             setStep(3);
         } catch (error) {
-            alert('Eroare la trimiterea comenzii. Vă rugăm încercați din nou.');
+            alert(dictionary.orderModal.errorMessage);
         } finally {
             setLoading(false);
         }
@@ -348,10 +354,10 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                             <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
                                 <Check size={40} strokeWidth={3} />
                             </div>
-                            <h3 className="text-2xl font-bold text-stone-800 mb-2">Comandă Trimisă cu Succes!</h3>
-                            <p className="text-stone-600 mb-8">Vă vom contacta în scurt timp pentru confirmare.</p>
+                            <h3 className="text-2xl font-bold text-stone-800 mb-2">{dictionary.orderModal.successTitle}</h3>
+                            <p className="text-stone-600 mb-8">{dictionary.orderModal.successMessage}</p>
                             <button onClick={onClose} className="bg-bakery-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-bakery-600">
-                                Închide
+                                {dictionary.orderModal.close}
                             </button>
                         </div>
                     )}

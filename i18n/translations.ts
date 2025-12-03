@@ -182,6 +182,13 @@ export interface SiteDictionary {
     toastAction: string;
     toastClose: string;
   };
+  orderModal: {
+    customOrder: string;
+    successTitle: string;
+    successMessage: string;
+    errorMessage: string;
+    close: string;
+  };
 }
 
 export const languageOptions: LanguageOption[] = [
@@ -402,7 +409,7 @@ export const translations: Record<Language, SiteDictionary> = {
           {
             title: '2. Obiectul Activității',
             paragraphs: [
-              'Officina del Gusto este o patiserie artizanală care oferă produse de panificație, patiserie și pizza în locațiile din Drăgășani și Băbeni. Produsele sunt disponibile exclusiv pentru ridicare din locațiile noastre fizice.',
+              'Officina del Gusto este o patiserie artizanală care oferă produse de panificație, patiserie și pizza în locațiile din Drăgășani și Băbeni. Produsele sunt disponibile pentru ridicare din locațiile noastre fizice sau livrare la domiciliu.',
             ],
           },
           {
@@ -426,7 +433,7 @@ export const translations: Record<Language, SiteDictionary> = {
           {
             title: '6. Soluționarea Litigiilor',
             paragraphs: [
-              'În cazul unor eventuale litigii, consumatorii pot apela la ANPC - Soluționarea Alternativă a Litigiilor (SAL) sau la Platforma Europeană ODR pentru Soluționarea Online a Litigiilor.',
+              'În cazul unor eventuale litigii, consumatorii pot apela la ANPC - Soluționarea Alternativă a Litigiilor (SAL) (https://reclamatiisal.anpc.ro/) sau la Platforma Europeană ODR pentru Soluționarea Online a Litigiilor.',
             ],
           },
           {
@@ -497,6 +504,13 @@ export const translations: Record<Language, SiteDictionary> = {
       toastTitle: 'Muzică de Crăciun disponibilă!',
       toastAction: 'Pornește muzica',
       toastClose: 'Închide',
+    },
+    orderModal: {
+      customOrder: 'Comandă Personalizată',
+      successTitle: 'Comandă Trimisă cu Succes!',
+      successMessage: 'Vă vom contacta în scurt timp pentru confirmare.',
+      errorMessage: 'Eroare la trimiterea comenzii. Vă rugăm încercați din nou.',
+      close: 'Închide',
     },
   },
   en: {
@@ -702,7 +716,7 @@ export const translations: Record<Language, SiteDictionary> = {
           {
             title: '2. Scope of Activity',
             paragraphs: [
-              'Officina del Gusto is an artisan bakery offering baked goods, pastries, and pizza in the Drăgășani and Băbeni locations. Products are available for pick-up only.',
+              'Officina del Gusto is an artisan bakery offering baked goods, pastries, and pizza in the Drăgășani and Băbeni locations. Products are available for pick-up or home delivery.',
             ],
           },
           {
@@ -793,6 +807,13 @@ export const translations: Record<Language, SiteDictionary> = {
       toastTitle: 'Christmas music available!',
       toastAction: 'Play music',
       toastClose: 'Close',
+    },
+    orderModal: {
+      customOrder: 'Custom Order',
+      successTitle: 'Order Sent Successfully!',
+      successMessage: 'We will contact you shortly for confirmation.',
+      errorMessage: 'Error sending order. Please try again.',
+      close: 'Close',
     },
   },
   it: {
@@ -953,7 +974,7 @@ export const translations: Record<Language, SiteDictionary> = {
           },
           {
             title: '2. Attività',
-            paragraphs: ['Produciamo prodotti da forno artigianali disponibili per il ritiro in negozio.'],
+            paragraphs: ['Produciamo prodotti da forno artigianali disponibili per il ritiro in negozio o consegna a domicilio.'],
           },
           {
             title: '3. Uso del sito',
@@ -1006,6 +1027,13 @@ export const translations: Record<Language, SiteDictionary> = {
       toastTitle: 'Musica di Natale disponibile!',
       toastAction: 'Avvia musica',
       toastClose: 'Chiudi',
+    },
+    orderModal: {
+      customOrder: 'Ordine Personalizzato',
+      successTitle: 'Ordine Inviato con Successo!',
+      successMessage: 'Ti contatteremo a breve per la conferma.',
+      errorMessage: 'Errore nell invio dell ordine. Riprova.',
+      close: 'Chiudi',
     },
   },
   fr: {
@@ -1149,7 +1177,7 @@ export const translations: Record<Language, SiteDictionary> = {
         lastUpdated: 'Dernière mise à jour',
         sections: [
           { title: '1. Informations', paragraphs: ['Site exploité par Officina del Gusto (Drăgășani, Roumanie).', 'Contact : +40 754 554 194 • odgdragasani@gmail.com'] },
-          { title: '2. Activité', paragraphs: ['Produits artisanaux disponibles uniquement en retrait boutique.'] },
+          { title: '2. Activité', paragraphs: ['Produits artisanaux disponibles en retrait boutique ou livraison à domicile.'] },
           { title: '3. Usage', paragraphs: ['Site informatif permettant l envoi de candidatures.'] },
           { title: '4. Propriété intellectuelle', paragraphs: ['Textes et visuels appartiennent à Officina del Gusto.'] },
           { title: '5. Responsabilité', paragraphs: ['Offres et horaires susceptibles de changer.'] },
@@ -1189,6 +1217,13 @@ export const translations: Record<Language, SiteDictionary> = {
       toastTitle: 'Musique de Noël disponible !',
       toastAction: 'Lire la musique',
       toastClose: 'Fermer',
+    },
+    orderModal: {
+      customOrder: 'Commande Personnalisée',
+      successTitle: 'Commande Envoyée avec Succès !',
+      successMessage: 'Nous vous contacterons bientôt pour confirmation.',
+      errorMessage: 'Erreur lors de l envoi. Veuillez réessayer.',
+      close: 'Fermer',
     },
   },
   es: {
@@ -1332,7 +1367,7 @@ export const translations: Record<Language, SiteDictionary> = {
         lastUpdated: 'Última actualización',
         sections: [
           { title: '1. Información', paragraphs: ['Sitio operado por Officina del Gusto (Rumanía).', 'Contacto: +40 754 554 194 • odgdragasani@gmail.com'] },
-          { title: '2. Actividad', paragraphs: ['Productos artesanales disponibles solo para recoger en tienda.'] },
+          { title: '2. Actividad', paragraphs: ['Productos artesanales disponibles para recoger en tienda o entrega a domicilio.'] },
           { title: '3. Uso', paragraphs: ['Contenido informativo y formulario de empleo.'] },
           { title: '4. Propiedad intelectual', paragraphs: ['Textos e imágenes pertenecen a Officina del Gusto.'] },
           { title: '5. Responsabilidad', paragraphs: ['Horarios y productos pueden cambiar sin aviso.'] },
@@ -1372,6 +1407,13 @@ export const translations: Record<Language, SiteDictionary> = {
       toastTitle: '¡Música navideña disponible!',
       toastAction: 'Reproducir',
       toastClose: 'Cerrar',
+    },
+    orderModal: {
+      customOrder: 'Pedido Personalizado',
+      successTitle: '¡Pedido Enviado con Éxito!',
+      successMessage: 'Nos pondremos en contacto pronto para confirmar.',
+      errorMessage: 'Error al enviar el pedido. Inténtalo de nuevo.',
+      close: 'Cerrar',
     },
   },
   zh: {
@@ -1515,7 +1557,7 @@ export const translations: Record<Language, SiteDictionary> = {
         lastUpdated: '最后更新',
         sections: [
           { title: '1. 基本信息', paragraphs: ['本网站由 Officina del Gusto 运营，位于罗马尼亚 Drăgășani。', '联系方式：+40 754 554 194 / odgdragasani@gmail.com'] },
-          { title: '2. 业务范围', paragraphs: ['门店提供手工烘焙与披萨，仅限现场取货。'] },
+          { title: '2. 业务范围', paragraphs: ['门店提供手工烘焙与披萨，支持到店自取或送货上门。'] },
           { title: '3. 网站用途', paragraphs: ['展示产品及提供职位申请渠道。'] },
           { title: '4. 知识产权', paragraphs: ['网站文字与图片归 Officina del Gusto 所有。'] },
           { title: '5. 责任限制', paragraphs: ['产品与营业时间可能随时调整。'] },
@@ -1555,6 +1597,13 @@ export const translations: Record<Language, SiteDictionary> = {
       toastTitle: '圣诞音乐已就绪！',
       toastAction: '立即播放',
       toastClose: '关闭',
+    },
+    orderModal: {
+      customOrder: '定制订单',
+      successTitle: '订单发送成功！',
+      successMessage: '我们将尽快联系您确认。',
+      errorMessage: '发送订单时出错。请重试。',
+      close: '关闭',
     },
   },
   ru: {
@@ -1698,7 +1747,7 @@ export const translations: Record<Language, SiteDictionary> = {
         lastUpdated: 'Дата обновления',
         sections: [
           { title: '1. Общие сведения', paragraphs: ['Сайт управляется Officina del Gusto (Drăgășani, Румыния).', 'Контакты: +40 754 554 194 / odgdragasani@gmail.com'] },
-          { title: '2. Деятельность', paragraphs: ['Ручная выпечка и пицца, доступные только для самовывоза.'] },
+          { title: '2. Деятельность', paragraphs: ['Ручная выпечка и пицца, доступные для самовывоза или доставки на дом.'] },
           { title: '3. Использование сайта', paragraphs: ['Информационный ресурс с формой для отклика на вакансии.'] },
           { title: '4. Интеллектуальная собственность', paragraphs: ['Материалы сайта принадлежат Officina del Gusto.'] },
           { title: '5. Ответственность', paragraphs: ['Ассортимент и график могут изменяться без уведомления.'] },
@@ -1738,6 +1787,13 @@ export const translations: Record<Language, SiteDictionary> = {
       toastTitle: 'Рождественская музыка готова!',
       toastAction: 'Воспроизвести',
       toastClose: 'Закрыть',
+    },
+    orderModal: {
+      customOrder: 'Индивидуальный заказ',
+      successTitle: 'Заказ успешно отправлен!',
+      successMessage: 'Мы свяжемся с вами в ближайшее время для подтверждения.',
+      errorMessage: 'Ошибка при отправке заказа. Пожалуйста, попробуйте снова.',
+      close: 'Закрыть',
     },
   },
 };

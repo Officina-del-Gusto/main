@@ -559,6 +559,11 @@ for delete using ( bucket_id = 'images' );
           </button>
           <button onClick={() => setActiveTab('orders')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'orders' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
             <ShoppingBag size={18} /> Comenzi
+            {orders.filter(o => o.status === 'pending').length > 0 && (
+              <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                {orders.filter(o => o.status === 'pending').length}
+              </span>
+            )}
           </button>
           <button onClick={() => setActiveTab('products')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'products' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
             <ShoppingBag size={18} /> Produse
