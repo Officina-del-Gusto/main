@@ -9,6 +9,7 @@ import MapSection from './components/MapSection';
 import Footer from './components/Footer';
 import AdminDashboard from './components/AdminDashboard';
 import ChristmasEffects from './components/ChristmasEffects';
+import OrderModal from './components/OrderModal';
 import { ChristmasMusicProvider } from './contexts/ChristmasMusicContext';
 import { Lock, ArrowUp } from 'lucide-react';
 import { useLanguage } from './contexts/LanguageContext';
@@ -31,6 +32,8 @@ const App: React.FC = () => {
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
 
   // Admin-level Christmas control (can completely disable for all users)
   const [christmasAdminEnabled, setChristmasAdminEnabled] = useState<boolean>(() => {
@@ -212,12 +215,12 @@ const App: React.FC = () => {
         {/* Christmas Effects - always mounted for smooth transitions */}
         <ChristmasEffects enabled={christmasEnabled} />
 
-        <Navbar christmasAdminEnabled={christmasAdminEnabled} />
+        <Navbar christmasAdminEnabled={christmasAdminEnabled} onOpenOrderModal={() => setIsOrderModalOpen(true)} />
         <main className="flex-grow">
           <Hero />
           <InfoSection />
-          <ProductGallery />
-          <CustomOrders />
+          <ProductGallery onOpenOrderModal={() => setIsOrderModalOpen(true)} />
+          <CustomOrders onOpenOrderModal={() => setIsOrderModalOpen(true)} />
           <JobsSection />
           <MapSection />
         </main>
@@ -232,6 +235,8 @@ const App: React.FC = () => {
         >
           <ArrowUp size={24} />
         </button>
+
+        <OrderModal isOpen={isOrderModalOpen} onClose={() => setIsOrderModalOpen(false)} />
       </div>
     </ChristmasMusicProvider>
   );

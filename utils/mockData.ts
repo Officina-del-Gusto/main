@@ -823,3 +823,91 @@ export const reorderHeroImages = async (images: { id: string; display_order: num
     }
   }
 };
+// ... existing code ...
+
+export interface OrderItem {
+  id: string;
+  name: string;
+  image_url: string;
+  quantity: number;
+  type: 'product' | 'custom';
+}
+
+export interface OrderRequest {
+  id?: string;
+  customer_name: string;
+  phone_number: string;
+  items: OrderItem[];
+  needed_by: string;
+  delivery_type: 'pickup' | 'delivery';
+  delivery_address?: string;
+  status: 'pending' | 'contacted' | 'completed';
+  created_at?: string;
+}
+
+export const submitOrder = async (order: OrderRequest): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('order_requests')
+      .insert([{
+        customer_name: order.customer_name,
+        phone_number: order.phone_number,
+        items: order.items,
+        needed_by: order.needed_by,
+        delivery_type: order.delivery_type,
+        delivery_address: order.delivery_address,
+        status: 'pending'
+      }]);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error submitting order:', error);
+    throw error;
+  }
+};
+
+export const getOrders = async (): Promise<OrderRequest[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('order_requests')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      if (error.code === '42P01') return []; // Table doesn't exist yet
+      throw error;
+    }
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    return [];
+  }
+};
+
+export const deleteOrder = async (id: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('order_requests')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error deleting order:', error);
+    throw error;
+  }
+};
+
+export const updateOrderStatus = async (id: string, status: 'pending' | 'contacted' | 'completed'): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('order_requests')
+      .update({ status })
+      .eq('id', id);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    throw error;
+  }
+};

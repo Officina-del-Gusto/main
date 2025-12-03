@@ -12,7 +12,11 @@ const logWarning = (...args: unknown[]) => {
 
 const featureIcons = [PartyPopper, Gift, Calendar, Sparkles];
 
-const CustomOrders: React.FC = () => {
+interface CustomOrdersProps {
+  onOpenOrderModal?: () => void;
+}
+
+const CustomOrders: React.FC<CustomOrdersProps> = ({ onOpenOrderModal }) => {
   const { dictionary } = useLanguage();
   const content = dictionary.customOrders;
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -156,7 +160,7 @@ const CustomOrders: React.FC = () => {
 
   return (
     <>
-      <section className="py-16 bg-gradient-to-b from-amber-50/80 via-orange-50/50 to-bakery-50/30 relative overflow-hidden">
+      <section id="custom-orders" className="py-16 bg-gradient-to-b from-amber-50/80 via-orange-50/50 to-bakery-50/30 relative overflow-hidden">
         {/* Decorative background elements */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute top-10 left-10 w-72 h-72 bg-orange-400 rounded-full blur-3xl"></div>
@@ -239,21 +243,32 @@ const CustomOrders: React.FC = () => {
               <h3 className="font-serif text-xl font-bold text-bakery-800 mb-4 text-center">
                 {content.eyebrow}
               </h3>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <a
-                  href={`tel:+40${content.phoneNumber.replace(/\s/g, '')}`}
-                  className="flex-1 inline-flex items-center justify-center gap-3 bg-bakery-500 hover:bg-bakery-600 text-white font-bold py-3 px-5 rounded-xl shadow-lg hover:shadow-bakery-500/30 transition-all transform hover:-translate-y-1"
-                >
-                  <Phone size={20} />
-                  {content.phoneCta}
-                </a>
-                <a
-                  href={`mailto:${content.emailAddress}`}
-                  className="flex-1 inline-flex items-center justify-center gap-3 bg-white hover:bg-bakery-50 border-2 border-bakery-500 text-bakery-700 font-bold py-3 px-5 rounded-xl transition-all transform hover:-translate-y-1"
-                >
-                  <Mail size={20} />
-                  {content.emailCta}
-                </a>
+              <div className="flex flex-col gap-3">
+                {onOpenOrderModal && (
+                  <button
+                    onClick={onOpenOrderModal}
+                    className="w-full flex items-center justify-center gap-3 bg-bakery-500 hover:bg-bakery-600 text-white font-bold py-3 px-5 rounded-xl shadow-lg hover:shadow-bakery-500/30 transition-all transform hover:-translate-y-1"
+                  >
+                    <PartyPopper size={20} />
+                    Comandă Acum
+                  </button>
+                )}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <a
+                    href={`tel:+40${content.phoneNumber.replace(/\s/g, '')}`}
+                    className="flex-1 inline-flex items-center justify-center gap-3 bg-white hover:bg-bakery-50 border-2 border-bakery-500 text-bakery-700 font-bold py-3 px-5 rounded-xl transition-all transform hover:-translate-y-1"
+                  >
+                    <Phone size={20} />
+                    {content.phoneCta}
+                  </a>
+                  <a
+                    href={`mailto:${content.emailAddress}`}
+                    className="flex-1 inline-flex items-center justify-center gap-3 bg-white hover:bg-bakery-50 border-2 border-bakery-500 text-bakery-700 font-bold py-3 px-5 rounded-xl transition-all transform hover:-translate-y-1"
+                  >
+                    <Mail size={20} />
+                    {content.emailCta}
+                  </a>
+                </div>
               </div>
             </div>
           </div>

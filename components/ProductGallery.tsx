@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getProducts, DEFAULT_PRODUCTS, Product } from '../utils/mockData';
+import { ShoppingBag } from 'lucide-react';
 
 const logWarning = (...args: unknown[]) => {
   if (import.meta.env.DEV) {
@@ -8,7 +9,11 @@ const logWarning = (...args: unknown[]) => {
   }
 };
 
-const ProductGallery: React.FC = () => {
+interface ProductGalleryProps {
+  onOpenOrderModal?: () => void;
+}
+
+const ProductGallery: React.FC<ProductGalleryProps> = ({ onOpenOrderModal }) => {
   const { dictionary } = useLanguage();
   const [products, setProducts] = useState<Product[]>(DEFAULT_PRODUCTS);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,11 +52,11 @@ const ProductGallery: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12">
             {products.filter(p => p.is_active).map((product) => (
-              <div key={product.id} className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-                <div className="relative h-64 overflow-hidden">
-                  <img 
-                    src={product.image_url} 
-                    alt={product.name_ro} 
+              <div key={product.id} className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 flex flex-col">
+                <div className="relative h-64 overflow-hidden flex-shrink-0">
+                  <img
+                    src={product.image_url}
+                    alt={product.name_ro}
                     className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
                     loading="lazy"
                   />
@@ -62,19 +67,28 @@ const ProductGallery: React.FC = () => {
                     </div>
                   )}
                 </div>
-                <div className="p-6 relative">
+                <div className="p-6 relative flex-grow flex flex-col">
                   {/* Decorative element */}
                   <div className="absolute -top-6 right-6 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg group-hover:bg-bakery-500 group-hover:text-white transition-colors duration-300">
                     <span className="font-serif font-bold text-xl">OdG</span>
                   </div>
-                  
+
                   <h3 className="text-2xl font-serif font-bold text-bakery-800 mb-3 group-hover:text-bakery-600 transition-colors">
                     {product.name_ro}
                   </h3>
-                  <p className="text-bakery-600 text-sm leading-relaxed mb-4">
+                  <p className="text-bakery-600 text-sm leading-relaxed mb-4 flex-grow">
                     {product.description_ro}
                   </p>
-                  <div className="w-full h-px bg-bakery-100 group-hover:bg-bakery-200 transition-colors"></div>
+
+                  {onOpenOrderModal && (
+                    <button
+                      onClick={onOpenOrderModal}
+                      className="w-full mt-auto py-3 bg-bakery-100 text-bakery-800 font-bold rounded-xl hover:bg-bakery-500 hover:text-white transition-all flex items-center justify-center gap-2 group-hover:shadow-md"
+                    >
+                      <ShoppingBag size={18} />
+                      Comandă Acum
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
