@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { X, ShoppingBag, Calendar, Phone, User, Check, Minus, Plus, Loader } from 'lucide-react';
+import emailjs from '@emailjs/browser';
 import { getProducts, getCarouselImages, submitOrder, Product, CarouselImage, OrderItem } from '../utils/mockData';
 import { useLanguage } from '../contexts/LanguageContext';
+
+const EMAILJS_SERVICE_ID = 'service_7kfjg5q';
+const EMAILJS_TEMPLATE_ID = 'template_2nfnq8o';
+const EMAILJS_PUBLIC_KEY = 'tpzvd85CgW2Vc_aeG';
 
 interface OrderModalProps {
     isOpen: boolean;
@@ -75,6 +80,7 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
         e.preventDefault();
         setLoading(true);
         try {
+            // 1. Submit to Supabase
             await submitOrder({
                 customer_name: formData.name,
                 phone_number: formData.phone,
@@ -84,6 +90,34 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                 delivery_address: formData.deliveryType === 'delivery' ? formData.address : undefined,
                 status: 'pending'
             });
+
+            // 2. Send Email via EmailJS
+            const templateParams = {
+                customer_name: formData.name || 'Client',
+                phone_number: formData.phone,
+                needed_by: formData.date,
+                delivery_type_label: formData.deliveryType === 'delivery' ? 'Livrare la Domiciliu' : 'Ridicare Personală',
+                delivery_type_class: formData.deliveryType === 'delivery' ? 'badge-delivery' : 'badge-pickup',
+                delivery_address: formData.deliveryType === 'delivery' ? formData.address : '',
+                items: Array.from(cart.values()).map(item => ({
+                    name: item.name,
+                    quantity: item.quantity
+                }))
+            };
+
+            try {
+                await emailjs.send(
+                    EMAILJS_SERVICE_ID,
+                    EMAILJS_TEMPLATE_ID,
+                    templateParams,
+                    EMAILJS_PUBLIC_KEY
+                );
+                console.log('Email sent successfully');
+            } catch (emailError) {
+                console.error('Failed to send email:', emailError);
+                // Don't block the success flow if email fails, but maybe log it
+            }
+
             setStep(3);
         } catch (error) {
             alert('Eroare la trimiterea comenzii. Vă rugăm încercați din nou.');
