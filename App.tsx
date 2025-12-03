@@ -31,12 +31,12 @@ const App: React.FC = () => {
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  
+
   // Admin-level Christmas control (can completely disable for all users)
   const [christmasAdminEnabled, setChristmasAdminEnabled] = useState<boolean>(() => {
     return safeGetBooleanFromStorage('christmasAdminEnabled', true);
   });
-  
+
   // User-level Christmas control (user can toggle on/off if admin allows)
   const [christmasUserEnabled, setChristmasUserEnabled] = useState<boolean>(() => {
     return safeGetBooleanFromStorage('christmasEffects', true);
@@ -82,25 +82,25 @@ const App: React.FC = () => {
     if (!localStorage.getItem('adminPassword')) {
       localStorage.setItem('adminPassword', 'mamaliga');
     }
-    
+
     // Set default admin enabled only on FIRST visit (if null)
     if (localStorage.getItem('christmasAdminEnabled') === null) {
       localStorage.setItem('christmasAdminEnabled', 'true');
     }
   }, []);
-  
+
   // Force Christmas USER preference to enabled on every page load/refresh
   // This ensures Christmas shows by default, but ADMIN toggle is always respected
   React.useEffect(() => {
     // Only reset user preference if admin has Christmas enabled
     const adminSetting = localStorage.getItem('christmasAdminEnabled');
     const adminEnabled = adminSetting !== 'false'; // null or 'true' = enabled
-    
+
     if (adminEnabled) {
       // Reset user preference to enabled on page load
       localStorage.setItem('christmasEffects', 'true');
       setChristmasUserEnabled(true);
-      
+
       // Only reset music choice if user hasn't chosen "never"
       const musicChoice = localStorage.getItem('christmasMusicChoice');
       if (musicChoice !== 'never') {
@@ -113,7 +113,7 @@ const App: React.FC = () => {
     e.preventDefault();
     const savedUsername = localStorage.getItem('adminUsername') || 'odg';
     const savedPassword = localStorage.getItem('adminPassword') || 'mamaliga';
-    
+
     if (loginForm.username === savedUsername && loginForm.password === savedPassword) {
       // Generate session token for this login session
       const sessionToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
@@ -132,8 +132,8 @@ const App: React.FC = () => {
       setView('login');
       return null;
     }
-    
-    return <AdminDashboard 
+
+    return <AdminDashboard
       onLogout={() => {
         sessionStorage.removeItem('adminSession');
         setView('public');
@@ -160,7 +160,7 @@ const App: React.FC = () => {
             <Lock size={48} />
           </div>
           <h2 className="text-2xl font-serif font-bold text-center mb-6 text-stone-800">{dictionary.login.title}</h2>
-          
+
           {loginError && (
             <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-center text-sm font-bold">
               {dictionary.login.error}
@@ -170,29 +170,29 @@ const App: React.FC = () => {
           <form onSubmit={handleAdminLogin} className="space-y-4">
             <div>
               <label className="block text-sm font-bold text-stone-600 mb-1">{dictionary.login.userLabel}</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={loginForm.username}
-                onChange={e => setLoginForm({...loginForm, username: e.target.value})}
+                onChange={e => setLoginForm({ ...loginForm, username: e.target.value })}
                 className="w-full px-4 py-3 bg-white text-gray-900 border border-stone-300 rounded-xl focus:border-bakery-500 focus:ring-2 focus:ring-bakery-200 outline-none"
               />
             </div>
             <div>
               <label className="block text-sm font-bold text-stone-600 mb-1">{dictionary.login.passLabel}</label>
-              <input 
-                type="password" 
+              <input
+                type="password"
                 value={loginForm.password}
-                onChange={e => setLoginForm({...loginForm, password: e.target.value})}
+                onChange={e => setLoginForm({ ...loginForm, password: e.target.value })}
                 className="w-full px-4 py-3 bg-white text-gray-900 border border-stone-300 rounded-xl focus:border-bakery-500 focus:ring-2 focus:ring-bakery-200 outline-none"
               />
             </div>
-            <button 
+            <button
               type="submit"
               className="w-full py-4 bg-bakery-500 hover:bg-bakery-600 text-white font-bold rounded-xl mt-4 shadow-lg transition-transform active:scale-95"
             >
               {dictionary.login.submit}
             </button>
-            <button 
+            <button
               type="button"
               onClick={() => setView('public')}
               className="w-full py-2 text-stone-400 hover:text-stone-600 text-sm font-medium"
@@ -211,7 +211,7 @@ const App: React.FC = () => {
       <div className="font-sans antialiased text-stone-800 bg-stone-50 min-h-screen flex flex-col relative">
         {/* Christmas Effects - always mounted for smooth transitions */}
         <ChristmasEffects enabled={christmasEnabled} />
-        
+
         <Navbar christmasAdminEnabled={christmasAdminEnabled} />
         <main className="flex-grow">
           <Hero />
@@ -222,13 +222,12 @@ const App: React.FC = () => {
           <MapSection />
         </main>
         <Footer onAdminClick={() => setView('login')} />
-        
+
         {/* Scroll to Top Button */}
         <button
           onClick={scrollToTop}
-          className={`fixed bottom-8 right-8 z-40 p-4 bg-bakery-500 hover:bg-bakery-600 text-white rounded-full shadow-lg transition-all duration-300 transform ${
-            showScrollTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16 pointer-events-none'
-          }`}
+          className={`fixed bottom-8 right-8 z-40 p-4 bg-bakery-500 hover:bg-bakery-600 text-white rounded-full shadow-lg transition-all duration-300 transform ${showScrollTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16 pointer-events-none'
+            }`}
           aria-label="Scroll to top"
         >
           <ArrowUp size={24} />

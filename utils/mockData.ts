@@ -43,6 +43,13 @@ export interface Product {
   created_at: string;
 }
 
+export interface HeroImage {
+  id: string;
+  image_url: string;
+  display_order: number;
+  created_at: string;
+}
+
 // --- DEFAULT DATA (Fallback when DB is empty/missing) ---
 const DEFAULT_JOBS: Job[] = [
   {
@@ -79,10 +86,12 @@ const DEFAULT_APPLICATIONS: Application[] = [];
 // --- CONNECTION CHECK ---
 export const checkDbConnection = async (): Promise<boolean> => {
   try {
-    const { error } = await supabase.from('jobs').select('id').limit(1);
-    if (error) {
-        return false;
-    }
+    const { error: jobsError } = await supabase.from('jobs').select('id').limit(1);
+    if (jobsError) return false;
+
+    const { error: carouselError } = await supabase.from('carousel_images').select('id').limit(1);
+    if (carouselError) return false;
+
     return true;
   } catch (e: any) {
     return false;
@@ -115,7 +124,7 @@ export const getJobs = async (): Promise<Job[]> => {
       active: row.active,
       datePosted: row.created_at
     })) : [];
-    
+
     // If we have jobs in DB, check which default jobs are not yet in DB
     if (dbJobs.length > 0) {
       const dbTitles = new Set(dbJobs.map(j => j.title));
@@ -123,7 +132,7 @@ export const getJobs = async (): Promise<Job[]> => {
       // Return DB jobs first, then remaining defaults
       return [...dbJobs, ...remainingDefaults];
     }
-    
+
     // If DB is completely empty, return default jobs
     return DEFAULT_JOBS;
 
@@ -162,11 +171,11 @@ export const saveJob = async (job: Partial<Job>) => {
 export const deleteJob = async (id: string) => {
   try {
     if (id.startsWith('default-')) {
-       throw new Error("DEFAULT_JOB_ERROR");
+      throw new Error("DEFAULT_JOB_ERROR");
     }
     const { error } = await supabase.from('jobs').delete().eq('id', id);
     if (error) throw error;
-  } catch (e: any) { 
+  } catch (e: any) {
     throw e;
   }
 };
@@ -179,7 +188,7 @@ export const toggleJobStatus = async (id: string, currentStatus: boolean) => {
       if (!defaultJob) {
         throw new Error("DEFAULT_JOB_NOT_FOUND");
       }
-      
+
       const dbPayload = {
         title: defaultJob.title,
         type: defaultJob.type,
@@ -187,16 +196,16 @@ export const toggleJobStatus = async (id: string, currentStatus: boolean) => {
         description: defaultJob.description,
         active: !currentStatus  // Toggle: if currently false, set to true
       };
-      
+
       const { error } = await supabase.from('jobs').insert([dbPayload]);
       if (error) throw error;
       return;
     }
-    
+
     // For existing DB jobs, simply toggle
     const { error } = await supabase.from('jobs').update({ active: !currentStatus }).eq('id', id);
     if (error) throw error;
-  } catch (e: any) { 
+  } catch (e: any) {
     throw e;
   }
 };
@@ -205,18 +214,18 @@ export const activateAllJobs = async () => {
   try {
     const connected = await checkDbConnection();
     if (!connected) {
-        throw new Error("CONNECTION_ERROR");
+      throw new Error("CONNECTION_ERROR");
     }
 
     // Get existing jobs from DB
     const { data: existingJobs, error: fetchError } = await supabase
       .from('jobs')
       .select('title');
-    
+
     if (fetchError) throw fetchError;
-    
+
     const existingTitles = new Set(existingJobs?.map(j => j.title) || []);
-    
+
     // Find default jobs that don't exist in DB yet
     const jobsToInsert = DEFAULT_JOBS
       .filter(job => !existingTitles.has(job.title))
@@ -227,13 +236,13 @@ export const activateAllJobs = async () => {
         description: job.description,
         active: true
       }));
-    
+
     // Insert new jobs if any
     if (jobsToInsert.length > 0) {
       const { error: insertError } = await supabase.from('jobs').insert(jobsToInsert);
       if (insertError) throw insertError;
     }
-    
+
     // Set ALL jobs in DB to active (using .not('id', 'is', null) to match all rows)
     const { error: updateError } = await supabase.from('jobs').update({ active: true }).not('id', 'is', null);
     if (updateError) throw updateError;
@@ -246,18 +255,18 @@ export const deactivateAllJobs = async () => {
   try {
     const connected = await checkDbConnection();
     if (!connected) {
-        throw new Error("CONNECTION_ERROR");
+      throw new Error("CONNECTION_ERROR");
     }
 
     // Get existing jobs from DB
     const { data: existingJobs, error: fetchError } = await supabase
       .from('jobs')
       .select('title');
-    
+
     if (fetchError) throw fetchError;
-    
+
     const existingTitles = new Set(existingJobs?.map(j => j.title) || []);
-    
+
     // Find default jobs that don't exist in DB yet
     const jobsToInsert = DEFAULT_JOBS
       .filter(job => !existingTitles.has(job.title))
@@ -268,13 +277,13 @@ export const deactivateAllJobs = async () => {
         description: job.description,
         active: false
       }));
-    
+
     // Insert new jobs if any
     if (jobsToInsert.length > 0) {
       const { error: insertError } = await supabase.from('jobs').insert(jobsToInsert);
       if (insertError) throw insertError;
     }
-    
+
     // Set ALL jobs in DB to inactive (using .not('id', 'is', null) to match all rows)
     const { error: updateError } = await supabase.from('jobs').update({ active: false }).not('id', 'is', null);
     if (updateError) throw updateError;
@@ -287,7 +296,7 @@ export const deleteAllJobs = async () => {
   try {
     const connected = await checkDbConnection();
     if (!connected) {
-        throw new Error("CONNECTION_ERROR");
+      throw new Error("CONNECTION_ERROR");
     }
 
     // Delete all jobs from DB (using .not('id', 'is', null) to match all rows)
@@ -302,7 +311,7 @@ export const resetDatabase = async () => {
   try {
     const connected = await checkDbConnection();
     if (!connected) {
-        throw new Error("CONNECTION_ERROR");
+      throw new Error("CONNECTION_ERROR");
     }
 
     // Delete all jobs from DB (using .not('id', 'is', null) to match all rows)
@@ -338,7 +347,7 @@ export const getApplications = async (): Promise<Application[]> => {
       .order('created_at', { ascending: false });
 
     if (error) {
-       return DEFAULT_APPLICATIONS;
+      return DEFAULT_APPLICATIONS;
     }
 
     if (data && data.length > 0) {
@@ -356,7 +365,7 @@ export const getApplications = async (): Promise<Application[]> => {
         dateApplied: row.created_at
       }));
     }
-    return DEFAULT_APPLICATIONS; 
+    return DEFAULT_APPLICATIONS;
   } catch (err: any) {
     return DEFAULT_APPLICATIONS;
   }
@@ -373,7 +382,7 @@ const validateFile = (file: File, allowedExtensions: string[], maxSize: number):
   if (file.size > maxSize) {
     throw new Error(`Fișierul este prea mare. Maxim ${Math.round(maxSize / 1024 / 1024)}MB.`);
   }
-  
+
   // Validate file extension
   const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
   if (!allowedExtensions.includes(ext)) {
@@ -384,13 +393,13 @@ const validateFile = (file: File, allowedExtensions: string[], maxSize: number):
 export const uploadCV = async (file: File): Promise<string> => {
   // Validate file before upload
   validateFile(file, CV_ALLOWED_EXTENSIONS, CV_MAX_FILE_SIZE);
-  
+
   try {
     // Sanitize filename - remove special characters
     const safeFileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
     const { error } = await supabase.storage.from('cvs').upload(safeFileName, file);
     if (error) throw error;
-    
+
     const { data } = supabase.storage.from('cvs').getPublicUrl(safeFileName);
     return data.publicUrl;
   } catch (error: unknown) {
@@ -419,7 +428,7 @@ export const submitApplication = async (appData: Omit<Application, 'id'>) => {
 };
 
 export const updateApplicationStatus = async (id: string, status: 'new' | 'starred' | 'rejected' | 'trashed') => {
-  if (id.startsWith('default-')) return; 
+  if (id.startsWith('default-')) return;
   try {
     const { error } = await supabase.from('applications').update({ status }).eq('id', id);
     if (error) throw error;
@@ -434,7 +443,7 @@ export const deleteApplication = async (id: string, cvUrl?: string) => {
       const urlParts = cvUrl.split('/');
       const fileName = urlParts[urlParts.length - 1];
       if (fileName) {
-         await supabase.storage.from('cvs').remove([fileName]);
+        await supabase.storage.from('cvs').remove([fileName]);
       }
     }
   } catch (e: any) { /* no-op */ }
@@ -446,6 +455,13 @@ export const DEFAULT_CAROUSEL_IMAGES: CarouselImage[] = [
   { id: 'default-2', image_url: '/comenzi/WhatsApp Image 2025-12-01 at 22.39.37_3243dc8f.jpg', display_order: 2, created_at: new Date().toISOString() },
   { id: 'default-3', image_url: '/comenzi/WhatsApp Image 2025-12-01 at 22.40.07_ebb8f61c.jpg', display_order: 3, created_at: new Date().toISOString() },
   { id: 'default-4', image_url: '/comenzi/WhatsApp Image 2025-12-01 at 22.40.09_e7abdd0e.jpg', display_order: 4, created_at: new Date().toISOString() },
+];
+
+export const DEFAULT_HERO_IMAGES: HeroImage[] = [
+  { id: 'default-h1', image_url: "https://i.ibb.co/jkGvV4ys/transparent-Photoroom.jpg", display_order: 1, created_at: new Date().toISOString() },
+  { id: 'default-h2', image_url: "https://i.ibb.co/BvT77MJ/Whats-App-Image-2025-11-29-at-01-44-53-95d8e75c.jpg", display_order: 2, created_at: new Date().toISOString() },
+  { id: 'default-h3', image_url: "https://i.ibb.co/GQ2vMbMM/Whats-App-Image-2025-11-29-at-01-46-19-c44ae1ab.jpg", display_order: 3, created_at: new Date().toISOString() },
+  { id: 'default-h4', image_url: "https://i.ibb.co/36XPpSf/Whats-App-Image-2025-11-29-at-01-46-19-4cb8cb4a.jpg", display_order: 4, created_at: new Date().toISOString() },
 ];
 
 // --- DEFAULT PRODUCTS (Fallback) ---
@@ -485,11 +501,11 @@ export const getCarouselImages = async (): Promise<CarouselImage[]> => {
 export const uploadCarouselImage = async (file: File): Promise<string> => {
   // Validate file before upload
   validateFile(file, IMAGE_ALLOWED_EXTENSIONS, IMAGE_MAX_FILE_SIZE);
-  
+
   const safeFileName = `carousel_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
   const { error } = await supabase.storage.from('images').upload(safeFileName, file);
   if (error) throw error;
-  
+
   const { data } = supabase.storage.from('images').getPublicUrl(safeFileName);
   return data.publicUrl;
 };
@@ -501,9 +517,9 @@ export const addCarouselImage = async (imageUrl: string): Promise<void> => {
     .select('display_order')
     .order('display_order', { ascending: false })
     .limit(1);
-  
+
   const nextOrder = existing && existing.length > 0 ? existing[0].display_order + 1 : 1;
-  
+
   const { error } = await supabase.from('carousel_images').insert([{
     image_url: imageUrl,
     display_order: nextOrder
@@ -515,11 +531,11 @@ export const deleteCarouselImage = async (id: string, imageUrl: string): Promise
   if (id.startsWith('default-')) {
     throw new Error("Cannot delete default images. Add your own images first.");
   }
-  
+
   // Delete from database
   const { error } = await supabase.from('carousel_images').delete().eq('id', id);
   if (error) throw error;
-  
+
   // Try to delete from storage if it's a Supabase URL
   if (imageUrl.includes('supabase')) {
     try {
@@ -537,7 +553,7 @@ export const deleteCarouselImage = async (id: string, imageUrl: string): Promise
 export const reorderCarouselImages = async (images: { id: string; display_order: number; image_url?: string }[]): Promise<void> => {
   // Check if any items are defaults - if so, we need to migrate all to DB
   const hasDefaults = images.some(img => img.id.startsWith('default-'));
-  
+
   if (hasDefaults) {
     // Rebuild payload directly from in-memory data to preserve custom uploads
     const allCarouselData = images
@@ -546,10 +562,10 @@ export const reorderCarouselImages = async (images: { id: string; display_order:
         display_order: index + 1,
       }))
       .filter(item => item.image_url);
-    
+
     // Delete all existing and insert fresh with new order
     await supabase.from('carousel_images').delete().not('id', 'is', null);
-    
+
     if (allCarouselData.length > 0) {
       const { error } = await supabase.from('carousel_images').insert(allCarouselData);
       if (error) throw error;
@@ -557,7 +573,8 @@ export const reorderCarouselImages = async (images: { id: string; display_order:
   } else {
     // All items are already in DB, just update order
     for (const img of images) {
-      await supabase.from('carousel_images').update({ display_order: img.display_order }).eq('id', img.id);
+      const { error } = await supabase.from('carousel_images').update({ display_order: img.display_order }).eq('id', img.id);
+      if (error) throw error;
     }
   }
 };
@@ -587,11 +604,11 @@ export const getProducts = async (): Promise<Product[]> => {
 export const uploadProductImage = async (file: File): Promise<string> => {
   // Validate file before upload
   validateFile(file, IMAGE_ALLOWED_EXTENSIONS, IMAGE_MAX_FILE_SIZE);
-  
+
   const safeFileName = `product_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
   const { error } = await supabase.storage.from('images').upload(safeFileName, file);
   if (error) throw error;
-  
+
   const { data } = supabase.storage.from('images').getPublicUrl(safeFileName);
   return data.publicUrl;
 };
@@ -604,9 +621,9 @@ export const saveProduct = async (product: Partial<Product>): Promise<void> => {
       .select('display_order')
       .order('display_order', { ascending: false })
       .limit(1);
-    
+
     const nextOrder = existing && existing.length > 0 ? existing[0].display_order + 1 : 1;
-    
+
     const { error } = await supabase.from('products').insert([{
       image_url: product.image_url,
       name_ro: product.name_ro,
@@ -633,9 +650,9 @@ export const saveProduct = async (product: Partial<Product>): Promise<void> => {
       .select('display_order')
       .order('display_order', { ascending: false })
       .limit(1);
-    
+
     const nextOrder = existing && existing.length > 0 ? existing[0].display_order + 1 : 1;
-    
+
     const { error } = await supabase.from('products').insert([{
       image_url: product.image_url,
       name_ro: product.name_ro,
@@ -652,10 +669,10 @@ export const deleteProduct = async (id: string, imageUrl: string): Promise<void>
   if (id.startsWith('default-')) {
     throw new Error("Cannot delete default products. Add your own products first.");
   }
-  
+
   const { error } = await supabase.from('products').delete().eq('id', id);
   if (error) throw error;
-  
+
   // Try to delete from storage if it's a Supabase URL
   if (imageUrl.includes('supabase')) {
     try {
@@ -674,7 +691,7 @@ export const toggleProductActive = async (id: string, currentStatus: boolean): P
   if (id.startsWith('default-')) {
     throw new Error("Cannot toggle default products. Add your own products first.");
   }
-  
+
   const { error } = await supabase.from('products').update({ is_active: !currentStatus }).eq('id', id);
   if (error) throw error;
 };
@@ -682,7 +699,7 @@ export const toggleProductActive = async (id: string, currentStatus: boolean): P
 export const reorderProducts = async (products: { id: string; display_order: number; image_url?: string; name_ro?: string; description_ro?: string; tag_ro?: string | null; is_active?: boolean }[]): Promise<void> => {
   // Check if any items are defaults - if so, we need to migrate all to DB
   const hasDefaults = products.some(p => p.id.startsWith('default-'));
-  
+
   if (hasDefaults) {
     // Preserve existing product data - prefer passed data, fallback to defaults
     const allProductData = products.map((p, index) => {
@@ -696,10 +713,10 @@ export const reorderProducts = async (products: { id: string; display_order: num
         is_active: p.is_active ?? defaultProd?.is_active ?? true,
       };
     }).filter(item => item.image_url && item.name_ro);
-    
+
     // Delete all existing and insert fresh with new order
     await supabase.from('products').delete().not('id', 'is', null);
-    
+
     if (allProductData.length > 0) {
       const { error } = await supabase.from('products').insert(allProductData);
       if (error) throw error;
@@ -708,6 +725,101 @@ export const reorderProducts = async (products: { id: string; display_order: num
     // All items are already in DB, just update order
     for (const prod of products) {
       await supabase.from('products').update({ display_order: prod.display_order }).eq('id', prod.id);
+    }
+  }
+};
+
+// --- HERO IMAGES OPERATIONS ---
+
+export const getHeroImages = async (): Promise<HeroImage[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('hero_images')
+      .select('*')
+      .order('display_order', { ascending: true });
+
+    if (error) {
+      if (error.code === '42P01' || error.message.includes('does not exist')) {
+        return DEFAULT_HERO_IMAGES;
+      }
+      throw error;
+    }
+
+    return data && data.length > 0 ? data : DEFAULT_HERO_IMAGES;
+  } catch (err: any) {
+    return DEFAULT_HERO_IMAGES;
+  }
+};
+
+export const uploadHeroImage = async (file: File): Promise<string> => {
+  validateFile(file, IMAGE_ALLOWED_EXTENSIONS, IMAGE_MAX_FILE_SIZE);
+
+  const safeFileName = `hero_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+  const { error } = await supabase.storage.from('images').upload(safeFileName, file);
+  if (error) throw error;
+
+  const { data } = supabase.storage.from('images').getPublicUrl(safeFileName);
+  return data.publicUrl;
+};
+
+export const addHeroImage = async (imageUrl: string): Promise<void> => {
+  const { data: existing } = await supabase
+    .from('hero_images')
+    .select('display_order')
+    .order('display_order', { ascending: false })
+    .limit(1);
+
+  const nextOrder = existing && existing.length > 0 ? existing[0].display_order + 1 : 1;
+
+  const { error } = await supabase.from('hero_images').insert([{
+    image_url: imageUrl,
+    display_order: nextOrder
+  }]);
+  if (error) throw error;
+};
+
+export const deleteHeroImage = async (id: string, imageUrl: string): Promise<void> => {
+  if (id.startsWith('default-')) {
+    throw new Error("Cannot delete default images. Add your own images first.");
+  }
+
+  const { error } = await supabase.from('hero_images').delete().eq('id', id);
+  if (error) throw error;
+
+  if (imageUrl.includes('supabase')) {
+    try {
+      const urlParts = imageUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      if (fileName) {
+        await supabase.storage.from('images').remove([fileName]);
+      }
+    } catch (e) {
+      // Storage delete is optional
+    }
+  }
+};
+
+export const reorderHeroImages = async (images: { id: string; display_order: number; image_url?: string }[]): Promise<void> => {
+  const hasDefaults = images.some(img => img.id.startsWith('default-'));
+
+  if (hasDefaults) {
+    const allHeroData = images
+      .map((img, index) => ({
+        image_url: img.image_url || DEFAULT_HERO_IMAGES.find(d => d.id === img.id)?.image_url || '',
+        display_order: index + 1,
+      }))
+      .filter(item => item.image_url);
+
+    await supabase.from('hero_images').delete().not('id', 'is', null);
+
+    if (allHeroData.length > 0) {
+      const { error } = await supabase.from('hero_images').insert(allHeroData);
+      if (error) throw error;
+    }
+  } else {
+    for (const img of images) {
+      const { error } = await supabase.from('hero_images').update({ display_order: img.display_order }).eq('id', img.id);
+      if (error) throw error;
     }
   }
 };

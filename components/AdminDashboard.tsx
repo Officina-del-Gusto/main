@@ -1,16 +1,17 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { 
+import {
   LayoutDashboard, Users, Plus, Edit, Trash2, Power, PowerOff,
   Star, Archive, Check, X, LogOut, Home, RotateCcw, Eye, Layers, AlertTriangle, Copy, ArrowRight, Settings,
   Image, ShoppingBag, Upload, GripVertical, ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { 
+import {
   Job, Application, CarouselImage, Product,
   getJobs, saveJob, deleteJob, toggleJobStatus, activateAllJobs, deactivateAllJobs, deleteAllJobs, resetDatabase, checkDbConnection,
   getApplications, updateApplicationStatus, deleteApplication,
   getCarouselImages, uploadCarouselImage, addCarouselImage, deleteCarouselImage, reorderCarouselImages,
-  getProducts, uploadProductImage, saveProduct, deleteProduct, toggleProductActive, reorderProducts
+  getProducts, uploadProductImage, saveProduct, deleteProduct, toggleProductActive, reorderProducts,
+  HeroImage, getHeroImages, uploadHeroImage, addHeroImage, deleteHeroImage, reorderHeroImages
 } from '../utils/mockData';
 
 interface AdminDashboardProps {
@@ -20,7 +21,7 @@ interface AdminDashboardProps {
 }
 
 type AppFilter = 'all' | 'new' | 'starred' | 'rejected' | 'trashed';
-type AdminTab = 'jobs' | 'applications' | 'carousel' | 'products';
+type AdminTab = 'jobs' | 'applications' | 'carousel' | 'products' | 'hero';
 
 // Custom Notification Component
 const NotificationToast = ({ message, type, onClose }: { message: string, type: 'success' | 'error', onClose: () => void }) => (
@@ -51,17 +52,19 @@ const ConfirmModal = ({ isOpen, message, onConfirm, onCancel }: { isOpen: boolea
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnabled, onChristmasToggle }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('jobs');
   const [appFilter, setAppFilter] = useState<AppFilter>('all');
-  
+
   const [jobs, setJobs] = useState<Job[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [carouselImages, setCarouselImages] = useState<CarouselImage[]>([]);
+  const [heroImages, setHeroImages] = useState<HeroImage[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // File upload refs
   const carouselFileRef = useRef<HTMLInputElement>(null);
+  const heroFileRef = useRef<HTMLInputElement>(null);
   const productFileRef = useRef<HTMLInputElement>(null);
-  
+
   // Settings State
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsForm, setSettingsForm] = useState({
@@ -72,20 +75,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnab
   });
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [dbError, setDbError] = useState(false);
-  
+
   // UI State
-  const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
-  const [confirmConfig, setConfirmConfig] = useState<{isOpen: boolean, message: string, onConfirm: () => void} | null>(null);
-  
+  const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+  const [confirmConfig, setConfirmConfig] = useState<{ isOpen: boolean, message: string, onConfirm: () => void } | null>(null);
+
   // Job Form State
   const [isEditingJob, setIsEditingJob] = useState(false);
   const [currentJob, setCurrentJob] = useState<Partial<Job>>({});
-  
+
   // Product Form State
   const [isEditingProduct, setIsEditingProduct] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<Partial<Product>>({});
   const [isUploadingCarousel, setIsUploadingCarousel] = useState(false);
+  const [isUploadingHero, setIsUploadingHero] = useState(false);
   const [isUploadingProduct, setIsUploadingProduct] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -112,6 +117,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnab
     setApplications(fetchedApps);
     const fetchedCarousel = await getCarouselImages();
     setCarouselImages(fetchedCarousel);
+    const fetchedHero = await getHeroImages();
+    setHeroImages(fetchedHero);
     const fetchedProducts = await getProducts();
     setProducts(fetchedProducts);
   };
@@ -154,9 +161,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnab
         showNotification("Job salvat cu succes!");
       } catch (e: any) {
         if (e.message === "DEFAULT_JOB_ERROR") {
-           showNotification("Nu poți edita un job default. Apasă 'Activează Toate' mai întâi.", 'error');
+          showNotification("Nu poți edita un job default. Apasă 'Activează Toate' mai întâi.", 'error');
         } else {
-           showNotification("Eroare la salvare. Verifică baza de date.", 'error');
+          showNotification("Eroare la salvare. Verifică baza de date.", 'error');
         }
       }
     }
@@ -173,9 +180,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnab
           showNotification("Job șters cu succes!");
         } catch (e: any) {
           if (e.message === "DEFAULT_JOB_ERROR") {
-             showNotification("Joburile default nu se pot șterge. Apasă 'Activează Toate' mai întâi.", 'error');
+            showNotification("Joburile default nu se pot șterge. Apasă 'Activează Toate' mai întâi.", 'error');
           } else {
-             showNotification("Eroare la ștergere.", 'error');
+            showNotification("Eroare la ștergere.", 'error');
           }
         }
         setConfirmConfig(null);
@@ -184,13 +191,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnab
   };
 
   const handleToggleJobStatus = async (id: string, currentStatus: boolean) => {
-     try {
-       await toggleJobStatus(id, currentStatus);
-       await refreshData();
-       showNotification(currentStatus ? "Job dezactivat!" : "Job activat!");
-     } catch (e: any) {
-       showNotification("Eroare la modificare status.", 'error');
-     }
+    try {
+      await toggleJobStatus(id, currentStatus);
+      await refreshData();
+      showNotification(currentStatus ? "Job dezactivat!" : "Job activat!");
+    } catch (e: any) {
+      showNotification("Eroare la modificare status.", 'error');
+    }
   };
 
   const handleActivateAll = async () => {
@@ -206,10 +213,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnab
           setDbError(false);
         } catch (e: any) {
           if (e.message === "CONNECTION_ERROR") {
-             setDbError(true);
-             showNotification('Eroare conexiune. Rulează scriptul SQL.', 'error');
+            setDbError(true);
+            showNotification('Eroare conexiune. Rulează scriptul SQL.', 'error');
           } else {
-             showNotification('Eroare la activare.', 'error');
+            showNotification('Eroare la activare.', 'error');
           }
         }
         setIsLoading(false);
@@ -231,10 +238,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnab
           setDbError(false);
         } catch (e: any) {
           if (e.message === "CONNECTION_ERROR") {
-             setDbError(true);
-             showNotification('Eroare conexiune. Rulează scriptul SQL.', 'error');
+            setDbError(true);
+            showNotification('Eroare conexiune. Rulează scriptul SQL.', 'error');
           } else {
-             showNotification('Eroare la dezactivare.', 'error');
+            showNotification('Eroare la dezactivare.', 'error');
           }
         }
         setIsLoading(false);
@@ -255,10 +262,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnab
           showNotification('Toate joburile au fost șterse!');
         } catch (e: any) {
           if (e.message === "CONNECTION_ERROR") {
-             setDbError(true);
-             showNotification('Eroare conexiune. Rulează scriptul SQL.', 'error');
+            setDbError(true);
+            showNotification('Eroare conexiune. Rulează scriptul SQL.', 'error');
           } else {
-             showNotification('Eroare la ștergere.', 'error');
+            showNotification('Eroare la ștergere.', 'error');
           }
         }
         setIsLoading(false);
@@ -279,10 +286,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnab
           showNotification('Baza de date a fost resetată complet!');
         } catch (e: any) {
           if (e.message === "CONNECTION_ERROR") {
-             setDbError(true);
-             showNotification('Eroare conexiune. Rulează scriptul SQL.', 'error');
+            setDbError(true);
+            showNotification('Eroare conexiune. Rulează scriptul SQL.', 'error');
           } else {
-             showNotification('Eroare la resetare.', 'error');
+            showNotification('Eroare la resetare.', 'error');
           }
         }
         setIsLoading(false);
@@ -314,8 +321,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnab
   // Filter Logic
   const filteredApps = applications.filter(app => {
     if (appFilter === 'trashed') return app.status === 'trashed';
-    if (app.status === 'trashed') return false; 
-    if (appFilter === 'all') return true; 
+    if (app.status === 'trashed') return false;
+    if (appFilter === 'all') return true;
     return app.status === appFilter;
   });
 
@@ -434,14 +441,14 @@ for delete using ( bucket_id = 'images' );
     <div className="min-h-screen bg-stone-100 flex flex-col">
       {/* NOTIFICATIONS */}
       {notification && <NotificationToast message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
-      
+
       {/* CONFIRM MODAL */}
       {confirmConfig && (
-        <ConfirmModal 
-          isOpen={confirmConfig.isOpen} 
-          message={confirmConfig.message} 
-          onConfirm={confirmConfig.onConfirm} 
-          onCancel={() => setConfirmConfig(null)} 
+        <ConfirmModal
+          isOpen={confirmConfig.isOpen}
+          message={confirmConfig.message}
+          onConfirm={confirmConfig.onConfirm}
+          onCancel={() => setConfirmConfig(null)}
         />
       )}
 
@@ -458,14 +465,12 @@ for delete using ( bucket_id = 'images' );
               <span className="text-sm font-bold">🎄 Crăciun</span>
               <button
                 onClick={() => onChristmasToggle(!christmasEnabled)}
-                className={`relative w-12 h-6 rounded-full transition-colors ${
-                  christmasEnabled ? 'bg-green-500' : 'bg-stone-500'
-                }`}
+                className={`relative w-12 h-6 rounded-full transition-colors ${christmasEnabled ? 'bg-green-500' : 'bg-stone-500'
+                  }`}
               >
                 <div
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                    christmasEnabled ? 'translate-x-6' : 'translate-x-0'
-                  }`}
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${christmasEnabled ? 'translate-x-6' : 'translate-x-0'
+                    }`}
                 />
               </button>
             </div>
@@ -483,7 +488,7 @@ for delete using ( bucket_id = 'images' );
       </div>
 
       <div className="flex-grow max-w-7xl mx-auto w-full px-4 py-8">
-        
+
         {/* DATABASE SETUP HELP BOX - Shows if error occurs */}
         {dbError && (
           <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-6 mb-8 animate-fade-in">
@@ -494,11 +499,11 @@ for delete using ( bucket_id = 'images' );
               <div className="flex-grow">
                 <h3 className="text-xl font-bold text-red-800 mb-2">Configurare Bază de Date Necesară</h3>
                 <p className="text-red-700 mb-4">
-                  Se pare că tabelele nu există în noul proiect Supabase (Eroare 404). <br/>
+                  Se pare că tabelele nu există în noul proiect Supabase (Eroare 404). <br />
                   Pentru ca aplicația să funcționeze, trebuie să rulezi acest cod în <strong>Supabase SQL Editor</strong>.
                 </p>
                 <div className="bg-neutral-900 rounded-xl p-4 relative group">
-                  <button 
+                  <button
                     onClick={() => navigator.clipboard.writeText(sqlScript)}
                     className="absolute top-4 right-4 text-stone-400 hover:text-white bg-stone-800 hover:bg-stone-700 p-2 rounded-lg transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
                   >
@@ -514,7 +519,16 @@ for delete using ( bucket_id = 'images' );
         )}
 
         {/* Main Tab Switcher */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
+          <button onClick={() => setActiveTab('hero')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'hero' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
+            <Image size={18} /> Hero
+          </button>
+          <button onClick={() => setActiveTab('products')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'products' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
+            <ShoppingBag size={18} /> Produse
+          </button>
+          <button onClick={() => setActiveTab('carousel')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'carousel' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
+            <Image size={18} /> Carusel
+          </button>
           <button onClick={() => setActiveTab('jobs')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'jobs' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
             <LayoutDashboard size={18} /> Joburi
           </button>
@@ -522,807 +536,970 @@ for delete using ( bucket_id = 'images' );
             <Users size={18} /> Aplicații
             {counts.new > 0 && <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{counts.new}</span>}
           </button>
-          <button onClick={() => setActiveTab('carousel')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'carousel' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
-            <Image size={18} /> Carusel
-          </button>
-          <button onClick={() => setActiveTab('products')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'products' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
-            <ShoppingBag size={18} /> Produse
-          </button>
         </div>
 
         {/* Loading State */}
         {isLoading ? (
-            <div className="flex justify-center items-center h-64 text-stone-400">
-                <span className="animate-pulse text-lg font-bold">Se încarcă datele...</span>
-            </div>
-        ) : (
-            <>
-                {/* --- JOBS TAB --- */}
-                {activeTab === 'jobs' && (
-                  <div className="space-y-6">
-                    <div className="flex flex-col gap-4">
-                      <div className="flex justify-between items-center">
-                        <h2 className="text-2xl font-bold text-stone-800">Joburi Postate</h2>
-                        <button 
-                          onClick={() => handleEditJob()}
-                          className="bg-bakery-500 hover:bg-bakery-600 text-white px-6 py-3 rounded-xl font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95"
-                        >
-                          <Plus size={20} /> Adaugă Job
-                        </button>
-                      </div>
-                      
-                      {/* Bulk Action Buttons */}
-                      <div className="flex flex-wrap gap-3">
-                        <button 
-                          onClick={handleActivateAll}
-                          className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-transform active:scale-95 shadow-md ${
-                            isDemoMode 
-                              ? 'bg-green-500 hover:bg-green-600 text-white animate-pulse' 
-                              : 'bg-green-500 hover:bg-green-600 text-white'
-                          }`}
-                          title="Activează toate joburile"
-                        >
-                          <Power size={18} /> Activează Toate
-                          {isDemoMode && <ArrowRight size={14} className="animate-bounce-x" />}
-                        </button>
-                        <button 
-                          onClick={handleDeactivateAll}
-                          className="px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-transform active:scale-95 shadow-md bg-orange-500 hover:bg-orange-600 text-white"
-                          title="Dezactivează toate joburile"
-                        >
-                          <PowerOff size={18} /> Dezactivează Toate
-                        </button>
-                        <button 
-                          onClick={handleDeleteAll}
-                          className="px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-transform active:scale-95 shadow-md bg-red-500 hover:bg-red-600 text-white"
-                          title="Șterge toate joburile"
-                        >
-                          <Trash2 size={18} /> Șterge Toate
-                        </button>
-                        <button 
-                          onClick={handleResetDB}
-                          className="px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-transform active:scale-95 shadow-md bg-red-700 hover:bg-red-800 text-white ring-2 ring-red-300"
-                          title="Resetează complet baza de date"
-                        >
-                          <RotateCcw size={18} /> Resetează DB
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Job List */}
-                    <div className="grid gap-4">
-                      {jobs.map(job => (
-                        <div key={job.id} className={`bg-white p-6 rounded-2xl shadow-sm border-l-8 flex flex-col md:flex-row justify-between items-center gap-4 ${job.active ? 'border-green-500' : 'border-stone-300'} ${job.id.startsWith('default-') ? 'opacity-80 ring-2 ring-yellow-400/50' : ''}`}>
-                          <div className="flex-grow text-center md:text-left">
-                            <div className="flex items-center justify-center md:justify-start gap-3 mb-1">
-                              <h3 className="text-xl font-bold text-stone-800">{job.title}</h3>
-                              <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${job.active ? 'bg-green-100 text-green-700' : 'bg-stone-200 text-stone-600'}`}>
-                                {job.active ? 'Activ' : 'Inactiv'}
-                              </span>
-                              {job.id.startsWith('default-') && (
-                                <span className="bg-yellow-100 text-yellow-700 text-xs px-2 py-0.5 rounded font-bold">Nesalvat</span>
-                              )}
-                            </div>
-                            <p className="text-stone-500 text-sm">{job.location} • {job.type}</p>
-                            <p className="text-stone-600 mt-2 line-clamp-1">{job.description}</p>
-                          </div>
-                          <div className="flex gap-2">
-                            <button onClick={() => handleToggleJobStatus(job.id, job.active)} className="p-3 rounded-lg bg-stone-100 text-stone-600 hover:bg-stone-200"><Power size={20} /></button>
-                            <button onClick={() => handleEditJob(job)} className="p-3 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100"><Edit size={20} /></button>
-                            <button onClick={() => handleDeleteJob(job.id)} className="p-3 rounded-lg bg-red-50 text-red-600 hover:bg-red-100"><Trash2 size={20} /></button>
-                          </div>
-                        </div>
-                      ))}
-                      {jobs.length === 0 && <p className="text-center text-stone-500 py-10">Nu sunt joburi. Apasă "Activează Toate" pentru a adăuga joburile default.</p>}
-                    </div>
-                  </div>
-                )}
-
-                {/* --- APPLICATIONS TAB --- */}
-                {activeTab === 'applications' && (
-                  <div>
-                    <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-                      <button onClick={() => setAppFilter('all')} className={`px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all flex items-center gap-2 ${appFilter === 'all' ? 'bg-stone-800 text-white shadow-md' : 'bg-white text-stone-500 hover:bg-stone-50'}`}><Layers size={14} /> Toate <span className="opacity-80 ml-1">{counts.all}</span></button>
-                      <button onClick={() => setAppFilter('new')} className={`px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${appFilter === 'new' ? 'bg-blue-500 text-white shadow-md' : 'bg-white text-stone-500 hover:bg-stone-50'}`}>Noi (Inbox) <span className="ml-1 opacity-80">{counts.new}</span></button>
-                      <button onClick={() => setAppFilter('starred')} className={`px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${appFilter === 'starred' ? 'bg-yellow-500 text-white shadow-md' : 'bg-white text-stone-500 hover:bg-stone-50'}`}>Favorite <span className="ml-1 opacity-80">{counts.starred}</span></button>
-                      <button onClick={() => setAppFilter('rejected')} className={`px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${appFilter === 'rejected' ? 'bg-red-400 text-white shadow-md' : 'bg-white text-stone-500 hover:bg-stone-50'}`}>Respinse <span className="ml-1 opacity-80">{counts.rejected}</span></button>
-                      <button onClick={() => setAppFilter('trashed')} className={`px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${appFilter === 'trashed' ? 'bg-stone-500 text-white shadow-md' : 'bg-white text-stone-500 hover:bg-stone-50'}`}>Coș Gunoi <span className="ml-1 opacity-80">{counts.trashed}</span></button>
-                    </div>
-
-                    <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                      {filteredApps.length === 0 ? (
-                        <div className="p-12 text-center text-stone-500 flex flex-col items-center"><Archive size={48} className="mb-4 opacity-20" /><p>Nu sunt aplicații în această categorie.</p></div>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-left">
-                            <thead className="bg-stone-50 border-b border-stone-200">
-                              <tr>
-                                <th className="p-4 text-stone-500 font-bold text-sm w-10">#</th>
-                                <th className="p-4 text-stone-500 font-bold text-sm">Nume Aplicant</th>
-                                <th className="p-4 text-stone-500 font-bold text-sm">Job</th>
-                                <th className="p-4 text-stone-500 font-bold text-sm">Locație Dorită</th>
-                                <th className="p-4 text-stone-500 font-bold text-sm">Contact</th>
-                                <th className="p-4 text-stone-500 font-bold text-sm">Mesaj / CV</th>
-                                <th className="p-4 text-stone-500 font-bold text-sm text-right">Acțiuni</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-stone-100">
-                              {filteredApps.map(app => (
-                                <tr key={app.id} className="hover:bg-stone-50 transition-colors">
-                                  <td className="p-4">
-                                    {app.status === 'starred' && <Star className="text-yellow-400 fill-yellow-400" size={18} />}
-                                    {app.status === 'rejected' && <X className="text-red-400" size={18} />}
-                                    {app.status === 'new' && <div className="w-3 h-3 bg-blue-500 rounded-full"></div>}
-                                    {app.status === 'trashed' && <Trash2 className="text-stone-300" size={18} />}
-                                  </td>
-                                  <td className="p-4 font-bold text-stone-800">{app.applicantName}<div className="text-xs text-stone-400 font-normal">{new Date(app.dateApplied).toLocaleDateString()}</div></td>
-                                  <td className="p-4 text-stone-600">{app.jobTitle}</td>
-                                  <td className="p-4 text-stone-700 font-medium">{(() => {
-                                    const locationMatch = app.message?.match(/\[Locație Dorită: (.+?)\]/);
-                                    return locationMatch ? locationMatch[1] : 'N/A';
-                                  })()}</td>
-                                  <td className="p-4 text-stone-600 text-sm">
-                                    <div className="flex flex-col">
-                                      <a href={`tel:${app.phone}`} className="text-bakery-600 hover:text-bakery-700 font-medium hover:underline">{app.phone}</a>
-                                      {app.email && <a href={`mailto:${app.email}`} className="text-blue-500 hover:text-blue-600 hover:underline">{app.email}</a>}
-                                    </div>
-                                  </td>
-                                  <td className="p-4">
-                                    {app.message && <div className="text-sm italic text-stone-500 mb-1 line-clamp-2 max-w-[200px]">"{app.message.replace(/\[Locație Dorită: .+?\]\n\n/, '')}"</div>}
-                                    {app.cvUrl ? (
-                                      <a href={app.cvUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-bakery-500 hover:bg-bakery-600 px-3 py-1.5 rounded-lg shadow-sm transition-colors mt-1"><Eye size={14} /> {app.cvFileName || "Vezi CV"}</a>
-                                    ) : <span className="text-xs text-stone-400">Fără CV</span>}
-                                  </td>
-                                  <td className="p-4 text-right">
-                                    <div className="flex justify-end gap-1">
-                                      {app.status !== 'trashed' ? (
-                                        <>
-                                          <button onClick={() => handleAppStatus(app.id, app.status === 'starred' ? 'new' : 'starred')} className={`p-2 rounded hover:bg-stone-200 ${app.status === 'starred' ? 'text-yellow-500' : 'text-stone-400 hover:text-yellow-500'}`} title={app.status === 'starred' ? 'Elimină din favorite' : 'Adaugă la favorite'}><Star size={18} fill={app.status === 'starred' ? 'currentColor' : 'none'} /></button>
-                                          <button onClick={() => handleAppStatus(app.id, app.status === 'rejected' ? 'new' : 'rejected')} className={`p-2 rounded hover:bg-stone-200 ${app.status === 'rejected' ? 'text-red-500' : 'text-stone-400 hover:text-red-500'}`} title={app.status === 'rejected' ? 'Anulează respingerea' : 'Marchează ca respins'}><Archive size={18} /></button>
-                                          <button onClick={() => handleAppStatus(app.id, 'trashed')} className="p-2 rounded hover:bg-stone-200 text-stone-400 hover:text-stone-600" title="Mută în coșul de gunoi"><Trash2 size={18} /></button>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <button onClick={() => handleAppStatus(app.id, 'new')} className="p-2 rounded hover:bg-green-100 text-green-600" title="Restaurează aplicația"><RotateCcw size={18} /></button>
-                                          <button onClick={() => handlePermanentDeleteApp(app.id, app.cvUrl)} className="p-2 rounded hover:bg-red-100 text-red-600" title="Șterge definitiv (ireversibil)"><X size={18} /></button>
-                                        </>
-                                      )}
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* --- CAROUSEL TAB --- */}
-                {activeTab === 'carousel' && (
-                  <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                      <h2 className="text-2xl font-bold text-stone-800">Imagini Carusel (Comenzi)</h2>
-                      <button 
-                        onClick={() => carouselFileRef.current?.click()}
-                        disabled={isUploadingCarousel}
-                        className="bg-bakery-500 hover:bg-bakery-600 disabled:bg-stone-400 text-white px-6 py-3 rounded-xl font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95"
-                      >
-                        {isUploadingCarousel ? (
-                          <span className="animate-pulse">Se încarcă...</span>
-                        ) : (
-                          <><Upload size={20} /> Adaugă Imagine</>
-                        )}
-                      </button>
-                      <input 
-                        type="file" 
-                        ref={carouselFileRef}
-                        accept="image/*"
-                        className="hidden"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          setIsUploadingCarousel(true);
-                          try {
-                            const url = await uploadCarouselImage(file);
-                            await addCarouselImage(url);
-                            await refreshData();
-                            showNotification('Imagine adăugată cu succes!');
-                          } catch (err: any) {
-                            showNotification('Eroare la încărcare: ' + (err.message || 'Necunoscută'), 'error');
-                          }
-                          setIsUploadingCarousel(false);
-                          e.target.value = '';
-                        }}
-                      />
-                    </div>
-
-                    <p className="text-stone-500 text-sm">
-                      Aceste imagini apar în caruselul din secțiunea "Comenzi Personalizate". Trage pentru a reordona.
-                    </p>
-
-                    {carouselImages.length === 0 ? (
-                      <div className="text-center p-10 bg-white rounded-2xl border border-dashed border-stone-300">
-                        <Image size={48} className="mx-auto text-stone-300 mb-4" />
-                        <p className="text-stone-500">Nicio imagine în carusel.</p>
-                        <p className="text-stone-400 text-sm">Apasă "Adaugă Imagine" pentru a începe.</p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {carouselImages.map((img, index) => (
-                          <div 
-                            key={img.id} 
-                            className={`relative group bg-white rounded-xl overflow-hidden shadow-sm border-2 ${img.id.startsWith('default-') ? 'border-yellow-300' : 'border-transparent'}`}
-                          >
-                            <img 
-                              src={img.image_url} 
-                              alt={`Carousel ${index + 1}`}
-                              className="w-full h-48 object-cover"
-                            />
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                              <button
-                                onClick={async () => {
-                                  if (index > 0) {
-                                    const newOrder = [...carouselImages];
-                                    [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
-                                    setCarouselImages(newOrder);
-                                    await reorderCarouselImages(newOrder.map((img, i) => ({ id: img.id, display_order: i + 1, image_url: img.image_url })));
-                                    await refreshData();
-                                    showNotification(`Imagine mutată la poziția #${index}`);
-                                  }
-                                }}
-                                disabled={index === 0}
-                                className={`p-2 bg-white rounded-lg transition-colors ${index === 0 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
-                                title="Mută la stânga"
-                              >
-                                <ChevronLeft size={20} />
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  if (index < carouselImages.length - 1) {
-                                    const newOrder = [...carouselImages];
-                                    [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
-                                    setCarouselImages(newOrder);
-                                    await reorderCarouselImages(newOrder.map((img, i) => ({ id: img.id, display_order: i + 1, image_url: img.image_url })));
-                                    await refreshData();
-                                    showNotification(`Imagine mutată la poziția #${index + 2}`);
-                                  }
-                                }}
-                                disabled={index === carouselImages.length - 1}
-                                className={`p-2 bg-white rounded-lg transition-colors ${index === carouselImages.length - 1 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
-                                title="Mută la dreapta"
-                              >
-                                <ChevronRight size={20} />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setConfirmConfig({
-                                    isOpen: true,
-                                    message: 'Sigur vrei să ștergi această imagine?',
-                                    onConfirm: async () => {
-                                      try {
-                                        await deleteCarouselImage(img.id, img.image_url);
-                                        await refreshData();
-                                        showNotification('Imagine ștearsă!');
-                                      } catch (err: any) {
-                                        showNotification(err.message || 'Eroare la ștergere', 'error');
-                                      }
-                                      setConfirmConfig(null);
-                                    }
-                                  });
-                                }}
-                                className="p-2 bg-red-500 rounded-lg text-white hover:bg-red-600"
-                                title="Șterge"
-                              >
-                                <Trash2 size={20} />
-                              </button>
-                            </div>
-                            <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-bold">
-                              #{index + 1}
-                            </div>
-                            {img.id.startsWith('default-') && (
-                              <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 text-xs px-2 py-1 rounded font-bold">
-                                Default
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* --- PRODUCTS TAB --- */}
-                {activeTab === 'products' && (
-                  <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                      <h2 className="text-2xl font-bold text-stone-800">Produse</h2>
-                      <button 
-                        onClick={() => {
-                          setCurrentProduct({
-                            name_ro: '',
-                            description_ro: '',
-                            tag_ro: '',
-                            is_active: true
-                          });
-                          setIsEditingProduct(true);
-                        }}
-                        className="bg-bakery-500 hover:bg-bakery-600 text-white px-6 py-3 rounded-xl font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95"
-                      >
-                        <Plus size={20} /> Adaugă Produs
-                      </button>
-                    </div>
-
-                    <p className="text-stone-500 text-sm">
-                      Aceste produse apar în galeria principală. Poți edita numele, descrierea și imaginea.
-                    </p>
-
-                    {products.length === 0 ? (
-                      <div className="text-center p-10 bg-white rounded-2xl border border-dashed border-stone-300">
-                        <ShoppingBag size={48} className="mx-auto text-stone-300 mb-4" />
-                        <p className="text-stone-500">Niciun produs.</p>
-                        <p className="text-stone-400 text-sm">Apasă "Adaugă Produs" pentru a începe.</p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {products.map((product, index) => (
-                          <div 
-                            key={product.id} 
-                            className={`relative bg-white rounded-xl overflow-hidden shadow-sm border-2 ${!product.is_active ? 'opacity-50' : ''} ${product.id.startsWith('default-') ? 'border-yellow-300' : 'border-transparent'}`}
-                          >
-                            <div className="relative h-40 overflow-hidden group">
-                              <img 
-                                src={product.image_url} 
-                                alt={product.name_ro}
-                                className="w-full h-full object-cover"
-                              />
-                              {/* Reorder buttons on hover */}
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                <button
-                                  onClick={async () => {
-                                    if (index > 0) {
-                                      const newOrder = [...products];
-                                      [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
-                                      setProducts(newOrder);
-                                      await reorderProducts(newOrder.map((p, i) => ({ 
-                                        id: p.id, 
-                                        display_order: i + 1,
-                                        image_url: p.image_url,
-                                        name_ro: p.name_ro,
-                                        description_ro: p.description_ro,
-                                        tag_ro: p.tag_ro,
-                                        is_active: p.is_active
-                                      })));
-                                      await refreshData();
-                                      showNotification(`Produs mutat la poziția #${index}`);
-                                    }
-                                  }}
-                                  disabled={index === 0}
-                                  className={`p-2 bg-white rounded-lg transition-colors ${index === 0 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
-                                  title="Mută la stânga"
-                                >
-                                  <ChevronLeft size={20} />
-                                </button>
-                                <button
-                                  onClick={async () => {
-                                    if (index < products.length - 1) {
-                                      const newOrder = [...products];
-                                      [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
-                                      setProducts(newOrder);
-                                      await reorderProducts(newOrder.map((p, i) => ({ 
-                                        id: p.id, 
-                                        display_order: i + 1,
-                                        image_url: p.image_url,
-                                        name_ro: p.name_ro,
-                                        description_ro: p.description_ro,
-                                        tag_ro: p.tag_ro,
-                                        is_active: p.is_active
-                                      })));
-                                      await refreshData();
-                                      showNotification(`Produs mutat la poziția #${index + 2}`);
-                                    }
-                                  }}
-                                  disabled={index === products.length - 1}
-                                  className={`p-2 bg-white rounded-lg transition-colors ${index === products.length - 1 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
-                                  title="Mută la dreapta"
-                                >
-                                  <ChevronRight size={20} />
-                                </button>
-                              </div>
-                              {/* Position badge */}
-                              <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-bold">
-                                #{index + 1}
-                              </div>
-                              {product.tag_ro && (
-                                <span className="absolute top-2 right-2 bg-bakery-500 text-white text-xs px-2 py-1 rounded font-bold">
-                                  {product.tag_ro}
-                                </span>
-                              )}
-                              {product.id.startsWith('default-') && (
-                                <span className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 text-xs px-2 py-1 rounded font-bold">
-                                  Default
-                                </span>
-                              )}
-                            </div>
-                            <div className="p-4">
-                              <h3 className="font-bold text-stone-800 mb-1">{product.name_ro}</h3>
-                              <p className="text-stone-500 text-sm line-clamp-2">{product.description_ro}</p>
-                            </div>
-                            <div className="p-3 border-t border-stone-100 flex justify-between items-center">
-                              <span className={`text-xs font-bold px-2 py-1 rounded ${product.is_active ? 'bg-green-100 text-green-700' : 'bg-stone-200 text-stone-600'}`}>
-                                {product.is_active ? 'Activ' : 'Inactiv'}
-                              </span>
-                              <div className="flex gap-1">
-                                <button 
-                                  onClick={async () => {
-                                    try {
-                                      await toggleProductActive(product.id, product.is_active);
-                                      await refreshData();
-                                      showNotification(product.is_active ? 'Produs dezactivat!' : 'Produs activat!');
-                                    } catch (err: any) {
-                                      showNotification(err.message || 'Eroare', 'error');
-                                    }
-                                  }}
-                                  className="p-2 rounded hover:bg-stone-100 text-stone-500"
-                                  title={product.is_active ? 'Dezactivează' : 'Activează'}
-                                >
-                                  <Power size={16} />
-                                </button>
-                                <button 
-                                  onClick={() => {
-                                    setCurrentProduct(product);
-                                    setIsEditingProduct(true);
-                                  }}
-                                  className="p-2 rounded hover:bg-blue-50 text-blue-600"
-                                  title="Editează"
-                                >
-                                  <Edit size={16} />
-                                </button>
-                                <button 
-                                  onClick={() => {
-                                    setConfirmConfig({
-                                      isOpen: true,
-                                      message: 'Sigur vrei să ștergi acest produs?',
-                                      onConfirm: async () => {
-                                        try {
-                                          await deleteProduct(product.id, product.image_url);
-                                          await refreshData();
-                                          showNotification('Produs șters!');
-                                        } catch (err: any) {
-                                          showNotification(err.message || 'Eroare la ștergere', 'error');
-                                        }
-                                        setConfirmConfig(null);
-                                      }
-                                    });
-                                  }}
-                                  className="p-2 rounded hover:bg-red-50 text-red-600"
-                                  title="Șterge"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-            </>
-        )}
-      </div>
-
-      {/* JOB EDIT MODAL */}
-      {isEditingJob && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 animate-fade-in">
-            <h3 className="text-2xl font-bold mb-6 text-stone-800">{currentJob.title ? 'Editează Job' : 'Job Nou'}</h3>
-            <form onSubmit={handleSaveJob} className="space-y-4">
-              <div>
-                <label className="block font-bold text-sm text-stone-600 mb-1">Titlu Job</label>
-                <input type="text" required value={currentJob.title || ''} onChange={e => setCurrentJob({...currentJob, title: e.target.value})} className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none placeholder-stone-400" placeholder="ex: Vânzătoare" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-bold text-sm text-stone-600 mb-1">Locație</label>
-                  <select value={currentJob.location || 'Drăgășani'} onChange={e => setCurrentJob({...currentJob, location: e.target.value})} className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 outline-none">
-                    <option value="Drăgășani">Drăgășani</option>
-                    <option value="Băbeni">Băbeni</option>
-                    <option value="Drăgășani & Băbeni">Ambele Locații</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-bold text-sm text-stone-600 mb-1">Tip Program</label>
-                  <select value={currentJob.type || 'Full-time'} onChange={e => setCurrentJob({...currentJob, type: e.target.value})} className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 outline-none">
-                    <option value="Full-time">Full-time</option>
-                    <option value="Part-time">Part-time</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block font-bold text-sm text-stone-600 mb-1">Descriere</label>
-                <textarea required rows={4} value={currentJob.description || ''} onChange={e => setCurrentJob({...currentJob, description: e.target.value})} className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none placeholder-stone-400" placeholder="Cerințe și beneficii..." />
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setIsEditingJob(false)} className="flex-1 py-3 bg-stone-200 hover:bg-stone-300 rounded-xl font-bold text-stone-600">Anulează</button>
-                <button type="submit" className="flex-1 py-3 bg-bakery-500 hover:bg-bakery-600 rounded-xl font-bold text-white shadow-md">Salvează</button>
-              </div>
-            </form>
+          <div className="flex justify-center items-center h-64 text-stone-400">
+            <span className="animate-pulse text-lg font-bold">Se încarcă datele...</span>
           </div>
-        </div>
-      )}
-
-      {/* PRODUCT EDIT MODAL */}
-      {isEditingProduct && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 animate-fade-in max-h-[90vh] overflow-y-auto">
-            <h3 className="text-2xl font-bold mb-6 text-stone-800">{currentProduct.id ? 'Editează Produs' : 'Produs Nou'}</h3>
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              try {
-                await saveProduct(currentProduct as Product);
-                setIsEditingProduct(false);
-                await refreshData();
-                showNotification('Produs salvat cu succes!');
-              } catch (err: any) {
-                showNotification(err.message || 'Eroare la salvare', 'error');
-              }
-            }} className="space-y-4">
-              
-              {/* Image Upload/Preview */}
-              <div>
-                <label className="block font-bold text-sm text-stone-600 mb-2">Imagine</label>
-                <div className="relative">
-                  {currentProduct.image_url ? (
-                    <div className="relative">
-                      <img 
-                        src={currentProduct.image_url} 
-                        alt="Preview" 
-                        className="w-full h-40 object-cover rounded-lg border border-stone-200"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => productFileRef.current?.click()}
-                        className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold rounded-lg opacity-0 hover:opacity-100 transition-opacity"
-                      >
-                        <Upload size={24} className="mr-2" /> Schimbă imaginea
-                      </button>
-                    </div>
-                  ) : (
+        ) : (
+          <>
+            {/* --- JOBS TAB --- */}
+            {activeTab === 'jobs' && (
+              <div className="space-y-6">
+                <div className="flex flex-col gap-4">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-2xl font-bold text-stone-800">Joburi Postate</h2>
                     <button
-                      type="button"
-                      onClick={() => productFileRef.current?.click()}
-                      className="w-full h-40 border-2 border-dashed border-stone-300 rounded-lg flex flex-col items-center justify-center text-stone-400 hover:border-bakery-400 hover:text-bakery-500 transition-colors"
+                      onClick={() => handleEditJob()}
+                      className="bg-bakery-500 hover:bg-bakery-600 text-white px-6 py-3 rounded-xl font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95"
                     >
-                      <Upload size={32} className="mb-2" />
-                      <span className="font-bold">Click pentru a încărca</span>
+                      <Plus size={20} /> Adaugă Job
                     </button>
+                  </div>
+
+                  {/* Bulk Action Buttons */}
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={handleActivateAll}
+                      className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-transform active:scale-95 shadow-md ${isDemoMode
+                        ? 'bg-green-500 hover:bg-green-600 text-white animate-pulse'
+                        : 'bg-green-500 hover:bg-green-600 text-white'
+                        }`}
+                      title="Activează toate joburile"
+                    >
+                      <Power size={18} /> Activează Toate
+                      {isDemoMode && <ArrowRight size={14} className="animate-bounce-x" />}
+                    </button>
+                    <button
+                      onClick={handleDeactivateAll}
+                      className="px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-transform active:scale-95 shadow-md bg-orange-500 hover:bg-orange-600 text-white"
+                      title="Dezactivează toate joburile"
+                    >
+                      <PowerOff size={18} /> Dezactivează Toate
+                    </button>
+                    <button
+                      onClick={handleDeleteAll}
+                      className="px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-transform active:scale-95 shadow-md bg-red-500 hover:bg-red-600 text-white"
+                      title="Șterge toate joburile"
+                    >
+                      <Trash2 size={18} /> Șterge Toate
+                    </button>
+                    <button
+                      onClick={handleResetDB}
+                      className="px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-transform active:scale-95 shadow-md bg-red-700 hover:bg-red-800 text-white ring-2 ring-red-300"
+                      title="Resetează complet baza de date"
+                    >
+                      <RotateCcw size={18} /> Resetează DB
+                    </button>
+                  </div>
+                </div>
+
+                {/* Job List */}
+                <div className="grid gap-4">
+                  {jobs.map(job => (
+                    <div key={job.id} className={`bg-white p-6 rounded-2xl shadow-sm border-l-8 flex flex-col md:flex-row justify-between items-center gap-4 ${job.active ? 'border-green-500' : 'border-stone-300'} ${job.id.startsWith('default-') ? 'opacity-80 ring-2 ring-yellow-400/50' : ''}`}>
+                      <div className="flex-grow text-center md:text-left">
+                        <div className="flex items-center justify-center md:justify-start gap-3 mb-1">
+                          <h3 className="text-xl font-bold text-stone-800">{job.title}</h3>
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${job.active ? 'bg-green-100 text-green-700' : 'bg-stone-200 text-stone-600'}`}>
+                            {job.active ? 'Activ' : 'Inactiv'}
+                          </span>
+                          {job.id.startsWith('default-') && (
+                            <span className="bg-yellow-100 text-yellow-700 text-xs px-2 py-0.5 rounded font-bold">Nesalvat</span>
+                          )}
+                        </div>
+                        <p className="text-stone-500 text-sm">{job.location} • {job.type}</p>
+                        <p className="text-stone-600 mt-2 line-clamp-1">{job.description}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => handleToggleJobStatus(job.id, job.active)} className="p-3 rounded-lg bg-stone-100 text-stone-600 hover:bg-stone-200"><Power size={20} /></button>
+                        <button onClick={() => handleEditJob(job)} className="p-3 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100"><Edit size={20} /></button>
+                        <button onClick={() => handleDeleteJob(job.id)} className="p-3 rounded-lg bg-red-50 text-red-600 hover:bg-red-100"><Trash2 size={20} /></button>
+                      </div>
+                    </div>
+                  ))}
+                  {jobs.length === 0 && <p className="text-center text-stone-500 py-10">Nu sunt joburi. Apasă "Activează Toate" pentru a adăuga joburile default.</p>}
+                </div>
+              </div>
+            )}
+
+            {/* --- APPLICATIONS TAB --- */}
+            {activeTab === 'applications' && (
+              <div>
+                <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+                  <button onClick={() => setAppFilter('all')} className={`px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all flex items-center gap-2 ${appFilter === 'all' ? 'bg-stone-800 text-white shadow-md' : 'bg-white text-stone-500 hover:bg-stone-50'}`}><Layers size={14} /> Toate <span className="opacity-80 ml-1">{counts.all}</span></button>
+                  <button onClick={() => setAppFilter('new')} className={`px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${appFilter === 'new' ? 'bg-blue-500 text-white shadow-md' : 'bg-white text-stone-500 hover:bg-stone-50'}`}>Noi (Inbox) <span className="ml-1 opacity-80">{counts.new}</span></button>
+                  <button onClick={() => setAppFilter('starred')} className={`px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${appFilter === 'starred' ? 'bg-yellow-500 text-white shadow-md' : 'bg-white text-stone-500 hover:bg-stone-50'}`}>Favorite <span className="ml-1 opacity-80">{counts.starred}</span></button>
+                  <button onClick={() => setAppFilter('rejected')} className={`px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${appFilter === 'rejected' ? 'bg-red-400 text-white shadow-md' : 'bg-white text-stone-500 hover:bg-stone-50'}`}>Respinse <span className="ml-1 opacity-80">{counts.rejected}</span></button>
+                  <button onClick={() => setAppFilter('trashed')} className={`px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${appFilter === 'trashed' ? 'bg-stone-500 text-white shadow-md' : 'bg-white text-stone-500 hover:bg-stone-50'}`}>Coș Gunoi <span className="ml-1 opacity-80">{counts.trashed}</span></button>
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                  {filteredApps.length === 0 ? (
+                    <div className="p-12 text-center text-stone-500 flex flex-col items-center"><Archive size={48} className="mb-4 opacity-20" /><p>Nu sunt aplicații în această categorie.</p></div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left">
+                        <thead className="bg-stone-50 border-b border-stone-200">
+                          <tr>
+                            <th className="p-4 text-stone-500 font-bold text-sm w-10">#</th>
+                            <th className="p-4 text-stone-500 font-bold text-sm">Nume Aplicant</th>
+                            <th className="p-4 text-stone-500 font-bold text-sm">Job</th>
+                            <th className="p-4 text-stone-500 font-bold text-sm">Locație Dorită</th>
+                            <th className="p-4 text-stone-500 font-bold text-sm">Contact</th>
+                            <th className="p-4 text-stone-500 font-bold text-sm">Mesaj / CV</th>
+                            <th className="p-4 text-stone-500 font-bold text-sm text-right">Acțiuni</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-100">
+                          {filteredApps.map(app => (
+                            <tr key={app.id} className="hover:bg-stone-50 transition-colors">
+                              <td className="p-4">
+                                {app.status === 'starred' && <Star className="text-yellow-400 fill-yellow-400" size={18} />}
+                                {app.status === 'rejected' && <X className="text-red-400" size={18} />}
+                                {app.status === 'new' && <div className="w-3 h-3 bg-blue-500 rounded-full"></div>}
+                                {app.status === 'trashed' && <Trash2 className="text-stone-300" size={18} />}
+                              </td>
+                              <td className="p-4 font-bold text-stone-800">{app.applicantName}<div className="text-xs text-stone-400 font-normal">{new Date(app.dateApplied).toLocaleDateString()}</div></td>
+                              <td className="p-4 text-stone-600">{app.jobTitle}</td>
+                              <td className="p-4 text-stone-700 font-medium">{(() => {
+                                const locationMatch = app.message?.match(/\[Locație Dorită: (.+?)\]/);
+                                return locationMatch ? locationMatch[1] : 'N/A';
+                              })()}</td>
+                              <td className="p-4 text-stone-600 text-sm">
+                                <div className="flex flex-col">
+                                  <a href={`tel:${app.phone}`} className="text-bakery-600 hover:text-bakery-700 font-medium hover:underline">{app.phone}</a>
+                                  {app.email && <a href={`mailto:${app.email}`} className="text-blue-500 hover:text-blue-600 hover:underline">{app.email}</a>}
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                {app.message && <div className="text-sm italic text-stone-500 mb-1 line-clamp-2 max-w-[200px]">"{app.message.replace(/\[Locație Dorită: .+?\]\n\n/, '')}"</div>}
+                                {app.cvUrl ? (
+                                  <a href={app.cvUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-bakery-500 hover:bg-bakery-600 px-3 py-1.5 rounded-lg shadow-sm transition-colors mt-1"><Eye size={14} /> {app.cvFileName || "Vezi CV"}</a>
+                                ) : <span className="text-xs text-stone-400">Fără CV</span>}
+                              </td>
+                              <td className="p-4 text-right">
+                                <div className="flex justify-end gap-1">
+                                  {app.status !== 'trashed' ? (
+                                    <>
+                                      <button onClick={() => handleAppStatus(app.id, app.status === 'starred' ? 'new' : 'starred')} className={`p-2 rounded hover:bg-stone-200 ${app.status === 'starred' ? 'text-yellow-500' : 'text-stone-400 hover:text-yellow-500'}`} title={app.status === 'starred' ? 'Elimină din favorite' : 'Adaugă la favorite'}><Star size={18} fill={app.status === 'starred' ? 'currentColor' : 'none'} /></button>
+                                      <button onClick={() => handleAppStatus(app.id, app.status === 'rejected' ? 'new' : 'rejected')} className={`p-2 rounded hover:bg-stone-200 ${app.status === 'rejected' ? 'text-red-500' : 'text-stone-400 hover:text-red-500'}`} title={app.status === 'rejected' ? 'Anulează respingerea' : 'Marchează ca respins'}><Archive size={18} /></button>
+                                      <button onClick={() => handleAppStatus(app.id, 'trashed')} className="p-2 rounded hover:bg-stone-200 text-stone-400 hover:text-stone-600" title="Mută în coșul de gunoi"><Trash2 size={18} /></button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <button onClick={() => handleAppStatus(app.id, 'new')} className="p-2 rounded hover:bg-green-100 text-green-600" title="Restaurează aplicația"><RotateCcw size={18} /></button>
+                                      <button onClick={() => handlePermanentDeleteApp(app.id, app.cvUrl)} className="p-2 rounded hover:bg-red-100 text-red-600" title="Șterge definitiv (ireversibil)"><X size={18} /></button>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
-                  <input 
-                    type="file" 
-                    ref={productFileRef}
+                </div>
+              </div>
+            )}
+
+            {/* --- CAROUSEL TAB --- */}
+            {activeTab === 'carousel' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-stone-800">Imagini Carusel (Comenzi)</h2>
+                  <button
+                    onClick={() => carouselFileRef.current?.click()}
+                    disabled={isUploadingCarousel}
+                    className="bg-bakery-500 hover:bg-bakery-600 disabled:bg-stone-400 text-white px-6 py-3 rounded-xl font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95"
+                  >
+                    {isUploadingCarousel ? (
+                      <span className="animate-pulse">Se încarcă...</span>
+                    ) : (
+                      <><Upload size={20} /> Adaugă Imagine</>
+                    )}
+                  </button>
+                  <input
+                    type="file"
+                    ref={carouselFileRef}
                     accept="image/*"
                     className="hidden"
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-                      setIsUploadingProduct(true);
+                      setIsUploadingCarousel(true);
                       try {
-                        const url = await uploadProductImage(file);
-                        setCurrentProduct({ ...currentProduct, image_url: url });
-                        showNotification('Imagine încărcată!');
+                        const url = await uploadCarouselImage(file);
+                        await addCarouselImage(url);
+                        await refreshData();
+                        showNotification('Imagine adăugată cu succes!');
                       } catch (err: any) {
                         showNotification('Eroare la încărcare: ' + (err.message || 'Necunoscută'), 'error');
                       }
-                      setIsUploadingProduct(false);
+                      setIsUploadingCarousel(false);
                       e.target.value = '';
                     }}
                   />
-                  {isUploadingProduct && (
-                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-lg">
-                      <span className="animate-pulse font-bold text-bakery-500">Se încarcă...</span>
-                    </div>
-                  )}
                 </div>
-                {!currentProduct.image_url && !currentProduct.id && (
-                  <p className="text-xs text-stone-400 mt-1">Sau lipește un URL direct mai jos:</p>
+
+                <p className="text-stone-500 text-sm">
+                  Aceste imagini apar în caruselul din secțiunea "Comenzi Personalizate". Trage pentru a reordona.
+                </p>
+
+                {carouselImages.length === 0 ? (
+                  <div className="text-center p-10 bg-white rounded-2xl border border-dashed border-stone-300">
+                    <Image size={48} className="mx-auto text-stone-300 mb-4" />
+                    <p className="text-stone-500">Nicio imagine în carusel.</p>
+                    <p className="text-stone-400 text-sm">Apasă "Adaugă Imagine" pentru a începe.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {carouselImages.map((img, index) => (
+                      <div
+                        key={img.id}
+                        className={`relative group bg-white rounded-xl overflow-hidden shadow-sm border-2 ${img.id.startsWith('default-') ? 'border-yellow-300' : 'border-transparent'}`}
+                      >
+                        <img
+                          src={img.image_url}
+                          alt={`Carousel ${index + 1}`}
+                          className="w-full h-48 object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <button
+                            onClick={async () => {
+                              if (index > 0 && !isReordering) {
+                                setIsReordering(true);
+                                try {
+                                  const newOrder = [...carouselImages];
+                                  [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
+                                  setCarouselImages(newOrder);
+                                  await reorderCarouselImages(newOrder.map((img, i) => ({ id: img.id, display_order: i + 1, image_url: img.image_url })));
+
+                                  // Wait a bit for DB propagation then refresh to ensure consistency
+                                  setTimeout(async () => {
+                                    await refreshData();
+                                  }, 500);
+
+                                  showNotification(`Imagine mutată la poziția #${index}`);
+                                } catch (error: any) {
+                                  showNotification('Eroare la mutare: ' + (error.message || 'Necunoscută'), 'error');
+                                  await refreshData(); // Only refresh on error
+                                } finally {
+                                  setIsReordering(false);
+                                }
+                              }
+                            }}
+                            disabled={index === 0}
+                            className={`p-2 bg-white rounded-lg transition-colors ${index === 0 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
+                            title="Mută la stânga"
+                          >
+                            <ChevronLeft size={20} />
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (index < carouselImages.length - 1 && !isReordering) {
+                                setIsReordering(true);
+                                try {
+                                  const newOrder = [...carouselImages];
+                                  [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+                                  setCarouselImages(newOrder);
+                                  await reorderCarouselImages(newOrder.map((img, i) => ({ id: img.id, display_order: i + 1, image_url: img.image_url })));
+
+                                  // Wait a bit for DB propagation then refresh to ensure consistency
+                                  setTimeout(async () => {
+                                    await refreshData();
+                                  }, 500);
+
+                                  showNotification(`Imagine mutată la poziția #${index + 2}`);
+                                } catch (error: any) {
+                                  showNotification('Eroare la mutare: ' + (error.message || 'Necunoscută'), 'error');
+                                  await refreshData(); // Only refresh on error
+                                } finally {
+                                  setIsReordering(false);
+                                }
+                              }
+                            }}
+                            disabled={index === carouselImages.length - 1}
+                            className={`p-2 bg-white rounded-lg transition-colors ${index === carouselImages.length - 1 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
+                            title="Mută la dreapta"
+                          >
+                            <ChevronRight size={20} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setConfirmConfig({
+                                isOpen: true,
+                                message: 'Sigur vrei să ștergi această imagine?',
+                                onConfirm: async () => {
+                                  try {
+                                    await deleteCarouselImage(img.id, img.image_url);
+                                    await refreshData();
+                                    showNotification('Imagine ștearsă!');
+                                  } catch (err: any) {
+                                    showNotification(err.message || 'Eroare la ștergere', 'error');
+                                  }
+                                  setConfirmConfig(null);
+                                }
+                              });
+                            }}
+                            className="p-2 bg-red-500 rounded-lg text-white hover:bg-red-600"
+                            title="Șterge"
+                          >
+                            <Trash2 size={20} />
+                          </button>
+                        </div>
+                        <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-bold">
+                          #{index + 1}
+                        </div>
+                        {img.id.startsWith('default-') && (
+                          <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 text-xs px-2 py-1 rounded font-bold">
+                            Default
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
-                <input 
-                  type="url" 
-                  value={currentProduct.image_url || ''} 
-                  onChange={e => setCurrentProduct({...currentProduct, image_url: e.target.value})}
-                  className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none placeholder-stone-400 mt-2 text-sm"
-                  placeholder="https://example.com/imagine.jpg"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-sm text-stone-600 mb-1">Nume Produs *</label>
-                <input 
-                  type="text" 
-                  required 
-                  value={currentProduct.name_ro || ''} 
-                  onChange={e => setCurrentProduct({...currentProduct, name_ro: e.target.value})} 
-                  className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none placeholder-stone-400" 
-                  placeholder="ex: Covrigi cu susan" 
-                />
-              </div>
-              
-              <div>
-                <label className="block font-bold text-sm text-stone-600 mb-1">Descriere *</label>
-                <textarea 
-                  required 
-                  rows={3} 
-                  value={currentProduct.description_ro || ''} 
-                  onChange={e => setCurrentProduct({...currentProduct, description_ro: e.target.value})} 
-                  className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none placeholder-stone-400" 
-                  placeholder="Descriere scurtă a produsului..." 
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-sm text-stone-600 mb-1">Etichetă (opțional)</label>
-                <input 
-                  type="text" 
-                  value={currentProduct.tag_ro || ''} 
-                  onChange={e => setCurrentProduct({...currentProduct, tag_ro: e.target.value})} 
-                  className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none placeholder-stone-400" 
-                  placeholder="ex: Popular, Nou, Favorit" 
-                />
-                <p className="text-xs text-stone-400 mt-1">Apare ca badge pe imagine (lasă gol pentru nicio etichetă)</p>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setIsEditingProduct(false)} className="flex-1 py-3 bg-stone-200 hover:bg-stone-300 rounded-xl font-bold text-stone-600">Anulează</button>
-                <button 
-                  type="submit" 
-                  disabled={!currentProduct.image_url || !currentProduct.name_ro || !currentProduct.description_ro}
-                  className="flex-1 py-3 bg-bakery-500 hover:bg-bakery-600 disabled:bg-stone-400 rounded-xl font-bold text-white shadow-md"
-                >
-                  Salvează
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* SETTINGS MODAL */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setIsSettingsOpen(false)}>
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 animate-fade-in" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-bold text-stone-800 flex items-center gap-2">
-                <Settings size={24} className="text-bakery-500" />
-                Setări Admin
-              </h3>
-              <button onClick={() => setIsSettingsOpen(false)} className="p-2 hover:bg-stone-100 rounded-lg transition-colors">
-                <X size={20} />
-              </button>
-            </div>
-            
-            {settingsError && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm font-bold flex items-center gap-2">
-                <AlertTriangle size={16} />
-                {settingsError}
               </div>
             )}
 
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              const savedPassword = localStorage.getItem('adminPassword') || 'mamaliga';
-              
-              if (settingsForm.currentPassword !== savedPassword) {
-                setSettingsError('Parola curentă este incorectă!');
-                return;
-              }
-              
-              if (settingsForm.newPassword && settingsForm.newPassword !== settingsForm.confirmPassword) {
-                setSettingsError('Parolele noi nu se potrivesc!');
-                return;
-              }
-              
-              if (!settingsForm.newUsername && !settingsForm.newPassword) {
-                setSettingsError('Trebuie să schimbi cel puțin numele de utilizator sau parola!');
-                return;
-              }
-              
-              // Sanitize and validate inputs
-              if (settingsForm.newUsername) {
-                const sanitized = settingsForm.newUsername.trim();
-                if (sanitized.length < 3 || sanitized.length > 20) {
-                  setSettingsError('Numele de utilizator trebuie să aibă între 3 și 20 caractere!');
-                  return;
-                }
-                if (!/^[a-zA-Z0-9_-]+$/.test(sanitized)) {
-                  setSettingsError('Numele de utilizator poate conține doar litere, cifre, _ și -');
-                  return;
-                }
-                localStorage.setItem('adminUsername', sanitized);
-              }
-              
-              if (settingsForm.newPassword) {
-                if (settingsForm.newPassword.length < 6) {
-                  setSettingsError('Parola trebuie să aibă cel puțin 6 caractere!');
-                  return;
-                }
-                localStorage.setItem('adminPassword', settingsForm.newPassword);
-              }
-              
-              showNotification('Credențiale actualizate cu succes! Vei fi deconectat.');
-              setTimeout(() => {
-                onLogout();
-              }, 2000);
-              
-            }} className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-stone-600 mb-1">Parolă Curentă *</label>
-                <input 
-                  type="password" 
-                  required
-                  value={settingsForm.currentPassword}
-                  onChange={e => setSettingsForm({...settingsForm, currentPassword: e.target.value})}
-                  className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none"
-                  placeholder="Introdu parola curentă"
-                />
-              </div>
+            {/* --- PRODUCTS TAB --- */}
+            {activeTab === 'products' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-stone-800">Produse</h2>
+                  <button
+                    onClick={() => {
+                      setCurrentProduct({
+                        name_ro: '',
+                        description_ro: '',
+                        tag_ro: '',
+                        is_active: true
+                      });
+                      setIsEditingProduct(true);
+                    }}
+                    className="bg-bakery-500 hover:bg-bakery-600 text-white px-6 py-3 rounded-xl font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95"
+                  >
+                    <Plus size={20} /> Adaugă Produs
+                  </button>
+                </div>
 
-              <div className="border-t border-stone-200 pt-4">
-                <p className="text-xs text-stone-500 mb-3 italic">Completează doar câmpurile pe care vrei să le modifici</p>
-                
-                <div className="mb-4">
-                  <label className="block text-sm font-bold text-stone-600 mb-1">Nume Utilizator Nou (Opțional)</label>
-                  <input 
-                    type="text" 
-                    value={settingsForm.newUsername}
-                    onChange={e => setSettingsForm({...settingsForm, newUsername: e.target.value})}
-                    className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none"
-                    placeholder="Lasă gol pentru a păstra"
+                <p className="text-stone-500 text-sm">
+                  Aceste produse apar în galeria principală. Poți edita numele, descrierea și imaginea.
+                </p>
+
+                {products.length === 0 ? (
+                  <div className="text-center p-10 bg-white rounded-2xl border border-dashed border-stone-300">
+                    <ShoppingBag size={48} className="mx-auto text-stone-300 mb-4" />
+                    <p className="text-stone-500">Niciun produs.</p>
+                    <p className="text-stone-400 text-sm">Apasă "Adaugă Produs" pentru a începe.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {products.map((product, index) => (
+                      <div
+                        key={product.id}
+                        className={`relative bg-white rounded-xl overflow-hidden shadow-sm border-2 ${!product.is_active ? 'opacity-50' : ''} ${product.id.startsWith('default-') ? 'border-yellow-300' : 'border-transparent'}`}
+                      >
+                        <div className="relative h-40 overflow-hidden group">
+                          <img
+                            src={product.image_url}
+                            alt={product.name_ro}
+                            className="w-full h-full object-cover"
+                          />
+                          {/* Reorder buttons on hover */}
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <button
+                              onClick={async () => {
+                                if (index > 0) {
+                                  const newOrder = [...products];
+                                  [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
+                                  setProducts(newOrder);
+                                  await reorderProducts(newOrder.map((p, i) => ({
+                                    id: p.id,
+                                    display_order: i + 1,
+                                    image_url: p.image_url,
+                                    name_ro: p.name_ro,
+                                    description_ro: p.description_ro,
+                                    tag_ro: p.tag_ro,
+                                    is_active: p.is_active
+                                  })));
+                                  await refreshData();
+                                  showNotification(`Produs mutat la poziția #${index}`);
+                                }
+                              }}
+                              disabled={index === 0}
+                              className={`p-2 bg-white rounded-lg transition-colors ${index === 0 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
+                              title="Mută la stânga"
+                            >
+                              <ChevronLeft size={20} />
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (index < products.length - 1) {
+                                  const newOrder = [...products];
+                                  [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+                                  setProducts(newOrder);
+                                  await reorderProducts(newOrder.map((p, i) => ({
+                                    id: p.id,
+                                    display_order: i + 1,
+                                    image_url: p.image_url,
+                                    name_ro: p.name_ro,
+                                    description_ro: p.description_ro,
+                                    tag_ro: p.tag_ro,
+                                    is_active: p.is_active
+                                  })));
+                                  await refreshData();
+                                  showNotification(`Produs mutat la poziția #${index + 2}`);
+                                }
+                              }}
+                              disabled={index === products.length - 1}
+                              className={`p-2 bg-white rounded-lg transition-colors ${index === products.length - 1 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
+                              title="Mută la dreapta"
+                            >
+                              <ChevronRight size={20} />
+                            </button>
+                          </div>
+                          {/* Position badge */}
+                          <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-bold">
+                            #{index + 1}
+                          </div>
+                          {product.tag_ro && (
+                            <span className="absolute top-2 right-2 bg-bakery-500 text-white text-xs px-2 py-1 rounded font-bold">
+                              {product.tag_ro}
+                            </span>
+                          )}
+                          {product.id.startsWith('default-') && (
+                            <span className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 text-xs px-2 py-1 rounded font-bold">
+                              Default
+                            </span>
+                          )}
+                        </div>
+                        <div className="p-4">
+                          <h3 className="font-bold text-stone-800 mb-1">{product.name_ro}</h3>
+                          <p className="text-stone-500 text-sm line-clamp-2">{product.description_ro}</p>
+                        </div>
+                        <div className="p-3 border-t border-stone-100 flex justify-between items-center">
+                          <span className={`text-xs font-bold px-2 py-1 rounded ${product.is_active ? 'bg-green-100 text-green-700' : 'bg-stone-200 text-stone-600'}`}>
+                            {product.is_active ? 'Activ' : 'Inactiv'}
+                          </span>
+                          <div className="flex gap-1">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await toggleProductActive(product.id, product.is_active);
+                                  await refreshData();
+                                  showNotification(product.is_active ? 'Produs dezactivat!' : 'Produs activat!');
+                                } catch (err: any) {
+                                  showNotification(err.message || 'Eroare', 'error');
+                                }
+                              }}
+                              className="p-2 rounded hover:bg-stone-100 text-stone-500"
+                              title={product.is_active ? 'Dezactivează' : 'Activează'}
+                            >
+                              <Power size={16} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setCurrentProduct(product);
+                                setIsEditingProduct(true);
+                              }}
+                              className="p-2 rounded hover:bg-blue-50 text-blue-600"
+                              title="Editează"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setConfirmConfig({
+                                  isOpen: true,
+                                  message: 'Sigur vrei să ștergi acest produs?',
+                                  onConfirm: async () => {
+                                    try {
+                                      await deleteProduct(product.id, product.image_url);
+                                      await refreshData();
+                                      showNotification('Produs șters!');
+                                    } catch (err: any) {
+                                      showNotification(err.message || 'Eroare la ștergere', 'error');
+                                    }
+                                    setConfirmConfig(null);
+                                  }
+                                });
+                              }}
+                              className="p-2 rounded hover:bg-red-50 text-red-600"
+                              title="Șterge"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* --- HERO TAB --- */}
+            {activeTab === 'hero' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-stone-800">Imagini Hero (Slider Principal)</h2>
+                  <button
+                    onClick={() => heroFileRef.current?.click()}
+                    disabled={isUploadingHero}
+                    className="bg-bakery-500 hover:bg-bakery-600 disabled:bg-stone-400 text-white px-6 py-3 rounded-xl font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95"
+                  >
+                    {isUploadingHero ? (
+                      <span className="animate-pulse">Se încarcă...</span>
+                    ) : (
+                      <><Upload size={20} /> Adaugă Imagine</>
+                    )}
+                  </button>
+                  <input
+                    type="file"
+                    ref={heroFileRef}
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setIsUploadingHero(true);
+                      try {
+                        const url = await uploadHeroImage(file);
+                        await addHeroImage(url);
+                        await refreshData();
+                        showNotification('Imagine Hero adăugată cu succes!');
+                      } catch (err: any) {
+                        showNotification('Eroare la încărcare: ' + (err.message || 'Necunoscută'), 'error');
+                      }
+                      setIsUploadingHero(false);
+                      e.target.value = '';
+                    }}
                   />
                 </div>
 
-                <div className="mb-4">
-                  <label className="block text-sm font-bold text-stone-600 mb-1">Parolă Nouă (Opțional)</label>
-                  <input 
-                    type="password" 
-                    value={settingsForm.newPassword}
-                    onChange={e => setSettingsForm({...settingsForm, newPassword: e.target.value})}
-                    className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none"
-                    placeholder="Lasă gol pentru a păstra"
+                <p className="text-stone-500 text-sm">
+                  Aceste imagini apar în slider-ul principal de pe prima pagină. Trage pentru a reordona.
+                </p>
+
+                {heroImages.length === 0 ? (
+                  <div className="text-center p-10 bg-white rounded-2xl border border-dashed border-stone-300">
+                    <Image size={48} className="mx-auto text-stone-300 mb-4" />
+                    <p className="text-stone-500">Nicio imagine în slider.</p>
+                    <p className="text-stone-400 text-sm">Apasă "Adaugă Imagine" pentru a începe.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {heroImages.map((img, index) => (
+                      <div
+                        key={img.id}
+                        className={`relative group bg-white rounded-xl overflow-hidden shadow-sm border-2 ${img.id.startsWith('default-') ? 'border-yellow-300' : 'border-transparent'}`}
+                      >
+                        <img
+                          src={img.image_url}
+                          alt={`Hero ${index + 1}`}
+                          className="w-full h-48 object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <button
+                            onClick={async () => {
+                              if (index > 0 && !isReordering) {
+                                setIsReordering(true);
+                                try {
+                                  const newOrder = [...heroImages];
+                                  [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
+                                  setHeroImages(newOrder);
+                                  await reorderHeroImages(newOrder.map((img, i) => ({ id: img.id, display_order: i + 1, image_url: img.image_url })));
+                                  showNotification(`Imagine mutată la poziția #${index}`);
+                                } catch (error: any) {
+                                  showNotification('Eroare la mutare: ' + (error.message || 'Necunoscută'), 'error');
+                                  await refreshData();
+                                } finally {
+                                  setIsReordering(false);
+                                }
+                              }
+                            }}
+                            disabled={index === 0}
+                            className={`p-2 bg-white rounded-lg transition-colors ${index === 0 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
+                            title="Mută la stânga"
+                          >
+                            <ChevronLeft size={20} />
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (index < heroImages.length - 1 && !isReordering) {
+                                setIsReordering(true);
+                                try {
+                                  const newOrder = [...heroImages];
+                                  [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+                                  setHeroImages(newOrder);
+                                  await reorderHeroImages(newOrder.map((img, i) => ({ id: img.id, display_order: i + 1, image_url: img.image_url })));
+                                  showNotification(`Imagine mutată la poziția #${index + 2}`);
+                                } catch (error: any) {
+                                  showNotification('Eroare la mutare: ' + (error.message || 'Necunoscută'), 'error');
+                                  await refreshData();
+                                } finally {
+                                  setIsReordering(false);
+                                }
+                              }
+                            }}
+                            disabled={index === heroImages.length - 1}
+                            className={`p-2 bg-white rounded-lg transition-colors ${index === heroImages.length - 1 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
+                            title="Mută la dreapta"
+                          >
+                            <ChevronRight size={20} />
+                          </button>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            if (confirm('Sigur vrei să ștergi această imagine?')) {
+                              try {
+                                await deleteHeroImage(img.id, img.image_url);
+                                await refreshData();
+                                showNotification('Imagine ștearsă!');
+                              } catch (error: any) {
+                                showNotification('Eroare la ștergere: ' + (error.message || 'Necunoscută'), 'error');
+                              }
+                            }
+                          }}
+                          className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-md"
+                          title="Șterge imagine"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                        <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
+                          #{index + 1}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* JOB EDIT MODAL */}
+      {
+        isEditingJob && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 animate-fade-in">
+              <h3 className="text-2xl font-bold mb-6 text-stone-800">{currentJob.title ? 'Editează Job' : 'Job Nou'}</h3>
+              <form onSubmit={handleSaveJob} className="space-y-4">
+                <div>
+                  <label className="block font-bold text-sm text-stone-600 mb-1">Titlu Job</label>
+                  <input type="text" required value={currentJob.title || ''} onChange={e => setCurrentJob({ ...currentJob, title: e.target.value })} className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none placeholder-stone-400" placeholder="ex: Vânzătoare" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-bold text-sm text-stone-600 mb-1">Locație</label>
+                    <select value={currentJob.location || 'Drăgășani'} onChange={e => setCurrentJob({ ...currentJob, location: e.target.value })} className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 outline-none">
+                      <option value="Drăgășani">Drăgășani</option>
+                      <option value="Băbeni">Băbeni</option>
+                      <option value="Drăgășani & Băbeni">Ambele Locații</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-bold text-sm text-stone-600 mb-1">Tip Program</label>
+                    <select value={currentJob.type || 'Full-time'} onChange={e => setCurrentJob({ ...currentJob, type: e.target.value })} className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 outline-none">
+                      <option value="Full-time">Full-time</option>
+                      <option value="Part-time">Part-time</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block font-bold text-sm text-stone-600 mb-1">Descriere</label>
+                  <textarea required rows={4} value={currentJob.description || ''} onChange={e => setCurrentJob({ ...currentJob, description: e.target.value })} className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none placeholder-stone-400" placeholder="Cerințe și beneficii..." />
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button type="button" onClick={() => setIsEditingJob(false)} className="flex-1 py-3 bg-stone-200 hover:bg-stone-300 rounded-xl font-bold text-stone-600">Anulează</button>
+                  <button type="submit" className="flex-1 py-3 bg-bakery-500 hover:bg-bakery-600 rounded-xl font-bold text-white shadow-md">Salvează</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )
+      }
+
+      {/* PRODUCT EDIT MODAL */}
+      {
+        isEditingProduct && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 animate-fade-in max-h-[90vh] overflow-y-auto">
+              <h3 className="text-2xl font-bold mb-6 text-stone-800">{currentProduct.id ? 'Editează Produs' : 'Produs Nou'}</h3>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  await saveProduct(currentProduct as Product);
+                  setIsEditingProduct(false);
+                  await refreshData();
+                  showNotification('Produs salvat cu succes!');
+                } catch (err: any) {
+                  showNotification(err.message || 'Eroare la salvare', 'error');
+                }
+              }} className="space-y-4">
+
+                {/* Image Upload/Preview */}
+                <div>
+                  <label className="block font-bold text-sm text-stone-600 mb-2">Imagine</label>
+                  <div className="relative">
+                    {currentProduct.image_url ? (
+                      <div className="relative">
+                        <img
+                          src={currentProduct.image_url}
+                          alt="Preview"
+                          className="w-full h-40 object-cover rounded-lg border border-stone-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => productFileRef.current?.click()}
+                          className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold rounded-lg opacity-0 hover:opacity-100 transition-opacity"
+                        >
+                          <Upload size={24} className="mr-2" /> Schimbă imaginea
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => productFileRef.current?.click()}
+                        className="w-full h-40 border-2 border-dashed border-stone-300 rounded-lg flex flex-col items-center justify-center text-stone-400 hover:border-bakery-400 hover:text-bakery-500 transition-colors"
+                      >
+                        <Upload size={32} className="mb-2" />
+                        <span className="font-bold">Click pentru a încărca</span>
+                      </button>
+                    )}
+                    <input
+                      type="file"
+                      ref={productFileRef}
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setIsUploadingProduct(true);
+                        try {
+                          const url = await uploadProductImage(file);
+                          setCurrentProduct({ ...currentProduct, image_url: url });
+                          showNotification('Imagine încărcată!');
+                        } catch (err: any) {
+                          showNotification('Eroare la încărcare: ' + (err.message || 'Necunoscută'), 'error');
+                        }
+                        setIsUploadingProduct(false);
+                        e.target.value = '';
+                      }}
+                    />
+                    {isUploadingProduct && (
+                      <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-lg">
+                        <span className="animate-pulse font-bold text-bakery-500">Se încarcă...</span>
+                      </div>
+                    )}
+                  </div>
+                  {!currentProduct.image_url && !currentProduct.id && (
+                    <p className="text-xs text-stone-400 mt-1">Sau lipește un URL direct mai jos:</p>
+                  )}
+                  <input
+                    type="url"
+                    value={currentProduct.image_url || ''}
+                    onChange={e => setCurrentProduct({ ...currentProduct, image_url: e.target.value })}
+                    className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none placeholder-stone-400 mt-2 text-sm"
+                    placeholder="https://example.com/imagine.jpg"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-stone-600 mb-1">Confirmă Parola Nouă</label>
-                  <input 
-                    type="password" 
-                    value={settingsForm.confirmPassword}
-                    onChange={e => setSettingsForm({...settingsForm, confirmPassword: e.target.value})}
-                    className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none"
-                    placeholder="Doar dacă ai introdus parolă nouă"
-                    disabled={!settingsForm.newPassword}
+                  <label className="block font-bold text-sm text-stone-600 mb-1">Nume Produs *</label>
+                  <input
+                    type="text"
+                    required
+                    value={currentProduct.name_ro || ''}
+                    onChange={e => setCurrentProduct({ ...currentProduct, name_ro: e.target.value })}
+                    className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none placeholder-stone-400"
+                    placeholder="ex: Covrigi cu susan"
                   />
                 </div>
+
+                <div>
+                  <label className="block font-bold text-sm text-stone-600 mb-1">Descriere *</label>
+                  <textarea
+                    required
+                    rows={3}
+                    value={currentProduct.description_ro || ''}
+                    onChange={e => setCurrentProduct({ ...currentProduct, description_ro: e.target.value })}
+                    className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none placeholder-stone-400"
+                    placeholder="Descriere scurtă a produsului..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-sm text-stone-600 mb-1">Etichetă (opțional)</label>
+                  <input
+                    type="text"
+                    value={currentProduct.tag_ro || ''}
+                    onChange={e => setCurrentProduct({ ...currentProduct, tag_ro: e.target.value })}
+                    className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none placeholder-stone-400"
+                    placeholder="ex: Popular, Nou, Favorit"
+                  />
+                  <p className="text-xs text-stone-400 mt-1">Apare ca badge pe imagine (lasă gol pentru nicio etichetă)</p>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button type="button" onClick={() => setIsEditingProduct(false)} className="flex-1 py-3 bg-stone-200 hover:bg-stone-300 rounded-xl font-bold text-stone-600">Anulează</button>
+                  <button
+                    type="submit"
+                    disabled={!currentProduct.image_url || !currentProduct.name_ro || !currentProduct.description_ro}
+                    className="flex-1 py-3 bg-bakery-500 hover:bg-bakery-600 disabled:bg-stone-400 rounded-xl font-bold text-white shadow-md"
+                  >
+                    Salvează
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )
+      }
+
+      {/* SETTINGS MODAL */}
+      {
+        isSettingsOpen && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setIsSettingsOpen(false)}>
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-stone-800 flex items-center gap-2">
+                  <Settings size={24} className="text-bakery-500" />
+                  Setări Admin
+                </h3>
+                <button onClick={() => setIsSettingsOpen(false)} className="p-2 hover:bg-stone-100 rounded-lg transition-colors">
+                  <X size={20} />
+                </button>
               </div>
 
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => {
-                  setIsSettingsOpen(false);
-                  setSettingsForm({ currentPassword: '', newUsername: '', newPassword: '', confirmPassword: '' });
-                  setSettingsError(null);
-                }} className="flex-1 py-3 bg-stone-200 hover:bg-stone-300 rounded-xl font-bold text-stone-600">
-                  Anulează
-                </button>
-                <button type="submit" className="flex-1 py-3 bg-bakery-500 hover:bg-bakery-600 rounded-xl font-bold text-white shadow-md">
-                  Salvează Modificările
-                </button>
-              </div>
-            </form>
+              {settingsError && (
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm font-bold flex items-center gap-2">
+                  <AlertTriangle size={16} />
+                  {settingsError}
+                </div>
+              )}
+
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const savedPassword = localStorage.getItem('adminPassword') || 'mamaliga';
+
+                if (settingsForm.currentPassword !== savedPassword) {
+                  setSettingsError('Parola curentă este incorectă!');
+                  return;
+                }
+
+                if (settingsForm.newPassword && settingsForm.newPassword !== settingsForm.confirmPassword) {
+                  setSettingsError('Parolele noi nu se potrivesc!');
+                  return;
+                }
+
+                if (!settingsForm.newUsername && !settingsForm.newPassword) {
+                  setSettingsError('Trebuie să schimbi cel puțin numele de utilizator sau parola!');
+                  return;
+                }
+
+                // Sanitize and validate inputs
+                if (settingsForm.newUsername) {
+                  const sanitized = settingsForm.newUsername.trim();
+                  if (sanitized.length < 3 || sanitized.length > 20) {
+                    setSettingsError('Numele de utilizator trebuie să aibă între 3 și 20 caractere!');
+                    return;
+                  }
+                  if (!/^[a-zA-Z0-9_-]+$/.test(sanitized)) {
+                    setSettingsError('Numele de utilizator poate conține doar litere, cifre, _ și -');
+                    return;
+                  }
+                  localStorage.setItem('adminUsername', sanitized);
+                }
+
+                if (settingsForm.newPassword) {
+                  if (settingsForm.newPassword.length < 6) {
+                    setSettingsError('Parola trebuie să aibă cel puțin 6 caractere!');
+                    return;
+                  }
+                  localStorage.setItem('adminPassword', settingsForm.newPassword);
+                }
+
+                showNotification('Credențiale actualizate cu succes! Vei fi deconectat.');
+                setTimeout(() => {
+                  onLogout();
+                }, 2000);
+
+              }} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-stone-600 mb-1">Parolă Curentă *</label>
+                  <input
+                    type="password"
+                    required
+                    value={settingsForm.currentPassword}
+                    onChange={e => setSettingsForm({ ...settingsForm, currentPassword: e.target.value })}
+                    className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none"
+                    placeholder="Introdu parola curentă"
+                  />
+                </div>
+
+                <div className="border-t border-stone-200 pt-4">
+                  <p className="text-xs text-stone-500 mb-3 italic">Completează doar câmpurile pe care vrei să le modifici</p>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-bold text-stone-600 mb-1">Nume Utilizator Nou (Opțional)</label>
+                    <input
+                      type="text"
+                      value={settingsForm.newUsername}
+                      onChange={e => setSettingsForm({ ...settingsForm, newUsername: e.target.value })}
+                      className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none"
+                      placeholder="Lasă gol pentru a păstra"
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-bold text-stone-600 mb-1">Parolă Nouă (Opțional)</label>
+                    <input
+                      type="password"
+                      value={settingsForm.newPassword}
+                      onChange={e => setSettingsForm({ ...settingsForm, newPassword: e.target.value })}
+                      className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none"
+                      placeholder="Lasă gol pentru a păstra"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-stone-600 mb-1">Confirmă Parola Nouă</label>
+                    <input
+                      type="password"
+                      value={settingsForm.confirmPassword}
+                      onChange={e => setSettingsForm({ ...settingsForm, confirmPassword: e.target.value })}
+                      className="w-full px-4 py-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none"
+                      placeholder="Doar dacă ai introdus parolă nouă"
+                      disabled={!settingsForm.newPassword}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button type="button" onClick={() => {
+                    setIsSettingsOpen(false);
+                    setSettingsForm({ currentPassword: '', newUsername: '', newPassword: '', confirmPassword: '' });
+                    setSettingsError(null);
+                  }} className="flex-1 py-3 bg-stone-200 hover:bg-stone-300 rounded-xl font-bold text-stone-600">
+                    Anulează
+                  </button>
+                  <button type="submit" className="flex-1 py-3 bg-bakery-500 hover:bg-bakery-600 rounded-xl font-bold text-white shadow-md">
+                    Salvează Modificările
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 };
 
