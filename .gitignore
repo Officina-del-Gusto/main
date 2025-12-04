@@ -14,3 +14,5 @@ dist/
 # Environment files
 .env
 .env.local
+db_scripts/DB_BAckup_*
+
