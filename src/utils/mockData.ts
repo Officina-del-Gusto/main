@@ -30,6 +30,10 @@ export interface CarouselImage {
   image_url: string;
   display_order: number;
   created_at: string;
+  name?: string;
+  description?: string;
+  price?: number;
+  unit?: string;
 }
 
 export interface Product {
@@ -41,6 +45,15 @@ export interface Product {
   display_order: number;
   is_active: boolean;
   created_at: string;
+  price?: number;
+  unit?: string;
+}
+
+export interface StoreSettings {
+  id: number;
+  shipping_fee: number;
+  packaging_fee: number;
+  pricing_enabled: boolean;
 }
 
 export interface HeroImage {
@@ -96,6 +109,33 @@ export const checkDbConnection = async (): Promise<boolean> => {
   } catch (e: any) {
     return false;
   }
+};
+
+// --- STORE SETTINGS OPERATIONS ---
+
+export const getStoreSettings = async (): Promise<StoreSettings> => {
+  try {
+    const { data, error } = await supabase
+      .from('store_settings')
+      .select('*')
+      .single();
+
+    if (error) {
+      // Return defaults if not found
+      return { id: 1, shipping_fee: 15, packaging_fee: 2, pricing_enabled: true };
+    }
+    return data;
+  } catch (err) {
+    return { id: 1, shipping_fee: 15, packaging_fee: 2, pricing_enabled: true };
+  }
+};
+
+export const saveStoreSettings = async (settings: StoreSettings): Promise<void> => {
+  const { error } = await supabase
+    .from('store_settings')
+    .upsert(settings);
+
+  if (error) throw error;
 };
 
 // --- JOBS OPERATIONS ---
@@ -510,7 +550,7 @@ export const uploadCarouselImage = async (file: File): Promise<string> => {
   return data.publicUrl;
 };
 
-export const addCarouselImage = async (imageUrl: string): Promise<void> => {
+export const addCarouselImage = async (data: { image_url: string, name?: string, description?: string, price?: number, unit?: string }): Promise<void> => {
   // Get current max order
   const { data: existing } = await supabase
     .from('carousel_images')
@@ -521,9 +561,26 @@ export const addCarouselImage = async (imageUrl: string): Promise<void> => {
   const nextOrder = existing && existing.length > 0 ? existing[0].display_order + 1 : 1;
 
   const { error } = await supabase.from('carousel_images').insert([{
-    image_url: imageUrl,
-    display_order: nextOrder
+    image_url: data.image_url,
+    display_order: nextOrder,
+    name: data.name,
+    description: data.description,
+    price: data.price || 0,
+    unit: data.unit || 'buc'
   }]);
+  if (error) throw error;
+};
+
+export const updateCarouselImage = async (id: string, data: Partial<CarouselImage>): Promise<void> => {
+  if (id.startsWith('default-')) throw new Error("Cannot update default images");
+
+  const { error } = await supabase.from('carousel_images').update({
+    name: data.name,
+    description: data.description,
+    price: data.price,
+    unit: data.unit
+  }).eq('id', id);
+
   if (error) throw error;
 };
 
@@ -550,7 +607,7 @@ export const deleteCarouselImage = async (id: string, imageUrl: string): Promise
   }
 };
 
-export const reorderCarouselImages = async (images: { id: string; display_order: number; image_url?: string }[]): Promise<void> => {
+export const reorderCarouselImages = async (images: { id: string; display_order: number; image_url?: string; name?: string; description?: string; price?: number; unit?: string }[]): Promise<void> => {
   // Check if any items are defaults - if so, we need to migrate all to DB
   const hasDefaults = images.some(img => img.id.startsWith('default-'));
 
@@ -614,6 +671,16 @@ export const uploadProductImage = async (file: File): Promise<string> => {
 };
 
 export const saveProduct = async (product: Partial<Product>): Promise<void> => {
+  const payload = {
+    image_url: product.image_url,
+    name_ro: product.name_ro,
+    description_ro: product.description_ro,
+    tag_ro: product.tag_ro || null,
+    is_active: product.is_active !== undefined ? product.is_active : true,
+    price: product.price || 0,
+    unit: product.unit || 'buc'
+  };
+
   if (product.id?.startsWith('default-')) {
     // Converting default product to real one
     const { data: existing } = await supabase
@@ -625,23 +692,13 @@ export const saveProduct = async (product: Partial<Product>): Promise<void> => {
     const nextOrder = existing && existing.length > 0 ? existing[0].display_order + 1 : 1;
 
     const { error } = await supabase.from('products').insert([{
-      image_url: product.image_url,
-      name_ro: product.name_ro,
-      description_ro: product.description_ro,
-      tag_ro: product.tag_ro || null,
-      display_order: nextOrder,
-      is_active: product.is_active !== undefined ? product.is_active : true
+      ...payload,
+      display_order: nextOrder
     }]);
     if (error) throw error;
   } else if (product.id) {
     // Update existing
-    const { error } = await supabase.from('products').update({
-      image_url: product.image_url,
-      name_ro: product.name_ro,
-      description_ro: product.description_ro,
-      tag_ro: product.tag_ro || null,
-      is_active: product.is_active
-    }).eq('id', product.id);
+    const { error } = await supabase.from('products').update(payload).eq('id', product.id);
     if (error) throw error;
   } else {
     // New product
@@ -654,12 +711,8 @@ export const saveProduct = async (product: Partial<Product>): Promise<void> => {
     const nextOrder = existing && existing.length > 0 ? existing[0].display_order + 1 : 1;
 
     const { error } = await supabase.from('products').insert([{
-      image_url: product.image_url,
-      name_ro: product.name_ro,
-      description_ro: product.description_ro,
-      tag_ro: product.tag_ro || null,
-      display_order: nextOrder,
-      is_active: true
+      ...payload,
+      display_order: nextOrder
     }]);
     if (error) throw error;
   }
@@ -696,7 +749,7 @@ export const toggleProductActive = async (id: string, currentStatus: boolean): P
   if (error) throw error;
 };
 
-export const reorderProducts = async (products: { id: string; display_order: number; image_url?: string; name_ro?: string; description_ro?: string; tag_ro?: string | null; is_active?: boolean }[]): Promise<void> => {
+export const reorderProducts = async (products: { id: string; display_order: number; image_url?: string; name_ro?: string; description_ro?: string; tag_ro?: string | null; is_active?: boolean; price?: number; unit?: string }[]): Promise<void> => {
   // Check if any items are defaults - if so, we need to migrate all to DB
   const hasDefaults = products.some(p => p.id.startsWith('default-'));
 
@@ -711,6 +764,8 @@ export const reorderProducts = async (products: { id: string; display_order: num
         tag_ro: p.tag_ro || defaultProd?.tag_ro || null,
         display_order: index + 1,
         is_active: p.is_active ?? defaultProd?.is_active ?? true,
+        price: p.price || 0,
+        unit: p.unit || 'buc'
       };
     }).filter(item => item.image_url && item.name_ro);
 
@@ -831,6 +886,7 @@ export interface OrderItem {
   image_url: string;
   quantity: number;
   type: 'product' | 'custom';
+  price?: number;
 }
 
 export interface OrderRequest {
@@ -841,6 +897,7 @@ export interface OrderRequest {
   needed_by: string;
   delivery_type: 'pickup' | 'delivery';
   delivery_address?: string;
+  details?: string;
   status: 'pending' | 'contacted' | 'completed';
   created_at?: string;
 }

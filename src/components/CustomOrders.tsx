@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Phone, Mail, Sparkles, PartyPopper, Gift, Calendar, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getCarouselImages, DEFAULT_CAROUSEL_IMAGES } from '../utils/mockData';
+import { getCarouselImages, DEFAULT_CAROUSEL_IMAGES, CarouselImage } from '../utils/mockData';
 import { supabase } from '../supabaseClient';
 
 const logWarning = (...args: unknown[]) => {
@@ -22,7 +22,7 @@ const CustomOrders: React.FC<CustomOrdersProps> = ({ onOpenOrderModal }) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [orderImages, setOrderImages] = useState<string[]>(DEFAULT_CAROUSEL_IMAGES.map(img => img.image_url));
+  const [orderImages, setOrderImages] = useState<CarouselImage[]>(DEFAULT_CAROUSEL_IMAGES);
   const scrollRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number | null>(null);
   const scrollPositionRef = useRef(0);
@@ -33,10 +33,12 @@ const CustomOrders: React.FC<CustomOrdersProps> = ({ onOpenOrderModal }) => {
       try {
         const images = await getCarouselImages();
         if (images && images.length > 0) {
-          const newImages = images.map(img => img.image_url);
           setOrderImages(prev => {
-            if (JSON.stringify(prev) === JSON.stringify(newImages)) return prev;
-            return newImages;
+            // Simple check if IDs match to avoid unnecessary re-renders
+            const prevIds = prev.map(img => img.id).join(',');
+            const newIds = images.map(img => img.id).join(',');
+            if (prevIds === newIds) return prev;
+            return images;
           });
         }
       } catch (error) {
@@ -195,13 +197,13 @@ const CustomOrders: React.FC<CustomOrdersProps> = ({ onOpenOrderModal }) => {
             >
               {duplicatedImages.map((image, index) => (
                 <button
-                  key={`${image}-${index}`}
+                  key={`${image.id}-${index}`}
                   onClick={() => openLightbox(index)}
                   className="relative flex-shrink-0 w-72 h-80 rounded-2xl overflow-hidden shadow-xl cursor-pointer focus:outline-none group hover:shadow-2xl transition-shadow duration-300"
                 >
                   <img
-                    src={image}
-                    alt={`Comandă personalizată - tort și prăjituri artizanale de la Officina del Gusto - exemplu ${(index % orderImages.length) + 1}`}
+                    src={image.image_url}
+                    alt={`Comandă personalizată - ${image.name || 'Produs'} - exemplu ${(index % orderImages.length) + 1}`}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     loading="lazy"
                   />
@@ -213,6 +215,14 @@ const CustomOrders: React.FC<CustomOrdersProps> = ({ onOpenOrderModal }) => {
                       🔍 {dictionary.customOrders.viewImage || 'View'}
                     </span>
                   </div>
+
+                  {/* Name Overlay at bottom */}
+                  {image.name && (
+                    <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                      <p className="text-white font-bold text-lg drop-shadow-md truncate">{image.name}</p>
+                      {image.price && <p className="text-white/90 text-sm font-medium drop-shadow-md">{image.price} RON</p>}
+                    </div>
+                  )}
                 </button>
               ))}
             </div>
@@ -292,10 +302,23 @@ const CustomOrders: React.FC<CustomOrdersProps> = ({ onOpenOrderModal }) => {
           onClick={(e) => e.stopPropagation()}
         >
           <img
-            src={orderImages[currentImageIndex]}
-            alt={`Comandă personalizată Officina del Gusto - tort artizanal și prăjituri ${currentImageIndex + 1}`}
-            className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+            src={orderImages[currentImageIndex]?.image_url}
+            alt={`Comandă personalizată Officina del Gusto - ${orderImages[currentImageIndex]?.name || 'Produs'} ${currentImageIndex + 1}`}
+            className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl mx-auto"
           />
+
+          {/* Image Details */}
+          <div className="bg-white/95 backdrop-blur-md p-4 rounded-xl mt-4 max-w-2xl mx-auto shadow-lg text-center">
+            <h3 className="text-2xl font-bold text-bakery-800 mb-1">{orderImages[currentImageIndex]?.name || 'Comandă Personalizată'}</h3>
+            {orderImages[currentImageIndex]?.description && (
+              <p className="text-stone-600 mb-2">{orderImages[currentImageIndex]?.description}</p>
+            )}
+            {orderImages[currentImageIndex]?.price && (
+              <div className="inline-block bg-bakery-100 text-bakery-800 px-3 py-1 rounded-full font-bold text-sm">
+                {orderImages[currentImageIndex]?.price} RON {orderImages[currentImageIndex]?.unit ? `/ ${orderImages[currentImageIndex]?.unit}` : ''}
+              </div>
+            )}
+          </div>
 
           {/* Close Button */}
           <button

@@ -12,7 +12,8 @@ import {
   getCarouselImages, uploadCarouselImage, addCarouselImage, deleteCarouselImage, reorderCarouselImages,
   getProducts, uploadProductImage, saveProduct, deleteProduct, toggleProductActive, reorderProducts,
   HeroImage, getHeroImages, uploadHeroImage, addHeroImage, deleteHeroImage, reorderHeroImages,
-  OrderRequest, getOrders, deleteOrder, updateOrderStatus
+  OrderRequest, getOrders, deleteOrder, updateOrderStatus,
+  getStoreSettings, saveStoreSettings, StoreSettings, updateCarouselImage
 } from '../utils/mockData';
 
 interface AdminDashboardProps {
@@ -60,6 +61,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnab
   const [heroImages, setHeroImages] = useState<HeroImage[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<OrderRequest[]>([]);
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>({ id: 1, shipping_fee: 15, packaging_fee: 2, pricing_enabled: true });
+  const [isSettingsLoading, setIsSettingsLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   // File upload refs
@@ -89,6 +92,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnab
   // Product Form State
   const [isEditingProduct, setIsEditingProduct] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<Partial<Product>>({});
+  const [isEditingCarousel, setIsEditingCarousel] = useState(false);
+  const [currentCarouselItem, setCurrentCarouselItem] = useState<Partial<CarouselImage>>({});
   const [isUploadingCarousel, setIsUploadingCarousel] = useState(false);
   const [isUploadingHero, setIsUploadingHero] = useState(false);
   const [isUploadingProduct, setIsUploadingProduct] = useState(false);
@@ -125,6 +130,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnab
     setProducts(fetchedProducts);
     const fetchedOrders = await getOrders();
     setOrders(fetchedOrders);
+    const fetchedSettings = await getStoreSettings();
+    setStoreSettings(fetchedSettings);
   };
 
   const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
@@ -561,10 +568,7 @@ for delete using ( bucket_id = 'images' );
             <ShoppingBag size={18} /> Comenzi
           </button>
           <button onClick={() => setActiveTab('products')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'products' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
-            <ShoppingBag size={18} /> Produse
-          </button>
-          <button onClick={() => setActiveTab('carousel')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'carousel' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
-            <Image size={18} /> Carusel
+            <ShoppingBag size={18} /> Produse & Meniu
           </button>
           <button onClick={() => setActiveTab('jobs')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'jobs' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
             <LayoutDashboard size={18} /> Joburi
@@ -743,180 +747,436 @@ for delete using ( bucket_id = 'images' );
               </div>
             )}
 
-            {/* --- PRODUCTS TAB --- */}
+            {/* --- PRODUCTS TAB (Merged with Carousel & Settings) --- */}
             {activeTab === 'products' && (
-              <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-bold text-stone-800">Produse</h2>
-                  <button
-                    onClick={() => {
-                      setCurrentProduct({
-                        name_ro: '',
-                        description_ro: '',
-                        tag_ro: '',
-                        is_active: true
-                      });
-                      setIsEditingProduct(true);
-                    }}
-                    className="bg-bakery-500 hover:bg-bakery-600 text-white px-6 py-3 rounded-xl font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95"
-                  >
-                    <Plus size={20} /> Adaugă Produs
-                  </button>
+              <div className="space-y-10">
+
+                {/* GLOBAL SETTINGS SECTION */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-100">
+                  <h3 className="text-xl font-bold text-stone-800 mb-4 flex items-center gap-2">
+                    <Settings size={20} className="text-bakery-500" />
+                    Setări Globale Magazin
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <label className="block text-sm font-bold text-stone-600 mb-1">Taxă Livrare (RON)</label>
+                      <input
+                        type="number"
+                        value={storeSettings.shipping_fee}
+                        onChange={(e) => setStoreSettings({ ...storeSettings, shipping_fee: parseFloat(e.target.value) || 0 })}
+                        className="w-full p-2 border border-stone-300 rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-stone-600 mb-1">Taxă Ambalaj (RON)</label>
+                      <input
+                        type="number"
+                        value={storeSettings.packaging_fee}
+                        onChange={(e) => setStoreSettings({ ...storeSettings, packaging_fee: parseFloat(e.target.value) || 0 })}
+                        className="w-full p-2 border border-stone-300 rounded-lg"
+                      />
+                    </div>
+                    <div className="flex items-center gap-3 pt-6">
+                      <div
+                        className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${storeSettings.pricing_enabled ? 'bg-green-500' : 'bg-stone-300'}`}
+                        onClick={() => setStoreSettings({ ...storeSettings, pricing_enabled: !storeSettings.pricing_enabled })}
+                      >
+                        <div className={`w-4 h-4 bg-white rounded-full shadow-md transform transition-transform ${storeSettings.pricing_enabled ? 'translate-x-6' : 'translate-x-0'}`} />
+                      </div>
+                      <span className="font-bold text-stone-700">Afișare Prețuri pe Site</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      onClick={async () => {
+                        setIsSettingsLoading(true);
+                        try {
+                          await saveStoreSettings(storeSettings);
+                          showNotification("Setări salvate cu succes!");
+                        } catch (e) {
+                          showNotification("Eroare la salvare setări", "error");
+                        }
+                        setIsSettingsLoading(false);
+                      }}
+                      disabled={isSettingsLoading}
+                      className="px-6 py-2 bg-stone-800 text-white rounded-lg font-bold hover:bg-stone-900 disabled:opacity-50"
+                    >
+                      {isSettingsLoading ? 'Se salvează...' : 'Salvează Setări'}
+                    </button>
+                  </div>
                 </div>
 
-                <p className="text-stone-500 text-sm">
-                  Aceste produse apar în galeria principală. Poți edita numele, descrierea și imaginea.
-                </p>
-
-                {products.length === 0 ? (
-                  <div className="text-center p-10 bg-white rounded-2xl border border-dashed border-stone-300">
-                    <ShoppingBag size={48} className="mx-auto text-stone-300 mb-4" />
-                    <p className="text-stone-500">Niciun produs.</p>
-                    <p className="text-stone-400 text-sm">Apasă "Adaugă Produs" pentru a începe.</p>
+                {/* STANDARD PRODUCTS SECTION */}
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-2xl font-bold text-stone-800">Produse Standard</h2>
+                    <button
+                      onClick={() => {
+                        setCurrentProduct({
+                          name_ro: '',
+                          description_ro: '',
+                          tag_ro: '',
+                          is_active: true,
+                          price: 0,
+                          unit: 'buc'
+                        });
+                        setIsEditingProduct(true);
+                      }}
+                      className="bg-bakery-500 hover:bg-bakery-600 text-white px-6 py-3 rounded-xl font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95"
+                    >
+                      <Plus size={20} /> Adaugă Produs
+                    </button>
                   </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {products.map((product, index) => (
-                      <div
-                        key={product.id}
-                        className={`relative bg-white rounded-xl overflow-hidden shadow-sm border-2 ${!product.is_active ? 'opacity-50' : ''} ${product.id.startsWith('default-') ? 'border-yellow-300' : 'border-transparent'}`}
-                      >
-                        <div className="relative h-40 overflow-hidden group">
+
+                  <p className="text-stone-500 text-sm">
+                    Aceste produse apar în galeria principală. Poți edita numele, descrierea, prețul și imaginea.
+                  </p>
+
+                  {products.length === 0 ? (
+                    <div className="text-center p-10 bg-white rounded-2xl border border-dashed border-stone-300">
+                      <ShoppingBag size={48} className="mx-auto text-stone-300 mb-4" />
+                      <p className="text-stone-500">Niciun produs.</p>
+                      <p className="text-stone-400 text-sm">Apasă "Adaugă Produs" pentru a începe.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {products.map((product, index) => (
+                        <div
+                          key={product.id}
+                          className={`relative bg-white rounded-xl overflow-hidden shadow-sm border-2 ${!product.is_active ? 'opacity-50' : ''} ${product.id.startsWith('default-') ? 'border-yellow-300' : 'border-transparent'}`}
+                        >
+                          <div className="relative h-40 overflow-hidden group">
+                            <img
+                              src={product.image_url}
+                              alt={product.name_ro}
+                              className="w-full h-full object-cover"
+                            />
+                            {/* Reorder buttons on hover */}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                              <button
+                                onClick={async () => {
+                                  if (index > 0) {
+                                    const newOrder = [...products];
+                                    [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
+                                    setProducts(newOrder);
+                                    await reorderProducts(newOrder.map((p, i) => ({
+                                      id: p.id,
+                                      display_order: i + 1,
+                                      image_url: p.image_url,
+                                      name_ro: p.name_ro,
+                                      description_ro: p.description_ro,
+                                      tag_ro: p.tag_ro,
+                                      is_active: p.is_active,
+                                      price: p.price,
+                                      unit: p.unit
+                                    })));
+                                    await refreshData();
+                                    showNotification(`Produs mutat la poziția #${index}`);
+                                  }
+                                }}
+                                disabled={index === 0}
+                                className={`p-2 bg-white rounded-lg transition-colors ${index === 0 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
+                                title="Mută la stânga"
+                              >
+                                <ChevronLeft size={20} />
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (index < products.length - 1) {
+                                    const newOrder = [...products];
+                                    [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+                                    setProducts(newOrder);
+                                    await reorderProducts(newOrder.map((p, i) => ({
+                                      id: p.id,
+                                      display_order: i + 1,
+                                      image_url: p.image_url,
+                                      name_ro: p.name_ro,
+                                      description_ro: p.description_ro,
+                                      tag_ro: p.tag_ro,
+                                      is_active: p.is_active,
+                                      price: p.price,
+                                      unit: p.unit
+                                    })));
+                                    await refreshData();
+                                    showNotification(`Produs mutat la poziția #${index + 2}`);
+                                  }
+                                }}
+                                disabled={index === products.length - 1}
+                                className={`p-2 bg-white rounded-lg transition-colors ${index === products.length - 1 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
+                                title="Mută la dreapta"
+                              >
+                                <ChevronRight size={20} />
+                              </button>
+                            </div>
+                            {/* Position badge */}
+                            <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-bold">
+                              #{index + 1}
+                            </div>
+                            {product.tag_ro && (
+                              <span className="absolute top-2 right-2 bg-bakery-500 text-white text-xs px-2 py-1 rounded font-bold">
+                                {product.tag_ro}
+                              </span>
+                            )}
+                            {product.id.startsWith('default-') && (
+                              <span className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 text-xs px-2 py-1 rounded font-bold">
+                                Default
+                              </span>
+                            )}
+                          </div>
+                          <div className="p-4">
+                            <h3 className="font-bold text-stone-800 mb-1">{product.name_ro}</h3>
+                            <p className="text-stone-500 text-sm line-clamp-2">{product.description_ro}</p>
+                            <div className="mt-2 font-bold text-bakery-600">
+                              {product.price} RON / {product.unit}
+                            </div>
+                          </div>
+                          <div className="p-3 border-t border-stone-100 flex justify-between items-center">
+                            <span className={`text-xs font-bold px-2 py-1 rounded ${product.is_active ? 'bg-green-100 text-green-700' : 'bg-stone-200 text-stone-600'}`}>
+                              {product.is_active ? 'Activ' : 'Inactiv'}
+                            </span>
+                            <div className="flex gap-1">
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await toggleProductActive(product.id, product.is_active);
+                                    await refreshData();
+                                    showNotification(product.is_active ? 'Produs dezactivat!' : 'Produs activat!');
+                                  } catch (err: any) {
+                                    showNotification(err.message || 'Eroare', 'error');
+                                  }
+                                }}
+                                className="p-2 rounded hover:bg-stone-100 text-stone-500"
+                                title={product.is_active ? 'Dezactivează' : 'Activează'}
+                              >
+                                <Power size={16} />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setCurrentProduct(product);
+                                  setIsEditingProduct(true);
+                                }}
+                                className="p-2 rounded hover:bg-blue-50 text-blue-600"
+                                title="Editează"
+                              >
+                                <Edit size={16} />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setConfirmConfig({
+                                    isOpen: true,
+                                    message: 'Sigur vrei să ștergi acest produs?',
+                                    onConfirm: async () => {
+                                      try {
+                                        await deleteProduct(product.id, product.image_url);
+                                        await refreshData();
+                                        showNotification('Produs șters!');
+                                      } catch (err: any) {
+                                        showNotification(err.message || 'Eroare la ștergere', 'error');
+                                      }
+                                      setConfirmConfig(null);
+                                    }
+                                  });
+                                }}
+                                className="p-2 rounded hover:bg-red-50 text-red-600"
+                                title="Șterge"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* CAROUSEL SECTION (Merged) */}
+                <div className="space-y-6 pt-10 border-t border-stone-200">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-2xl font-bold text-stone-800">Produse Galerie (Carousel)</h2>
+                    <button
+                      onClick={() => carouselFileRef.current?.click()}
+                      disabled={isUploadingCarousel}
+                      className="bg-stone-700 hover:bg-stone-800 disabled:bg-stone-400 text-white px-6 py-3 rounded-xl font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95"
+                    >
+                      {isUploadingCarousel ? (
+                        <span className="animate-pulse">Se încarcă...</span>
+                      ) : (
+                        <><Upload size={20} /> Adaugă Imagine Carousel</>
+                      )}
+                    </button>
+                    <input
+                      type="file"
+                      ref={carouselFileRef}
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setIsUploadingCarousel(true);
+                        try {
+                          const url = await uploadCarouselImage(file);
+                          // Add with default empty metadata
+                          await addCarouselImage({ image_url: url, name: '', description: '', price: 0, unit: 'buc' });
+                          await refreshData();
+                          showNotification('Imagine adăugată în carusel!');
+                        } catch (err: any) {
+                          showNotification('Eroare la încărcare: ' + (err.message || 'Necunoscută'), 'error');
+                        }
+                        setIsUploadingCarousel(false);
+                        e.target.value = '';
+                      }}
+                    />
+                  </div>
+
+                  <p className="text-stone-500 text-sm">
+                    Aceste produse apar în caruselul de pe prima pagină. Acum poți adăuga detalii și preț.
+                  </p>
+
+                  {carouselImages.length === 0 ? (
+                    <div className="text-center p-10 bg-white rounded-2xl border border-dashed border-stone-300">
+                      <Image size={48} className="mx-auto text-stone-300 mb-4" />
+                      <p className="text-stone-500">Nicio imagine în carusel.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {carouselImages.map((img, index) => (
+                        <div
+                          key={img.id}
+                          className={`relative group bg-white rounded-xl overflow-hidden shadow-sm border-2 ${img.id.startsWith('default-') ? 'border-yellow-300' : 'border-transparent'}`}
+                        >
                           <img
-                            src={product.image_url}
-                            alt={product.name_ro}
-                            className="w-full h-full object-cover"
+                            src={img.image_url}
+                            alt={`Carousel ${index + 1}`}
+                            className="w-full h-48 object-cover"
                           />
-                          {/* Reorder buttons on hover */}
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+
+                          {/* Metadata Overlay */}
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/70 p-2 text-white">
+                            <div className="text-xs font-bold truncate">{img.name || 'Fără nume'}</div>
+                            <div className="text-xs opacity-80">{img.price ? `${img.price} RON` : '-'}</div>
+                          </div>
+
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            {/* Reorder Buttons */}
                             <button
                               onClick={async () => {
-                                if (index > 0) {
-                                  const newOrder = [...products];
-                                  [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
-                                  setProducts(newOrder);
-                                  await reorderProducts(newOrder.map((p, i) => ({
-                                    id: p.id,
-                                    display_order: i + 1,
-                                    image_url: p.image_url,
-                                    name_ro: p.name_ro,
-                                    description_ro: p.description_ro,
-                                    tag_ro: p.tag_ro,
-                                    is_active: p.is_active
-                                  })));
-                                  await refreshData();
-                                  showNotification(`Produs mutat la poziția #${index}`);
+                                if (index > 0 && !isReordering) {
+                                  setIsReordering(true);
+                                  try {
+                                    const newOrder = [...carouselImages];
+                                    [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
+                                    setCarouselImages(newOrder);
+                                    await reorderCarouselImages(newOrder.map((img, i) => ({
+                                      id: img.id,
+                                      display_order: i + 1,
+                                      image_url: img.image_url,
+                                      name: img.name,
+                                      description: img.description,
+                                      price: img.price,
+                                      unit: img.unit
+                                    })));
+                                    showNotification(`Imagine mutată la poziția #${index}`);
+                                  } catch (error: any) {
+                                    showNotification('Eroare la mutare', 'error');
+                                    await refreshData();
+                                  } finally {
+                                    setIsReordering(false);
+                                  }
                                 }
                               }}
                               disabled={index === 0}
                               className={`p-2 bg-white rounded-lg transition-colors ${index === 0 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
-                              title="Mută la stânga"
                             >
                               <ChevronLeft size={20} />
                             </button>
                             <button
                               onClick={async () => {
-                                if (index < products.length - 1) {
-                                  const newOrder = [...products];
-                                  [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
-                                  setProducts(newOrder);
-                                  await reorderProducts(newOrder.map((p, i) => ({
-                                    id: p.id,
-                                    display_order: i + 1,
-                                    image_url: p.image_url,
-                                    name_ro: p.name_ro,
-                                    description_ro: p.description_ro,
-                                    tag_ro: p.tag_ro,
-                                    is_active: p.is_active
-                                  })));
-                                  await refreshData();
-                                  showNotification(`Produs mutat la poziția #${index + 2}`);
+                                if (index < carouselImages.length - 1 && !isReordering) {
+                                  setIsReordering(true);
+                                  try {
+                                    const newOrder = [...carouselImages];
+                                    [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+                                    setCarouselImages(newOrder);
+                                    await reorderCarouselImages(newOrder.map((img, i) => ({
+                                      id: img.id,
+                                      display_order: i + 1,
+                                      image_url: img.image_url,
+                                      name: img.name,
+                                      description: img.description,
+                                      price: img.price,
+                                      unit: img.unit
+                                    })));
+                                    showNotification(`Imagine mutată la poziția #${index + 2}`);
+                                  } catch (error: any) {
+                                    showNotification('Eroare la mutare', 'error');
+                                    await refreshData();
+                                  } finally {
+                                    setIsReordering(false);
+                                  }
                                 }
                               }}
-                              disabled={index === products.length - 1}
-                              className={`p-2 bg-white rounded-lg transition-colors ${index === products.length - 1 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
-                              title="Mută la dreapta"
+                              disabled={index === carouselImages.length - 1}
+                              className={`p-2 bg-white rounded-lg transition-colors ${index === carouselImages.length - 1 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
                             >
                               <ChevronRight size={20} />
                             </button>
                           </div>
-                          {/* Position badge */}
-                          <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-bold">
-                            #{index + 1}
-                          </div>
-                          {product.tag_ro && (
-                            <span className="absolute top-2 right-2 bg-bakery-500 text-white text-xs px-2 py-1 rounded font-bold">
-                              {product.tag_ro}
-                            </span>
-                          )}
-                          {product.id.startsWith('default-') && (
-                            <span className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 text-xs px-2 py-1 rounded font-bold">
-                              Default
-                            </span>
-                          )}
-                        </div>
-                        <div className="p-4">
-                          <h3 className="font-bold text-stone-800 mb-1">{product.name_ro}</h3>
-                          <p className="text-stone-500 text-sm line-clamp-2">{product.description_ro}</p>
-                        </div>
-                        <div className="p-3 border-t border-stone-100 flex justify-between items-center">
-                          <span className={`text-xs font-bold px-2 py-1 rounded ${product.is_active ? 'bg-green-100 text-green-700' : 'bg-stone-200 text-stone-600'}`}>
-                            {product.is_active ? 'Activ' : 'Inactiv'}
-                          </span>
-                          <div className="flex gap-1">
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await toggleProductActive(product.id, product.is_active);
-                                  await refreshData();
-                                  showNotification(product.is_active ? 'Produs dezactivat!' : 'Produs activat!');
-                                } catch (err: any) {
-                                  showNotification(err.message || 'Eroare', 'error');
-                                }
-                              }}
-                              className="p-2 rounded hover:bg-stone-100 text-stone-500"
-                              title={product.is_active ? 'Dezactivează' : 'Activează'}
-                            >
-                              <Power size={16} />
-                            </button>
+
+                          {/* Action Buttons (Edit/Delete) */}
+                          <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => {
-                                setCurrentProduct(product);
-                                setIsEditingProduct(true);
+                                // Open Carousel Edit Modal (Need to implement this modal or reuse product modal with different state)
+                                // For simplicity, let's use a prompt or a new state. 
+                                // Actually, I should add a state for editing carousel item.
+                                // Let's use a new state `currentCarouselItem` and `isEditingCarousel`.
+                                // But I haven't added those states yet. I should add them.
+                                // I'll assume I'll add them in the next step or I can add inline editing?
+                                // No, modal is better.
+                                // I'll add the state in the next step. For now, I'll comment this out or use a placeholder.
+                                // Wait, I can't leave it broken.
+                                // I'll add the state in the previous step? No, I already did that step.
+                                // I'll add the state now using a separate tool call before this one?
+                                // Or I can add the state in the same file update if I scroll up?
+                                // I'll just add the button logic and assume I'll add the state/modal later.
+                                // Actually, I'll add `isEditingCarousel` state in the next tool call.
+                                // So I'll put the onClick handler here.
+                                setCurrentCarouselItem(img);
+                                setIsEditingCarousel(true);
                               }}
-                              className="p-2 rounded hover:bg-blue-50 text-blue-600"
-                              title="Editează"
+                              className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 shadow-md"
+                              title="Editează detalii"
                             >
                               <Edit size={16} />
                             </button>
                             <button
-                              onClick={() => {
-                                setConfirmConfig({
-                                  isOpen: true,
-                                  message: 'Sigur vrei să ștergi acest produs?',
-                                  onConfirm: async () => {
-                                    try {
-                                      await deleteProduct(product.id, product.image_url);
-                                      await refreshData();
-                                      showNotification('Produs șters!');
-                                    } catch (err: any) {
-                                      showNotification(err.message || 'Eroare la ștergere', 'error');
-                                    }
-                                    setConfirmConfig(null);
+                              onClick={async () => {
+                                if (confirm('Sigur vrei să ștergi această imagine?')) {
+                                  try {
+                                    await deleteCarouselImage(img.id, img.image_url);
+                                    await refreshData();
+                                    showNotification('Imagine ștearsă!');
+                                  } catch (error: any) {
+                                    showNotification('Eroare la ștergere: ' + (error.message || 'Necunoscută'), 'error');
                                   }
-                                });
+                                }
                               }}
-                              className="p-2 rounded hover:bg-red-50 text-red-600"
-                              title="Șterge"
+                              className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 shadow-md"
+                              title="Șterge imagine"
                             >
                               <Trash2 size={16} />
                             </button>
                           </div>
+
+                          <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
+                            #{index + 1}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -941,81 +1201,111 @@ for delete using ( bucket_id = 'images' );
                             <th className="p-4 text-stone-500 font-bold text-sm">Data Livrării</th>
                             <th className="p-4 text-stone-500 font-bold text-sm">Livrare</th>
                             <th className="p-4 text-stone-500 font-bold text-sm">Produse</th>
+                            <th className="p-4 text-stone-500 font-bold text-sm">Total</th>
                             <th className="p-4 text-stone-500 font-bold text-sm">Status</th>
                             <th className="p-4 text-stone-500 font-bold text-sm text-right">Acțiuni</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-stone-100">
-                          {orders.map((order) => (
-                            <tr key={order.id} className="hover:bg-stone-50 transition-colors">
-                              <td className="p-4 font-bold text-stone-800">
-                                {order.customer_name}
-                                <div className="text-xs text-stone-400 font-normal">
-                                  {order.created_at ? new Date(order.created_at).toLocaleDateString() : '-'}
-                                </div>
-                              </td>
-                              <td className="p-4 text-stone-600">
-                                <a href={`tel:${order.phone_number}`} className="hover:text-bakery-600 hover:underline">
-                                  {order.phone_number}
-                                </a>
-                              </td>
-                              <td className="p-4 text-stone-700">
-                                {new Date(order.needed_by).toLocaleDateString()}
-                              </td>
-                              <td className="p-4">
-                                <div className="flex flex-col">
-                                  <span className={`text-sm font-bold ${order.delivery_type === 'delivery' ? 'text-blue-600' : 'text-orange-600'}`}>
-                                    {order.delivery_type === 'delivery' ? 'Livrare' : 'Ridicare'}
+
+                          {orders.map((order) => {
+                            // Calculate Total
+                            const itemsTotal = order.items.reduce((sum: number, item: any) => sum + ((item.price || 0) * item.quantity), 0);
+                            const shipping = order.delivery_type === 'delivery' ? storeSettings.shipping_fee : 0;
+                            const packaging = storeSettings.packaging_fee;
+                            // Only add fees if there are items
+                            const grandTotal = itemsTotal > 0 ? itemsTotal + shipping + packaging : 0;
+
+                            return (
+                              <tr key={order.id} className="hover:bg-stone-50 transition-colors align-top">
+                                <td className="p-4 font-bold text-stone-800">
+                                  {order.customer_name}
+                                  <div className="text-xs text-stone-400 font-normal">
+                                    {order.created_at ? new Date(order.created_at).toLocaleDateString() : '-'}
+                                  </div>
+                                </td>
+                                <td className="p-4 text-stone-600">
+                                  <a href={`tel:${order.phone_number}`} className="hover:text-bakery-600 hover:underline">
+                                    {order.phone_number}
+                                  </a>
+                                </td>
+                                <td className="p-4 text-stone-700">
+                                  {new Date(order.needed_by).toLocaleDateString()}
+                                </td>
+                                <td className="p-4">
+                                  <div className="flex flex-col">
+                                    <span className={`text-sm font-bold ${order.delivery_type === 'delivery' ? 'text-blue-600' : 'text-orange-600'}`}>
+                                      {order.delivery_type === 'delivery' ? 'Livrare' : 'Ridicare'}
+                                    </span>
+                                    {order.delivery_type === 'delivery' && order.delivery_address && (
+                                      <span className="text-xs text-stone-500 max-w-[200px] truncate" title={order.delivery_address}>
+                                        {order.delivery_address}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="p-4">
+                                  <details className="group">
+                                    <summary className="cursor-pointer font-bold text-bakery-600 flex items-center gap-2 list-none text-sm">
+                                      <span>{order.items.length} produse</span>
+                                      <ChevronRight size={14} className="transition-transform group-open:rotate-90" />
+                                    </summary>
+                                    <div className="mt-2 pl-2 border-l-2 border-stone-200 space-y-1 text-sm min-w-[200px]">
+                                      {order.items.map((item: any, idx: number) => (
+                                        <div key={idx} className="flex justify-between gap-2">
+                                          <span className="text-stone-600">{item.quantity}x {item.name}</span>
+                                          <span className="text-stone-400 text-xs">
+                                            {item.price ? `${(item.price * item.quantity).toFixed(2)}` : '-'}
+                                          </span>
+                                        </div>
+                                      ))}
+                                      {order.details && (
+                                        <div className="pt-1 text-stone-500 italic text-xs border-t border-stone-100 mt-1">
+                                          Note: {order.details}
+                                        </div>
+                                      )}
+                                      <div className="pt-2 mt-2 border-t border-stone-100 text-xs text-stone-500">
+                                        <div className="flex justify-between"><span>Subtotal:</span> <span>{itemsTotal.toFixed(2)} RON</span></div>
+                                        {order.delivery_type === 'delivery' && (
+                                          <div className="flex justify-between"><span>Livrare:</span> <span>{shipping.toFixed(2)} RON</span></div>
+                                        )}
+                                        <div className="flex justify-between"><span>Ambalaj:</span> <span>{packaging.toFixed(2)} RON</span></div>
+                                      </div>
+                                    </div>
+                                  </details>
+                                </td>
+                                <td className="p-4 font-bold text-stone-800">
+                                  {grandTotal.toFixed(2)} RON
+                                </td>
+                                <td className="p-4">
+                                  <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${order.status === 'pending' ? 'bg-blue-100 text-blue-700' :
+                                    order.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                      'bg-yellow-100 text-yellow-700'
+                                    }`}>
+                                    {order.status === 'pending' ? 'Nouă' : order.status === 'completed' ? 'Finalizată' : order.status === 'contacted' ? 'Contactat' : order.status}
                                   </span>
-                                  {order.delivery_type === 'delivery' && order.delivery_address && (
-                                    <span className="text-xs text-stone-500 max-w-[200px] truncate" title={order.delivery_address}>
-                                      {order.delivery_address}
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="p-4">
-                                <div className="flex flex-col gap-1">
-                                  {order.items.map((item: any, idx: number) => (
-                                    <span key={idx} className="text-sm text-stone-600">
-                                      {item.quantity}x {item.name}
-                                    </span>
-                                  ))}
-                                </div>
-                              </td>
-                              <td className="p-4">
-                                <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${order.status === 'pending' ? 'bg-blue-100 text-blue-700' :
-                                  order.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                    'bg-yellow-100 text-yellow-700'
-                                  }`}>
-                                  {order.status === 'pending' ? 'Nouă' :
-                                    order.status === 'completed' ? 'Finalizată' :
-                                      order.status === 'contacted' ? 'Contactat' : order.status}
-                                </span>
-                              </td>
-                              <td className="p-4 text-right">
-                                <div className="flex justify-end gap-2">
-                                  <button
-                                    onClick={() => order.id && handleToggleOrderStatus(order.id, order.status)}
-                                    className={`p-2 rounded transition-colors ${order.status === 'completed'
-                                      ? 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100'
-                                      : 'bg-green-50 text-green-600 hover:bg-green-100'
-                                      }`}
-                                    title={order.status === 'completed' ? 'Marchează ca nefinalizată' : 'Marchează ca finalizată'}
-                                  >
-                                    {order.status === 'completed' ? <RotateCcw size={18} /> : <Check size={18} />}
-                                  </button>
-                                  <button
-                                    onClick={() => order.id && handleDeleteOrder(order.id)}
-                                    className="p-2 rounded hover:bg-red-50 text-red-500 hover:text-red-600 transition-colors"
-                                    title="Șterge Comanda"
-                                  >
-                                    <Trash2 size={18} />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
+                                </td>
+                                <td className="p-4 text-right">
+                                  <div className="flex justify-end gap-2">
+                                    <button
+                                      onClick={() => handleToggleOrderStatus(order.id, order.status)}
+                                      className={`p-2 rounded-lg transition-colors ${order.status === 'completed' ? 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}
+                                      title={order.status === 'completed' ? 'Marchează ca nefinalizat' : 'Marchează ca finalizat'}
+                                    >
+                                      {order.status === 'completed' ? <RotateCcw size={18} /> : <Check size={18} />}
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteOrder(order.id)}
+                                      className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                                      title="Șterge comandă"
+                                    >
+                                      <Trash2 size={18} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -1329,12 +1619,117 @@ for delete using ( bucket_id = 'images' );
                   <p className="text-xs text-stone-400 mt-1">Apare ca badge pe imagine (lasă gol pentru nicio etichetă)</p>
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-bold text-sm text-stone-600 mb-1">Preț (RON)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={currentProduct.price || 0}
+                      onChange={e => setCurrentProduct({ ...currentProduct, price: parseFloat(e.target.value) || 0 })}
+                      className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-sm text-stone-600 mb-1">Unitate (ex: buc, kg)</label>
+                    <input
+                      type="text"
+                      value={currentProduct.unit || 'buc'}
+                      onChange={e => setCurrentProduct({ ...currentProduct, unit: e.target.value })}
+                      className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none"
+                    />
+                  </div>
+                </div>
+
                 <div className="flex gap-3 pt-4">
                   <button type="button" onClick={() => setIsEditingProduct(false)} className="flex-1 py-3 bg-stone-200 hover:bg-stone-300 rounded-xl font-bold text-stone-600">Anulează</button>
                   <button
                     type="submit"
                     disabled={!currentProduct.image_url || !currentProduct.name_ro || !currentProduct.description_ro}
                     className="flex-1 py-3 bg-bakery-500 hover:bg-bakery-600 disabled:bg-stone-400 rounded-xl font-bold text-white shadow-md"
+                  >
+                    Salvează
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )
+      }
+
+      {/* CAROUSEL EDIT MODAL */}
+      {
+        isEditingCarousel && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 animate-fade-in max-h-[90vh] overflow-y-auto">
+              <h3 className="text-2xl font-bold mb-6 text-stone-800">Editează Imagine Carusel</h3>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  if (currentCarouselItem.id) {
+                    await updateCarouselImage(currentCarouselItem.id, currentCarouselItem);
+                    setIsEditingCarousel(false);
+                    await refreshData();
+                    showNotification('Imagine actualizată cu succes!');
+                  }
+                } catch (err: any) {
+                  showNotification(err.message || 'Eroare la salvare', 'error');
+                }
+              }} className="space-y-4">
+
+                <div className="relative h-40 rounded-lg overflow-hidden border border-stone-200">
+                  <img src={currentCarouselItem.image_url} alt="Preview" className="w-full h-full object-cover" />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-sm text-stone-600 mb-1">Nume (Opțional)</label>
+                  <input
+                    type="text"
+                    value={currentCarouselItem.name || ''}
+                    onChange={e => setCurrentCarouselItem({ ...currentCarouselItem, name: e.target.value })}
+                    className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none"
+                    placeholder="ex: Tort Aniversar"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-sm text-stone-600 mb-1">Descriere (Opțional)</label>
+                  <textarea
+                    rows={3}
+                    value={currentCarouselItem.description || ''}
+                    onChange={e => setCurrentCarouselItem({ ...currentCarouselItem, description: e.target.value })}
+                    className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none"
+                    placeholder="Detalii despre produs..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-bold text-sm text-stone-600 mb-1">Preț (RON)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={currentCarouselItem.price || 0}
+                      onChange={e => setCurrentCarouselItem({ ...currentCarouselItem, price: parseFloat(e.target.value) || 0 })}
+                      className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-sm text-stone-600 mb-1">Unitate</label>
+                    <input
+                      type="text"
+                      value={currentCarouselItem.unit || 'buc'}
+                      onChange={e => setCurrentCarouselItem({ ...currentCarouselItem, unit: e.target.value })}
+                      className="w-full p-3 border border-stone-300 rounded-lg bg-white text-stone-900 focus:ring-2 focus:ring-bakery-400 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button type="button" onClick={() => setIsEditingCarousel(false)} className="flex-1 py-3 bg-stone-200 hover:bg-stone-300 rounded-xl font-bold text-stone-600">Anulează</button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-3 bg-bakery-500 hover:bg-bakery-600 rounded-xl font-bold text-white shadow-md"
                   >
                     Salvează
                   </button>

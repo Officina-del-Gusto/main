@@ -281,7 +281,7 @@ const Navbar: React.FC<NavbarProps> = ({ christmasAdminEnabled = true, onOpenOrd
         {/* Mobile Menu */}
         {isOpen && (
           <div className="lg:hidden bg-white border-t border-bakery-100 shadow-xl absolute w-full top-full left-0">
-            <div className="px-4 py-6 space-y-4">
+            <div className="px-4 py-4 space-y-3">
               <button onClick={() => scrollToSection('products')} className="block w-full text-left px-4 py-3 text-bakery-800 hover:bg-bakery-50 rounded-lg text-lg font-medium border-l-4 border-transparent hover:border-bakery-500 transition-all">
                 {dictionary.navbar.mobileMenu.products}
               </button>

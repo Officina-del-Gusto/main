@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, ShoppingBag, Calendar, Phone, User, Check, Minus, Plus, Loader } from 'lucide-react';
 import emailjs from '@emailjs/browser';
-import { getProducts, getCarouselImages, submitOrder, Product, CarouselImage, OrderItem } from '../utils/mockData';
+import { getProducts, getCarouselImages, getStoreSettings, submitOrder, Product, CarouselImage, OrderItem, StoreSettings } from '../utils/mockData';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const EMAILJS_SERVICE_ID = 'service_7kfjg5q';
@@ -15,11 +15,12 @@ interface OrderModalProps {
 
 const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
     const { dictionary } = useLanguage();
-    const [step, setStep] = useState<1 | 2 | 3>(1);
+    const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
     const [loading, setLoading] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
     const [customItems, setCustomItems] = useState<CarouselImage[]>([]);
     const [cart, setCart] = useState<Map<string, OrderItem>>(new Map());
+    const [storeSettings, setStoreSettings] = useState<StoreSettings>({ id: 1, shipping_fee: 15, packaging_fee: 2, pricing_enabled: true });
 
     const [formData, setFormData] = useState({
         name: '',
@@ -38,12 +39,14 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [fetchedProducts, fetchedCustom] = await Promise.all([
+            const [fetchedProducts, fetchedCustom, fetchedSettings] = await Promise.all([
                 getProducts(),
-                getCarouselImages()
+                getCarouselImages(),
+                getStoreSettings()
             ]);
             setProducts(fetchedProducts);
             setCustomItems(fetchedCustom);
+            setStoreSettings(fetchedSettings);
         } catch (error) {
             console.error('Failed to load items', error);
         } finally {
@@ -62,7 +65,8 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                     name: 'name_ro' in item ? item.name_ro : `Custom Order #${item.display_order}`,
                     image_url: item.image_url,
                     quantity: 1,
-                    type
+                    type,
+                    price: item.price || 0
                 });
             } else if (currentItem) {
                 const newQuantity = currentItem.quantity + delta;
@@ -78,6 +82,12 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (step === 2) {
+            setStep(3);
+            return;
+        }
+
         setLoading(true);
         try {
             // 1. Submit to Supabase
@@ -118,7 +128,7 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                 // Don't block the success flow if email fails, but maybe log it
             }
 
-            setStep(3);
+            setStep(4);
         } catch (error) {
             alert('Eroare la trimiterea comenzii. Vă rugăm încercați din nou.');
         } finally {
@@ -137,8 +147,9 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                     <h2 className="text-xl font-serif font-bold text-bakery-800 flex items-center gap-2">
                         <ShoppingBag className="text-bakery-500" />
                         {step === 1 && 'Alege Produsele'}
-                        {step === 2 && 'Detalii Comandă'}
-                        {step === 3 && 'Comandă Trimisă!'}
+                        {step === 2 && 'Detalii Livrare'}
+                        {step === 3 && 'Revizuire Comandă'}
+                        {step === 4 && 'Comandă Trimisă!'}
                     </h2>
                     <button onClick={onClose} className="p-2 hover:bg-bakery-100 rounded-full transition-colors">
                         <X size={24} className="text-stone-500" />
@@ -148,85 +159,154 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-6">
                     {step === 1 && (
-                        <div className="space-y-8">
-                            {loading ? (
-                                <div className="flex justify-center py-12">
-                                    <Loader className="animate-spin text-bakery-500" size={40} />
-                                </div>
-                            ) : (
-                                <>
-                                    {/* Products Section */}
-                                    <section>
-                                        <h3 className="text-lg font-bold text-stone-700 mb-4 border-l-4 border-bakery-500 pl-3">Produse Standard</h3>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                            {products.map(product => {
-                                                const quantity = cart.get(product.id)?.quantity || 0;
-                                                return (
-                                                    <div key={product.id} className={`border rounded-xl p-3 flex gap-3 transition-all ${quantity > 0 ? 'border-bakery-500 bg-bakery-50' : 'border-stone-200'}`}>
-                                                        <img src={product.image_url} alt={product.name_ro} className="w-20 h-20 object-cover rounded-lg" />
-                                                        <div className="flex-1 flex flex-col justify-between">
-                                                            <h4 className="font-bold text-stone-800 text-sm">{product.name_ro}</h4>
-                                                            <div className="flex items-center gap-3 mt-2">
-                                                                <button
-                                                                    onClick={() => updateQuantity(product.id, product, 'product', -1)}
-                                                                    className={`p-1 rounded-full ${quantity > 0 ? 'bg-bakery-200 text-bakery-800' : 'bg-stone-100 text-stone-400'}`}
-                                                                    disabled={quantity === 0}
-                                                                >
-                                                                    <Minus size={16} />
-                                                                </button>
-                                                                <span className="font-bold w-4 text-center">{quantity}</span>
-                                                                <button
-                                                                    onClick={() => updateQuantity(product.id, product, 'product', 1)}
-                                                                    className="p-1 rounded-full bg-bakery-500 text-white hover:bg-bakery-600"
-                                                                >
-                                                                    <Plus size={16} />
-                                                                </button>
+                        <div className="flex flex-col lg:flex-row gap-6 h-full">
+                            {/* LEFT: Product List */}
+                            <div className="flex-1 overflow-y-auto pr-2">
+                                {loading ? (
+                                    <div className="flex justify-center py-12">
+                                        <Loader className="animate-spin text-bakery-500" size={40} />
+                                    </div>
+                                ) : (
+                                    <div className="space-y-8 pb-20">
+                                        {/* Products Section */}
+                                        <section>
+                                            <h3 className="text-lg font-bold text-stone-700 mb-4 border-l-4 border-bakery-500 pl-3">Produse Standard</h3>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                {products.map(product => {
+                                                    const quantity = cart.get(product.id)?.quantity || 0;
+                                                    return (
+                                                        <div key={product.id} className={`border rounded-xl p-3 flex gap-3 transition-all ${quantity > 0 ? 'border-bakery-500 bg-bakery-50' : 'border-stone-200'}`}>
+                                                            <img src={product.image_url} alt={product.name_ro} className="w-20 h-20 object-cover rounded-lg" />
+                                                            <div className="flex-1 flex flex-col justify-between">
+                                                                <div>
+                                                                    <h4 className="font-bold text-stone-800 text-sm">{product.name_ro}</h4>
+                                                                    {storeSettings.pricing_enabled && product.price && (
+                                                                        <div className="text-xs text-stone-500 font-bold mt-1">
+                                                                            {product.price} RON / {product.unit || 'buc'}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex items-center gap-3 mt-2">
+                                                                    <button
+                                                                        onClick={() => updateQuantity(product.id, product, 'product', -1)}
+                                                                        className={`p-1 rounded-full ${quantity > 0 ? 'bg-bakery-200 text-bakery-800' : 'bg-stone-100 text-stone-400'}`}
+                                                                        disabled={quantity === 0}
+                                                                    >
+                                                                        <Minus size={16} />
+                                                                    </button>
+                                                                    <span className="font-bold w-4 text-center">{quantity}</span>
+                                                                    <button
+                                                                        onClick={() => updateQuantity(product.id, product, 'product', 1)}
+                                                                        className="p-1 rounded-full bg-bakery-500 text-white hover:bg-bakery-600"
+                                                                    >
+                                                                        <Plus size={16} />
+                                                                    </button>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </section>
+                                                    );
+                                                })}
+                                            </div>
+                                        </section>
 
-                                    {/* Custom Orders Section */}
-                                    <section>
-                                        <h3 className="text-lg font-bold text-stone-700 mb-4 border-l-4 border-bakery-500 pl-3 mt-8">Din Galerie (Comenzi Speciale)</h3>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                                            {customItems.map((item, idx) => {
-                                                const quantity = cart.get(item.id)?.quantity || 0;
-                                                return (
-                                                    <div key={item.id} className={`relative group rounded-xl overflow-hidden border transition-all ${quantity > 0 ? 'ring-2 ring-bakery-500' : 'border-stone-200'}`}>
-                                                        <img src={item.image_url} alt="Custom" className="w-full h-32 object-cover" />
-                                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <div className="flex items-center gap-3 bg-white rounded-full p-1">
-                                                                <button
-                                                                    onClick={() => updateQuantity(item.id, item, 'custom', -1)}
-                                                                    className="p-1.5 hover:bg-stone-100 rounded-full"
-                                                                >
-                                                                    <Minus size={16} />
-                                                                </button>
-                                                                <span className="font-bold w-4 text-center">{quantity}</span>
-                                                                <button
-                                                                    onClick={() => updateQuantity(item.id, item, 'custom', 1)}
-                                                                    className="p-1.5 bg-bakery-500 text-white rounded-full"
-                                                                >
-                                                                    <Plus size={16} />
-                                                                </button>
+                                        {/* Custom Orders Section */}
+                                        <section>
+                                            <h3 className="text-lg font-bold text-stone-700 mb-4 border-l-4 border-bakery-500 pl-3 mt-8">Din Galerie (Comenzi Speciale)</h3>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                                {customItems.map((item) => {
+                                                    const quantity = cart.get(item.id)?.quantity || 0;
+                                                    return (
+                                                        <div key={item.id} className={`relative group rounded-xl overflow-hidden border transition-all ${quantity > 0 ? 'ring-2 ring-bakery-500' : 'border-stone-200'}`}>
+                                                            <img src={item.image_url} alt="Custom" className="w-full h-32 object-cover" />
+                                                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-1">
+                                                                <div className="text-white text-xs font-bold truncate px-1">{item.name || 'Produs Galerie'}</div>
+                                                                {storeSettings.pricing_enabled && item.price && (
+                                                                    <div className="text-white/80 text-[10px] px-1">{item.price} RON</div>
+                                                                )}
                                                             </div>
+                                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <div className="flex items-center gap-3 bg-white rounded-full p-1">
+                                                                    <button
+                                                                        onClick={() => updateQuantity(item.id, item, 'custom', -1)}
+                                                                        className="p-1.5 hover:bg-stone-100 rounded-full"
+                                                                    >
+                                                                        <Minus size={16} />
+                                                                    </button>
+                                                                    <span className="font-bold w-4 text-center">{quantity}</span>
+                                                                    <button
+                                                                        onClick={() => updateQuantity(item.id, item, 'custom', 1)}
+                                                                        className="p-1.5 bg-bakery-500 text-white rounded-full"
+                                                                    >
+                                                                        <Plus size={16} />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            {quantity > 0 && (
+                                                                <div className="absolute top-2 right-2 bg-bakery-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+                                                                    {quantity}x
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                        {quantity > 0 && (
-                                                            <div className="absolute top-2 right-2 bg-bakery-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
-                                                                {quantity}x
-                                                            </div>
-                                                        )}
+                                                    );
+                                                })}
+                                            </div>
+                                        </section>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* RIGHT: Order Summary (Sticky) */}
+                            <div className="hidden lg:block w-1/3 bg-stone-50 rounded-xl p-6 h-fit sticky top-0 border border-stone-200">
+                                <h3 className="font-bold text-xl text-stone-800 mb-4 flex items-center gap-2">
+                                    <ShoppingBag size={20} /> Sumar Comandă
+                                </h3>
+
+                                {cart.size === 0 ? (
+                                    <div className="text-center py-10 text-stone-400">
+                                        <p>Coșul este gol.</p>
+                                        <p className="text-sm">Alege produse din lista din stânga.</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                                            {Array.from(cart.values()).map(item => (
+                                                <div key={item.id} className="flex justify-between items-start text-sm border-b border-stone-200 pb-2">
+                                                    <div>
+                                                        <div className="font-bold text-stone-700">{item.name}</div>
+                                                        <div className="text-xs text-stone-500">
+                                                            {item.quantity} x {storeSettings.pricing_enabled && item.price ? `${item.price} RON` : ''}
+                                                        </div>
                                                     </div>
-                                                );
-                                            })}
+                                                    <div className="font-bold text-stone-800">
+                                                        {storeSettings.pricing_enabled && item.price ? `${(item.price * item.quantity).toFixed(2)} RON` : ''}
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                    </section>
-                                </>
-                            )}
+
+                                        {storeSettings.pricing_enabled && (
+                                            <div className="pt-4 border-t-2 border-stone-200 space-y-2">
+                                                <div className="flex justify-between text-stone-600">
+                                                    <span>Subtotal Produse:</span>
+                                                    <span className="font-bold">
+                                                        {Array.from(cart.values()).reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0).toFixed(2)} RON
+                                                    </span>
+                                                </div>
+                                                <div className="text-xs text-stone-400 italic">
+                                                    * Taxele de livrare și ambalaj se calculează la pasul următor.
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <button
+                                            onClick={() => setStep(2)}
+                                            className="w-full bg-bakery-500 text-white py-3 rounded-xl font-bold hover:bg-bakery-600 shadow-md mt-4 flex justify-center items-center gap-2"
+                                        >
+                                            Continuă <Check size={18} />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
 
@@ -338,12 +418,99 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                                 disabled={loading}
                                 className="w-full bg-bakery-500 text-white font-bold py-4 rounded-xl hover:bg-bakery-600 transition-colors flex justify-center items-center gap-2"
                             >
-                                {loading ? <Loader className="animate-spin" /> : <>Trimite Comanda <Check size={20} /></>}
+                                {loading ? <Loader className="animate-spin" /> : <>Revizuiește Comanda <Check size={20} /></>}
                             </button>
                         </form>
                     )}
 
                     {step === 3 && (
+                        <div className="max-w-2xl mx-auto space-y-6">
+                            <div className="bg-bakery-50 p-6 rounded-xl border border-bakery-100">
+                                <h3 className="font-bold text-bakery-800 mb-4 text-lg border-b border-bakery-200 pb-2">Sumar Final</h3>
+
+                                {/* Items List */}
+                                <div className="space-y-3 mb-6">
+                                    {Array.from(cart.values()).map(item => (
+                                        <div key={item.id} className="flex justify-between items-center text-sm">
+                                            <div className="flex items-center gap-3">
+                                                <span className="font-bold bg-white px-2 py-1 rounded border border-bakery-200">{item.quantity}x</span>
+                                                <span className="text-stone-700">{item.name}</span>
+                                            </div>
+                                            <span className="font-bold text-stone-800">
+                                                {storeSettings.pricing_enabled && item.price ? `${(item.price * item.quantity).toFixed(2)} RON` : ''}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Fees & Totals */}
+                                {storeSettings.pricing_enabled && (
+                                    <div className="border-t border-bakery-200 pt-4 space-y-2 text-sm">
+                                        <div className="flex justify-between text-stone-600">
+                                            <span>Subtotal Produse:</span>
+                                            <span>{Array.from(cart.values()).reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0).toFixed(2)} RON</span>
+                                        </div>
+                                        {formData.deliveryType === 'delivery' && (
+                                            <div className="flex justify-between text-stone-600">
+                                                <span>Taxă Livrare:</span>
+                                                <span>{storeSettings.shipping_fee.toFixed(2)} RON</span>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between text-stone-600">
+                                            <span>Taxă Ambalaj:</span>
+                                            <span>{storeSettings.packaging_fee.toFixed(2)} RON</span>
+                                        </div>
+                                        <div className="flex justify-between text-lg font-bold text-bakery-800 border-t border-bakery-200 pt-2 mt-2">
+                                            <span>Total General:</span>
+                                            <span>
+                                                {(Array.from(cart.values()).reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0) +
+                                                    (formData.deliveryType === 'delivery' ? storeSettings.shipping_fee : 0) +
+                                                    storeSettings.packaging_fee).toFixed(2)} RON
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="bg-white border border-stone-200 p-6 rounded-xl">
+                                <h3 className="font-bold text-stone-800 mb-4 text-lg">Detalii Livrare</h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <span className="block text-stone-500 text-xs uppercase font-bold">Nume</span>
+                                        <span className="font-medium">{formData.name || '-'}</span>
+                                    </div>
+                                    <div>
+                                        <span className="block text-stone-500 text-xs uppercase font-bold">Telefon</span>
+                                        <span className="font-medium">{formData.phone}</span>
+                                    </div>
+                                    <div>
+                                        <span className="block text-stone-500 text-xs uppercase font-bold">Data</span>
+                                        <span className="font-medium">{new Date(formData.date).toLocaleDateString('ro-RO')}</span>
+                                    </div>
+                                    <div>
+                                        <span className="block text-stone-500 text-xs uppercase font-bold">Metoda</span>
+                                        <span className="font-medium">{formData.deliveryType === 'delivery' ? 'Livrare la Domiciliu' : 'Ridicare Personală'}</span>
+                                    </div>
+                                    {formData.deliveryType === 'delivery' && (
+                                        <div className="sm:col-span-2">
+                                            <span className="block text-stone-500 text-xs uppercase font-bold">Adresa</span>
+                                            <span className="font-medium">{formData.address}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleSubmit}
+                                disabled={loading}
+                                className="w-full bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-700 transition-colors flex justify-center items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                            >
+                                {loading ? <Loader className="animate-spin" /> : <>Confirmă și Trimite Comanda <Check size={24} /></>}
+                            </button>
+                        </div>
+                    )}
+
+                    {step === 4 && (
                         <div className="text-center py-12">
                             <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
                                 <Check size={40} strokeWidth={3} />
