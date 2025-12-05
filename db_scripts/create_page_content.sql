@@ -26,6 +26,7 @@ ALTER TABLE page_content ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public can read page content" ON page_content;
 DROP POLICY IF EXISTS "Authenticated users can insert page content" ON page_content;
 DROP POLICY IF EXISTS "Authenticated users can update page content" ON page_content;
+DROP POLICY IF EXISTS "Allow delete page content" ON page_content;
 
 -- Allow public read access (for frontend)
 CREATE POLICY "Public can read page content"
@@ -41,6 +42,11 @@ CREATE POLICY "Authenticated users can update page content"
   ON page_content FOR UPDATE
   USING (true)
   WITH CHECK (true);
+
+-- Allow delete for reset functionality
+CREATE POLICY "Allow delete page content"
+  ON page_content FOR DELETE
+  USING (true);
 
 -- Create index for fast lookups by section_key
 CREATE INDEX IF NOT EXISTS idx_page_content_section_key ON page_content(section_key);

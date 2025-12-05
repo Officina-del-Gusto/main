@@ -8,6 +8,7 @@ import {
 import { usePageEditor } from '../../contexts/PageEditorContext';
 import { getAllPageContent, PageContent, getAllContentHistory, ContentHistory, revertToVersion, resetAllContent } from '../../utils/mockData';
 import EditableText from './EditableText';
+import ConfirmModal from '../ui/ConfirmModal';
 
 interface PageEditorPanelProps {
     onClose?: () => void;
@@ -95,6 +96,12 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
     const [showHistory, setShowHistory] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
 
+    // Modal states (replacing window.confirm)
+    const [resetModal, setResetModal] = useState(false);
+    const [discardModal, setDiscardModal] = useState(false);
+    const [revertModal, setRevertModal] = useState<string | null>(null);
+    const [exitEditModal, setExitEditModal] = useState(false);
+
     const currentHost = window.location.hostname === 'localhost'
         ? `localhost:${window.location.port}`
         : window.location.hostname;
@@ -131,11 +138,14 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
 
     const handleDiscard = () => {
         if (hasUnsavedChanges) {
-            if (window.confirm('Sigur vrei să anulezi modificările?')) {
-                discardChanges();
-                showNotification('Modificările au fost anulate', 'success');
-            }
+            setDiscardModal(true);
         }
+    };
+
+    const confirmDiscard = () => {
+        discardChanges();
+        showNotification('Modificările au fost anulate', 'success');
+        setDiscardModal(false);
     };
 
     const handleTranslate = async () => {
@@ -149,44 +159,54 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
 
     const handleToggleEditMode = () => {
         if (isEditMode && hasUnsavedChanges) {
-            if (window.confirm('Ai modificări nesalvate. Vrei să le anulezi?')) {
-                discardChanges();
-                setEditMode(false);
-            }
+            setExitEditModal(true);
         } else {
             setEditMode(!isEditMode);
         }
     };
 
-    const handleRevert = async (historyId: string) => {
-        if (window.confirm('Sigur vrei să restaurezi această versiune?')) {
-            try {
-                await revertToVersion(historyId);
-                await refreshContent();
-                const content = await getAllPageContent();
-                setContentList(content);
-                showNotification('Versiune restaurată!', 'success');
-            } catch (error) {
-                showNotification('Eroare la restaurare', 'error');
-            }
-        }
+    const confirmExitEdit = () => {
+        discardChanges();
+        setEditMode(false);
+        setExitEditModal(false);
     };
 
-    const handleResetAll = async () => {
-        if (window.confirm('⚠️ ATENȚIE: Toate modificările vor fi șterse și textul va reveni la valorile originale din traduceri. Această acțiune nu poate fi anulată!\n\nContinuați?')) {
-            setIsResetting(true);
-            try {
-                await resetAllContent();
-                showNotification('Conținut resetat! Se reîncarcă pagina...', 'success');
-                // Force full page reload to clear all cached state
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
-            } catch (error) {
-                console.error('Reset error:', error);
-                showNotification('Eroare la resetare: ' + (error as Error).message, 'error');
-                setIsResetting(false);
-            }
+    const handleRevert = (historyId: string) => {
+        setRevertModal(historyId);
+    };
+
+    const confirmRevert = async () => {
+        if (!revertModal) return;
+        try {
+            await revertToVersion(revertModal);
+            await refreshContent();
+            const content = await getAllPageContent();
+            setContentList(content);
+            showNotification('Versiune restaurată!', 'success');
+        } catch (error) {
+            showNotification('Eroare la restaurare', 'error');
+        }
+        setRevertModal(null);
+    };
+
+    const handleResetAll = () => {
+        setResetModal(true);
+    };
+
+    const confirmReset = async () => {
+        setIsResetting(true);
+        try {
+            await resetAllContent();
+            showNotification('Conținut resetat! Se reîncarcă pagina...', 'success');
+            // Force full page reload to clear all cached state
+            setTimeout(() => {
+                window.location.href = '/admin';
+            }, 1000);
+        } catch (error) {
+            console.error('Reset error:', error);
+            showNotification('Eroare la resetare: ' + (error as Error).message, 'error');
+            setIsResetting(false);
+            setResetModal(false);
         }
     };
 
@@ -617,6 +637,52 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
                     )}
                 </div>
             </div>
+
+            {/* Styled Confirmation Modals */}
+            <ConfirmModal
+                isOpen={resetModal}
+                onClose={() => setResetModal(false)}
+                onConfirm={confirmReset}
+                title="Resetare Completă"
+                message="Toate modificările vor fi șterse și textul va reveni la valorile originale din traduceri.\n\nAceastă acțiune nu poate fi anulată!"
+                confirmText="Da, Resetează Tot"
+                cancelText="Anulează"
+                variant="danger"
+                isLoading={isResetting}
+            />
+
+            <ConfirmModal
+                isOpen={discardModal}
+                onClose={() => setDiscardModal(false)}
+                onConfirm={confirmDiscard}
+                title="Anulează Modificările"
+                message="Sigur vrei să anulezi toate modificările nesalvate?"
+                confirmText="Da, Anulează"
+                cancelText="Nu"
+                variant="warning"
+            />
+
+            <ConfirmModal
+                isOpen={exitEditModal}
+                onClose={() => setExitEditModal(false)}
+                onConfirm={confirmExitEdit}
+                title="Ieși din Editare"
+                message="Ai modificări nesalvate. Acestea vor fi pierdute dacă ieși."
+                confirmText="Ieși fără Salvare"
+                cancelText="Rămâi"
+                variant="warning"
+            />
+
+            <ConfirmModal
+                isOpen={revertModal !== null}
+                onClose={() => setRevertModal(null)}
+                onConfirm={confirmRevert}
+                title="Restaurează Versiunea"
+                message="Sigur vrei să restaurezi această versiune? Conținutul actual va fi înlocuit."
+                confirmText="Da, Restaurează"
+                cancelText="Anulează"
+                variant="info"
+            />
         </div>
     );
 };

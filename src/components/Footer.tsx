@@ -56,6 +56,16 @@ const Footer: React.FC<FooterProps> = ({ onAdminClick }) => {
   const sundayClosed = useEditableContent('footer.sundayClosed', footerText.sundayClosed);
   const locationsNote = useEditableContent('footer.locationsNote', footerText.locationsNote);
 
+  // Editable contact links (shared with MapSection/CustomOrders)
+  const phoneNumber = useEditableContent('contact.phone', '0754 554 194');
+  const emailAddress = useEditableContent('contact.email', 'odgdragasani@gmail.com');
+
+  // Format phone for tel: and WhatsApp links
+  const formatPhoneForHref = (phone: string) => {
+    const cleaned = phone.replace(/\s+/g, '').replace(/^0/, '+40');
+    return cleaned;
+  };
+
   const lastUpdatedDate = useMemo(() => {
     const locale = localeMap[language] ?? 'en-US';
     return new Date().toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' });
@@ -110,7 +120,7 @@ const Footer: React.FC<FooterProps> = ({ onAdminClick }) => {
               <Facebook size={24} />
             </a>
             <a
-              href="https://wa.me/40754554194"
+              href={`https://wa.me/${formatPhoneForHref(phoneNumber.value).replace('+', '')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="w-12 h-12 rounded-full overflow-hidden hover:scale-110 transition-all duration-300 transform shadow-lg"
@@ -124,14 +134,14 @@ const Footer: React.FC<FooterProps> = ({ onAdminClick }) => {
               />
             </a>
             <a
-              href="mailto:odgdragasani@gmail.com"
+              href={`mailto:${emailAddress.value}`}
               className="w-12 h-12 rounded-full bg-stone-800 hover:bg-bakery-400 text-white flex items-center justify-center transition-all duration-300 transform hover:scale-110 shadow-lg"
               aria-label="Email"
             >
               <Mail size={24} />
             </a>
             <a
-              href="tel:+40754554194"
+              href={`tel:${formatPhoneForHref(phoneNumber.value)}`}
               className="w-12 h-12 rounded-full bg-stone-800 hover:bg-bakery-500 text-white flex items-center justify-center transition-all duration-300 transform hover:scale-110 shadow-lg"
               aria-label="Phone"
             >
