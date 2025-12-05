@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { Facebook, Phone, Mail, Lock, X } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useEditableContent } from '../contexts/useEditableContent';
 import type { TermsAndPrivacy, Language } from '../i18n/translations';
 
 interface FooterProps {
@@ -49,6 +50,12 @@ const Footer: React.FC<FooterProps> = ({ onAdminClick }) => {
   const footerText = dictionary.footer;
   const legal = dictionary.legal;
 
+  // Get editable content from DB (falls back to dictionary if not in DB)
+  const tagline = useEditableContent('footer.tagline', footerText.tagline);
+  const schedule = useEditableContent('footer.schedule', footerText.schedule);
+  const sundayClosed = useEditableContent('footer.sundayClosed', footerText.sundayClosed);
+  const locationsNote = useEditableContent('footer.locationsNote', footerText.locationsNote);
+
   const lastUpdatedDate = useMemo(() => {
     const locale = localeMap[language] ?? 'en-US';
     return new Date().toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' });
@@ -89,7 +96,7 @@ const Footer: React.FC<FooterProps> = ({ onAdminClick }) => {
 
           <div className="text-center md:text-left">
             <h3 className="text-3xl font-serif text-white font-bold mb-2">Officina del Gusto</h3>
-            <p className="font-cursive text-bakery-400 text-xl">{footerText.tagline}</p>
+            <p className="font-cursive text-bakery-400 text-xl">{tagline.value}</p>
           </div>
 
           <div className="flex items-center gap-6">
@@ -204,12 +211,12 @@ const Footer: React.FC<FooterProps> = ({ onAdminClick }) => {
         <div className="border-t border-stone-800 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-stone-500 gap-4">
           <div className="text-center md:text-left">
             <p>&copy; {new Date().getFullYear()} Officina del Gusto.</p>
-            <p className="mt-1">{footerText.locationsNote}</p>
+            <p className="mt-1">{locationsNote.value}</p>
           </div>
           <div className="flex gap-4">
-            <span className="text-stone-400">{footerText.schedule}</span>
+            <span className="text-stone-400">{schedule.value}</span>
             <span>•</span>
-            <span className="text-red-400/80">{footerText.sundayClosed}</span>
+            <span className="text-red-400/80">{sundayClosed.value}</span>
           </div>
         </div>
 

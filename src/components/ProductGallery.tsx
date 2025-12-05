@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useEditableContent } from '../contexts/useEditableContent';
 import { getProducts, DEFAULT_PRODUCTS, Product } from '../utils/mockData';
 import { ShoppingBag } from 'lucide-react';
 
@@ -17,6 +18,11 @@ const ProductGallery: React.FC<ProductGalleryProps> = ({ onOpenOrderModal }) => 
   const { dictionary } = useLanguage();
   const [products, setProducts] = useState<Product[]>(DEFAULT_PRODUCTS);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Get editable content from DB (falls back to dictionary if not in DB)
+  const eyebrow = useEditableContent('productGallery.eyebrow', dictionary.productGallery.eyebrow);
+  const title = useEditableContent('productGallery.title', dictionary.productGallery.title);
+  const description = useEditableContent('productGallery.description', dictionary.productGallery.description);
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -38,10 +44,10 @@ const ProductGallery: React.FC<ProductGalleryProps> = ({ onOpenOrderModal }) => 
     <section id="products" className="py-24 bg-bakery-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <span className="font-cursive text-3xl text-bakery-500 block mb-2">{dictionary.productGallery.eyebrow}</span>
-          <h2 className="text-4xl md:text-5xl font-serif font-bold text-bakery-900 mb-6">{dictionary.productGallery.title}</h2>
+          <span className="font-cursive text-3xl text-bakery-500 block mb-2">{eyebrow.value}</span>
+          <h2 className="text-4xl md:text-5xl font-serif font-bold text-bakery-900 mb-6">{title.value}</h2>
           <p className="text-bakery-700 max-w-2xl mx-auto text-lg">
-            {dictionary.productGallery.description}
+            {description.value}
           </p>
         </div>
 
