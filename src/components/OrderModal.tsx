@@ -159,18 +159,70 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
             });
             setCreatedOrder(newOrder);
 
-            // 2. Send Email via EmailJS
+            // 2. Send Email via EmailJS with comprehensive order data
+            const now = new Date();
+            const orderDate = now.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const orderTime = now.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+
+            // Check if order is urgent (needed within 2 days)
+            const neededDate = new Date(formData.date);
+            const daysUntilNeeded = Math.ceil((neededDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            const isUrgent = daysUntilNeeded <= 2;
+
+            // Calculate totals
+            const standardItems = Array.from(cart.values()).filter(i => i.type === 'product');
+            const specialItems = Array.from(cart.values()).filter(i => i.type === 'custom');
+            const subtotal = Array.from(cart.values()).reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0);
+            const packagingFee = storeSettings?.packaging_fee || 0;
+            const shippingFee = formData.deliveryType === 'delivery' ? (storeSettings?.shipping_fee || 0) : 0;
+            const total = subtotal + packagingFee + shippingFee;
+
             const templateParams = {
-                customer_name: formData.name || 'Client',
+                // Order identification
+                order_id: newOrder?.id?.slice(0, 8).toUpperCase() || 'N/A',
+                order_date: orderDate,
+                order_time: orderTime,
+
+                // Customer info
+                customer_name: formData.name || 'Client Anonim',
                 phone_number: formData.phone,
-                needed_by: formData.date,
-                delivery_type_label: formData.deliveryType === 'delivery' ? 'Livrare la Domiciliu' : 'Ridicare Personală',
+
+                // Delivery info
+                needed_by: new Date(formData.date).toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+                delivery_type_label: formData.deliveryType === 'delivery' ? '🚚 Livrare la Domiciliu' : '🏪 Ridicare Personală',
                 delivery_type_class: formData.deliveryType === 'delivery' ? 'badge-delivery' : 'badge-pickup',
                 delivery_address: formData.deliveryType === 'delivery' ? formData.address : '',
+
+                // Urgency
+                is_urgent: isUrgent,
+                days_until_needed: daysUntilNeeded,
+
+                // Items with full details
                 items: Array.from(cart.values()).map(item => ({
                     name: item.name,
-                    quantity: item.quantity
-                }))
+                    quantity: item.quantity,
+                    type: item.type === 'product' ? 'Produs Standard' : 'Comandă Specială',
+                    price: item.price || 0,
+                    price_display: item.price ? `${(item.price * item.quantity).toFixed(2)} RON` : 'Preț la cerere',
+                    unit_price: item.price ? `${item.price} RON/buc` : ''
+                })),
+
+                // Item counts for quick reference
+                standard_count: standardItems.reduce((sum, i) => sum + i.quantity, 0),
+                special_count: specialItems.reduce((sum, i) => sum + i.quantity, 0),
+                total_items: Array.from(cart.values()).reduce((sum, i) => sum + i.quantity, 0),
+
+                // Pricing (business owner sees this)
+                subtotal: subtotal.toFixed(2),
+                packaging_fee: packagingFee.toFixed(2),
+                shipping_fee: shippingFee.toFixed(2),
+                total: total.toFixed(2),
+                has_unpriced: Array.from(cart.values()).some(item => !item.price || item.price === 0),
+
+                // Plain text items list (backup for simple templates)
+                items_text: Array.from(cart.values()).map(item =>
+                    `• ${item.quantity}x ${item.name}${item.price ? ` - ${(item.price * item.quantity).toFixed(2)} RON` : ' (preț la cerere)'}`
+                ).join('\n')
             };
 
             try {
