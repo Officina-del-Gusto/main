@@ -29,7 +29,14 @@ const safeGetBooleanFromStorage = (key: string, defaultValue: boolean): boolean 
 const App: React.FC = () => {
   const { dictionary } = useLanguage();
   const [view, setView] = useState<'public' | 'login' | 'admin'>(() => {
-    return window.location.pathname === '/admin' ? 'login' : 'public';
+    // Check if already logged in
+    if (window.location.pathname === '/admin') {
+      if (localStorage.getItem('adminSession')) {
+        return 'admin';
+      }
+      return 'login';
+    }
+    return 'public';
   });
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState(false);
@@ -129,27 +136,24 @@ const App: React.FC = () => {
     const savedPassword = localStorage.getItem('adminPassword') || 'mamaliga';
 
     if (loginForm.username === savedUsername && loginForm.password === savedPassword) {
-      // Generate session token for this login session
-      const sessionToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
-      sessionStorage.setItem('adminSession', sessionToken);
+      // Store session in localStorage for persistence across refreshes
+      localStorage.setItem('adminSession', 'true');
       setView('admin');
       setLoginError(false);
-    } else {
-      setLoginError(true);
     }
   };
 
   // Render Admin View
   if (view === 'admin') {
-    // Verify session token exists
-    if (!sessionStorage.getItem('adminSession')) {
+    // Verify session exists
+    if (!localStorage.getItem('adminSession')) {
       setView('login');
       return null;
     }
 
     return <AdminDashboard
       onLogout={() => {
-        sessionStorage.removeItem('adminSession');
+        localStorage.removeItem('adminSession');
         setView('public');
         setLoginForm({ username: '', password: '' });
       }}

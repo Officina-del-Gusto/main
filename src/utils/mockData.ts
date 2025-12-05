@@ -1309,3 +1309,21 @@ export const revertToVersion = async (historyId: string): Promise<void> => {
     throw error;
   }
 };
+
+/**
+ * Reset all content to defaults by deleting all page_content entries
+ * This makes the site revert to the fallback dictionary translations
+ */
+export const resetAllContent = async (): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('page_content')
+      .delete()
+      .neq('section_key', ''); // Delete all rows
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error resetting all content:', error);
+    throw error;
+  }
+};

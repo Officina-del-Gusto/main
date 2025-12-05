@@ -2,19 +2,77 @@ import React, { useState, useEffect } from 'react';
 import {
     Save, X, Loader, RefreshCw, Languages, Edit, Eye,
     CheckCircle, AlertCircle, MapPin, Clock, Wheat, Heart, Coffee,
-    ShoppingBag, PartyPopper, Briefcase, Phone, Mail, Navigation,
-    RotateCcw, Download, History, Facebook, Link
+    ShoppingBag, PartyPopper, Briefcase, Phone, Mail, Gift, Calendar,
+    RotateCcw, History, Facebook, Trash2, ExternalLink
 } from 'lucide-react';
 import { usePageEditor } from '../../contexts/PageEditorContext';
-import { getAllPageContent, PageContent, getAllContentHistory, ContentHistory, revertToVersion } from '../../utils/mockData';
+import { getAllPageContent, PageContent, getAllContentHistory, ContentHistory, revertToVersion, resetAllContent } from '../../utils/mockData';
 import EditableText from './EditableText';
 
 interface PageEditorPanelProps {
     onClose?: () => void;
 }
 
+// Simple component for editable hyperlinks
+interface EditableLinkProps {
+    contentKey: string;
+    defaultText: string;
+    defaultHref: string;
+    className?: string;
+    icon?: React.ReactNode;
+}
+
+const EditableLink: React.FC<EditableLinkProps> = ({ contentKey, defaultText, defaultHref, className, icon }) => {
+    const { isEditMode, getContentValue, updateContent } = usePageEditor();
+    const textKey = `${contentKey}.text`;
+    const hrefKey = `${contentKey}.href`;
+
+    const textValue = getContentValue(textKey, defaultText);
+    const hrefValue = getContentValue(hrefKey, defaultHref);
+
+    const [showHrefEdit, setShowHrefEdit] = useState(false);
+    const [localHref, setLocalHref] = useState(hrefValue);
+
+    if (!isEditMode) {
+        return (
+            <a href={hrefValue} className={className} target="_blank" rel="noopener noreferrer">
+                {icon}
+                {textValue}
+            </a>
+        );
+    }
+
+    return (
+        <div className="space-y-1">
+            <div className="flex items-center gap-2">
+                {icon}
+                <EditableText contentKey={textKey} defaultValue={defaultText} as="span" className={className} />
+            </div>
+            <button
+                onClick={() => setShowHrefEdit(!showHrefEdit)}
+                className="text-xs text-blue-500 hover:text-blue-700 flex items-center gap-1"
+            >
+                <ExternalLink size={12} />
+                {showHrefEdit ? 'Ascunde link' : 'Editează link'}
+            </button>
+            {showHrefEdit && (
+                <input
+                    type="text"
+                    value={localHref}
+                    onChange={(e) => {
+                        setLocalHref(e.target.value);
+                        updateContent(hrefKey, e.target.value, defaultHref);
+                    }}
+                    className="w-full px-2 py-1 text-xs border border-blue-300 rounded bg-blue-50"
+                    placeholder="https://..."
+                />
+            )}
+        </div>
+    );
+};
+
 /**
- * Page Editor Panel v4 - Complete with ALL sections, hyperlinks, backup/restore
+ * Page Editor Panel v5 - Complete with simplified history, reset to default, hyperlink editing
  */
 const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
     const {
@@ -35,6 +93,7 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
     const [contentList, setContentList] = useState<PageContent[]>([]);
     const [historyList, setHistoryList] = useState<ContentHistory[]>([]);
     const [showHistory, setShowHistory] = useState(false);
+    const [isResetting, setIsResetting] = useState(false);
 
     const currentHost = window.location.hostname === 'localhost'
         ? `localhost:${window.location.port}`
@@ -60,6 +119,11 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
         try {
             await saveAllChanges();
             showNotification('Modificările au fost salvate!', 'success');
+            // Reload content list
+            const content = await getAllPageContent();
+            setContentList(content);
+            const history = await getAllContentHistory();
+            setHistoryList(history);
         } catch (error) {
             showNotification('Eroare la salvare', 'error');
         }
@@ -99,11 +163,54 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
             try {
                 await revertToVersion(historyId);
                 await refreshContent();
+                const content = await getAllPageContent();
+                setContentList(content);
                 showNotification('Versiune restaurată!', 'success');
             } catch (error) {
                 showNotification('Eroare la restaurare', 'error');
             }
         }
+    };
+
+    const handleResetAll = async () => {
+        if (window.confirm('⚠️ ATENȚIE: Toate modificările vor fi șterse și textul va reveni la valorile originale din traduceri. Această acțiune nu poate fi anulată!\n\nContinuați?')) {
+            setIsResetting(true);
+            try {
+                await resetAllContent();
+                await refreshContent();
+                const content = await getAllPageContent();
+                setContentList(content);
+                const history = await getAllContentHistory();
+                setHistoryList(history);
+                showNotification('Conținut resetat la valori originale!', 'success');
+            } catch (error) {
+                showNotification('Eroare la resetare', 'error');
+            }
+            setIsResetting(false);
+        }
+    };
+
+    // Format date nicely
+    const formatDate = (dateStr: string) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('ro-RO', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
+    // Group history by content preview for simpler display
+    const formatHistoryEntry = (entry: ContentHistory) => {
+        const preview = entry.content_ro.length > 30
+            ? entry.content_ro.substring(0, 30) + '...'
+            : entry.content_ro;
+        return {
+            label: preview,
+            date: formatDate(entry.changed_at)
+        };
     };
 
     return (
@@ -144,6 +251,16 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleResetAll}
+                        disabled={isResetting}
+                        className="flex items-center gap-2 px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium transition-all disabled:opacity-50"
+                        title="Resetează la valori originale"
+                    >
+                        {isResetting ? <Loader size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                        Resetare
+                    </button>
+
                     <button
                         onClick={refreshContent}
                         className="p-2 text-stone-500 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors"
@@ -198,8 +315,6 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
                         <span><kbd className="px-1.5 py-0.5 bg-white rounded border text-xs font-mono">Ctrl+Shift+Z</kbd> redo</span>
                         <span className="text-green-400">•</span>
                         <span><kbd className="px-1.5 py-0.5 bg-white rounded border text-xs font-mono">Esc</kbd> anulează</span>
-                        <span className="text-green-400">•</span>
-                        <span className="flex items-center gap-1"><Link size={14} /> = hyperlink editabil</span>
                     </div>
                 </div>
             )}
@@ -243,7 +358,7 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
                         </section>
 
                         {/* === INFO SECTION === */}
-                        <section className="py-16 px-6 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
+                        <section className="py-16 px-6 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 relative">
                             <div className="absolute top-2 left-2 bg-bakery-500/10 text-bakery-600 text-xs px-2 py-1 rounded">Tradiție și Pasiune</div>
                             <div className="max-w-6xl mx-auto">
                                 <div className="text-center mb-12">
@@ -294,19 +409,19 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mb-8">
                                     <div className="bg-white p-4 rounded-xl shadow-sm">
                                         <PartyPopper size={24} className="text-bakery-500 mx-auto mb-2" />
-                                        <EditableText contentKey="customOrders.feature1" defaultValue="Nunți și Botezuri" as="span" className="text-sm text-bakery-700 font-medium" />
+                                        <EditableText contentKey="customOrders.feature1" defaultValue="Nunți și Botezuri" as="span" className="text-sm text-bakery-700 font-medium block" />
                                     </div>
                                     <div className="bg-white p-4 rounded-xl shadow-sm">
-                                        <Heart size={24} className="text-bakery-500 mx-auto mb-2" />
-                                        <EditableText contentKey="customOrders.feature2" defaultValue="Petreceri și Aniversări" as="span" className="text-sm text-bakery-700 font-medium" />
+                                        <Gift size={24} className="text-bakery-500 mx-auto mb-2" />
+                                        <EditableText contentKey="customOrders.feature2" defaultValue="Petreceri și Aniversări" as="span" className="text-sm text-bakery-700 font-medium block" />
+                                    </div>
+                                    <div className="bg-white p-4 rounded-xl shadow-sm">
+                                        <Calendar size={24} className="text-bakery-500 mx-auto mb-2" />
+                                        <EditableText contentKey="customOrders.feature3" defaultValue="Evenimente Corporate" as="span" className="text-sm text-bakery-700 font-medium block" />
                                     </div>
                                     <div className="bg-white p-4 rounded-xl shadow-sm">
                                         <Coffee size={24} className="text-bakery-500 mx-auto mb-2" />
-                                        <EditableText contentKey="customOrders.feature3" defaultValue="Botezuri" as="span" className="text-sm text-bakery-700 font-medium" />
-                                    </div>
-                                    <div className="bg-white p-4 rounded-xl shadow-sm">
-                                        <Clock size={24} className="text-bakery-500 mx-auto mb-2" />
-                                        <EditableText contentKey="customOrders.feature4" defaultValue="Aniversări" as="span" className="text-sm text-bakery-700 font-medium" />
+                                        <EditableText contentKey="customOrders.feature4" defaultValue="Sărbători și Ocazii Speciale" as="span" className="text-sm text-bakery-700 font-medium block" />
                                     </div>
                                 </div>
 
@@ -361,10 +476,7 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
                                         </div>
                                         <div>
                                             <EditableText contentKey="mapSection.phoneLabel" defaultValue="Telefon" as="h4" className="font-bold text-white mb-1" />
-                                            <div className="flex items-center gap-2">
-                                                <EditableText contentKey="contact.phone" defaultValue="0754 554 194" as="span" className="text-stone-400 text-sm" />
-                                                <Link size={12} className="text-bakery-400" />
-                                            </div>
+                                            <EditableText contentKey="contact.phone" defaultValue="0754 554 194" as="span" className="text-stone-400 text-sm" />
                                         </div>
                                     </div>
                                     <div className="flex items-start gap-4">
@@ -373,18 +485,15 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
                                         </div>
                                         <div>
                                             <EditableText contentKey="mapSection.emailLabel" defaultValue="Email" as="h4" className="font-bold text-white mb-1" />
-                                            <div className="flex items-center gap-2">
-                                                <EditableText contentKey="contact.email" defaultValue="odgdragasani@gmail.com" as="span" className="text-stone-400 text-sm" />
-                                                <Link size={12} className="text-bakery-400" />
-                                            </div>
+                                            <EditableText contentKey="contact.email" defaultValue="odgdragasani@gmail.com" as="span" className="text-stone-400 text-sm" />
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Social Links */}
                                 <div className="mt-8 pt-6 border-t border-stone-700">
-                                    <p className="text-stone-500 text-sm mb-4">Linkuri Social Media (click pentru a edita URL-ul):</p>
-                                    <div className="flex justify-center gap-4">
+                                    <p className="text-stone-500 text-sm mb-4">Linkuri Social Media:</p>
+                                    <div className="flex justify-center gap-4 flex-wrap">
                                         <div className="flex items-center gap-2 px-4 py-2 bg-stone-800 rounded-lg">
                                             <Facebook size={18} className="text-blue-400" />
                                             <EditableText contentKey="social.facebook" defaultValue="facebook.com/ODGOfficinaDelGusto" as="span" className="text-stone-300 text-sm" />
@@ -430,7 +539,7 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="font-bold text-stone-800 flex items-center gap-2">
                                     <History size={18} />
-                                    Istoric Versiuni
+                                    Istoric Modificări
                                 </h3>
                                 <span className="text-xs text-stone-400">{historyList.length}</span>
                             </div>
@@ -443,34 +552,29 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
                                 </div>
                             ) : (
                                 <div className="space-y-2">
-                                    {historyList.slice(0, 20).map((history) => (
-                                        <div
-                                            key={history.id}
-                                            className="p-3 bg-stone-50 rounded-lg border border-stone-200 hover:border-purple-300 transition-colors"
-                                        >
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className="text-xs font-mono text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded truncate max-w-[120px]">
-                                                    {history.section_key}
-                                                </span>
-                                                <span className="text-[10px] text-stone-400">
-                                                    v{history.version_number}
-                                                </span>
+                                    {historyList.slice(0, 30).map((history) => {
+                                        const { label, date } = formatHistoryEntry(history);
+                                        return (
+                                            <div
+                                                key={history.id}
+                                                className="p-3 bg-stone-50 rounded-lg border border-stone-200 hover:border-purple-300 transition-colors"
+                                            >
+                                                <p className="text-sm text-stone-700 font-medium line-clamp-1">{label}</p>
+                                                <div className="flex items-center justify-between mt-2">
+                                                    <span className="text-xs text-stone-400">
+                                                        {date}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => handleRevert(history.id)}
+                                                        className="text-xs text-purple-600 hover:text-purple-800 flex items-center gap-1 font-medium"
+                                                    >
+                                                        <RotateCcw size={12} />
+                                                        Restaurează
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <p className="text-xs text-stone-600 line-clamp-2 mt-1">{history.content_ro}</p>
-                                            <div className="flex items-center justify-between mt-2">
-                                                <span className="text-[10px] text-stone-400">
-                                                    {new Date(history.changed_at).toLocaleDateString('ro-RO')}
-                                                </span>
-                                                <button
-                                                    onClick={() => handleRevert(history.id)}
-                                                    className="text-xs text-purple-600 hover:text-purple-800 flex items-center gap-1"
-                                                >
-                                                    <RotateCcw size={12} />
-                                                    Restaurează
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </>
@@ -484,8 +588,8 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
                             {contentList.length === 0 ? (
                                 <div className="text-stone-400 text-sm text-center py-8">
                                     <Edit size={28} className="mx-auto mb-3 opacity-30" />
-                                    <p>Niciun conținut încă.</p>
-                                    <p className="text-xs mt-1">Editați și salvați.</p>
+                                    <p>Niciun conținut modificat.</p>
+                                    <p className="text-xs mt-1">Editați și salvați pentru a vedea aici.</p>
                                 </div>
                             ) : (
                                 <div className="space-y-2">

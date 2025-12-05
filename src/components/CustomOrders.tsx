@@ -35,6 +35,12 @@ const CustomOrders: React.FC<CustomOrdersProps> = ({ onOpenOrderModal }) => {
   const phoneCta = useEditableContent('customOrders.phoneCta', content.phoneCta);
   const emailCta = useEditableContent('customOrders.emailCta', content.emailCta);
 
+  // 4 feature boxes - editable individually
+  const feature1 = useEditableContent('customOrders.feature1', content.features[0] || 'Nunți și Botezuri');
+  const feature2 = useEditableContent('customOrders.feature2', content.features[1] || 'Petreceri și Aniversări');
+  const feature3 = useEditableContent('customOrders.feature3', content.features[2] || 'Evenimente Corporate');
+  const feature4 = useEditableContent('customOrders.feature4', content.features[3] || 'Sărbători și Ocazii Speciale');
+
   // Fetch carousel images from database with Realtime Subscription
   useEffect(() => {
     const loadImages = async () => {
@@ -238,28 +244,38 @@ const CustomOrders: React.FC<CustomOrdersProps> = ({ onOpenOrderModal }) => {
 
           {/* Content Grid - Features and CTA */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Features Grid */}
+            {/* Features Grid - Now editable individually */}
             <div className="grid grid-cols-2 gap-3">
-              {content.features.map((feature, index) => {
-                const Icon = featureIcons[index] || Sparkles;
-                return (
-                  <div
-                    key={index}
-                    className="flex items-center gap-3 p-4 bg-white/80 backdrop-blur rounded-xl shadow-md hover:shadow-lg transition-shadow border border-bakery-100"
-                  >
-                    <div className="w-10 h-10 bg-bakery-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Icon size={20} className="text-bakery-600" />
-                    </div>
-                    <span className="text-bakery-800 font-medium text-sm leading-snug">{feature}</span>
-                  </div>
-                );
-              })}
+              <div className="flex items-center gap-3 p-4 bg-white/80 backdrop-blur rounded-xl shadow-md hover:shadow-lg transition-shadow border border-bakery-100">
+                <div className="w-10 h-10 bg-bakery-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <PartyPopper size={20} className="text-bakery-600" />
+                </div>
+                <span className="text-bakery-800 font-medium text-sm leading-snug">{feature1.value}</span>
+              </div>
+              <div className="flex items-center gap-3 p-4 bg-white/80 backdrop-blur rounded-xl shadow-md hover:shadow-lg transition-shadow border border-bakery-100">
+                <div className="w-10 h-10 bg-bakery-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Gift size={20} className="text-bakery-600" />
+                </div>
+                <span className="text-bakery-800 font-medium text-sm leading-snug">{feature2.value}</span>
+              </div>
+              <div className="flex items-center gap-3 p-4 bg-white/80 backdrop-blur rounded-xl shadow-md hover:shadow-lg transition-shadow border border-bakery-100">
+                <div className="w-10 h-10 bg-bakery-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Calendar size={20} className="text-bakery-600" />
+                </div>
+                <span className="text-bakery-800 font-medium text-sm leading-snug">{feature3.value}</span>
+              </div>
+              <div className="flex items-center gap-3 p-4 bg-white/80 backdrop-blur rounded-xl shadow-md hover:shadow-lg transition-shadow border border-bakery-100">
+                <div className="w-10 h-10 bg-bakery-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Sparkles size={20} className="text-bakery-600" />
+                </div>
+                <span className="text-bakery-800 font-medium text-sm leading-snug">{feature4.value}</span>
+              </div>
             </div>
 
             {/* Contact CTAs */}
             <div className="bg-white/90 backdrop-blur rounded-2xl p-6 shadow-xl border border-bakery-100 flex flex-col justify-center">
               <h3 className="font-serif text-xl font-bold text-bakery-800 mb-4 text-center">
-                {content.eyebrow}
+                {eyebrow.value}
               </h3>
               <div className="flex flex-col gap-3">
                 {onOpenOrderModal && (
