@@ -28,7 +28,9 @@ const safeGetBooleanFromStorage = (key: string, defaultValue: boolean): boolean 
 
 const App: React.FC = () => {
   const { dictionary } = useLanguage();
-  const [view, setView] = useState<'public' | 'login' | 'admin'>('public');
+  const [view, setView] = useState<'public' | 'login' | 'admin'>(() => {
+    return window.location.pathname === '/admin' ? 'login' : 'public';
+  });
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -57,6 +59,15 @@ const App: React.FC = () => {
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  // Update URL based on view
+  useEffect(() => {
+    if (view === 'admin' || view === 'login') {
+      window.history.pushState(null, '', '/admin');
+    } else {
+      window.history.pushState(null, '', '/');
+    }
+  }, [view]);
 
   // Scroll to top on page load/refresh
   useEffect(() => {

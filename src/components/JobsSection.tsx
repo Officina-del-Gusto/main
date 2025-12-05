@@ -3,6 +3,7 @@ import { Briefcase, MapPin, Clock, X, Upload, CheckCircle, Loader2, AlertTriangl
 import { Job, getJobs, submitApplication, uploadCV } from '../utils/mockData';
 import emailjs from '@emailjs/browser';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 // EmailJS Credentials - MUST be set in environment variables
 const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || '';
@@ -23,7 +24,7 @@ const sanitizeText = (text: string): string => {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#x27;')
     .trim();
-}; 
+};
 
 // Rate limiting helper
 const checkRateLimit = (): boolean => {
@@ -43,7 +44,9 @@ const JobsSection: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const { dictionary } = useLanguage();
   const jobsText = dictionary.jobs;
-  
+
+  useScrollLock(isModalOpen);
+
   // Loading States
   const [isLoading, setIsLoading] = useState(false); // For form submission
   const [isFetching, setIsFetching] = useState(true); // For initial data fetch
@@ -58,7 +61,8 @@ const JobsSection: React.FC = () => {
     phone: '',
     email: '',
     message: '',
-    preferredLocation: 'Drăgășani'
+    preferredLocation: 'Drăgășani',
+    cvLink: ''
   });
   const [cvFile, setCvFile] = useState<File | null>(null);
   const successTimeoutRef = useRef<number | null>(null);
@@ -91,14 +95,14 @@ const JobsSection: React.FC = () => {
     setIsModalOpen(true);
     setShowSuccess(false);
     setSubmitError(null);
-    
+
     // Strict Location Locking Logic
     const isDragasani = job.location === 'Drăgășani';
     const isBabeni = job.location === 'Băbeni';
     const isSingleLocation = isDragasani || isBabeni;
-    
+
     setFormData(prev => ({
-      ...prev, 
+      ...prev,
       // If single location, force it. Otherwise default to Drăgășani.
       preferredLocation: isSingleLocation ? job.location : 'Drăgășani'
     }));
@@ -107,7 +111,7 @@ const JobsSection: React.FC = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedJob(null);
-    setFormData({ name: '', phone: '', email: '', message: '', preferredLocation: 'Drăgășani' });
+    setFormData({ name: '', phone: '', email: '', message: '', preferredLocation: 'Drăgășani', cvLink: '' });
     setCvFile(null);
     setSubmitError(null);
   };
@@ -124,11 +128,11 @@ const JobsSection: React.FC = () => {
 
     // Phone validation - Allow international numbers or Romanian format
     const cleanPhone = formData.phone.replace(/[\s\-\(\)]/g, ''); // Remove spaces, dashes, parentheses
-    
+
     // Accept international format (+country code) OR Romanian format
     const internationalRegex = /^\+[1-9][0-9]{7,14}$/; // International format: + followed by country code and 8-15 digits
     const romanianRegex = /^(0040|0)(7[0-9]{8}|[23][0-9]{8})$/; // Romanian format
-    
+
     if (!internationalRegex.test(cleanPhone) && !romanianRegex.test(cleanPhone)) {
       setSubmitError(jobsText.phoneInvalid);
       return;
@@ -141,12 +145,20 @@ const JobsSection: React.FC = () => {
       return;
     }
 
+    // Validate CV Link if present
+    if (formData.cvLink) {
+      if (!formData.cvLink.startsWith('https://')) {
+        setSubmitError('Link-ul către CV trebuie să înceapă cu https://');
+        return;
+      }
+    }
+
     setIsLoading(true);
     setSubmitError(null);
 
     try {
       let downloadUrl = '';
-      
+
       if (cvFile) {
         downloadUrl = await uploadCV(cvFile);
       }
@@ -163,6 +175,7 @@ const JobsSection: React.FC = () => {
         message: fullMessage,
         cvFileName: cvFile ? cvFile.name : undefined,
         cvUrl: downloadUrl,
+        cvLink: formData.cvLink || undefined,
         status: 'new' as const,
         dateApplied: new Date().toISOString()
       };
@@ -180,7 +193,7 @@ const JobsSection: React.FC = () => {
         applicant_phone: sanitizeText(formData.phone),
         applicant_email: formData.email ? sanitizeText(formData.email) : "Nu a fost furnizat",
         message: formData.message ? sanitizeText(formData.message) : "Fără mesaj",
-        cv_link: downloadUrl || "Nu a fost încărcat CV"
+        cv_link: downloadUrl || formData.cvLink || "Nu a fost încărcat CV"
       };
 
       // Add reply_to if applicant provided email
@@ -243,31 +256,28 @@ const JobsSection: React.FC = () => {
           <div className="flex justify-center flex-wrap gap-4">
             <button
               onClick={() => setLocationFilter('all')}
-              className={`px-6 py-2 rounded-full font-bold transition-all ${
-                locationFilter === 'all' 
-                  ? 'bg-bakery-500 text-white shadow-md' 
-                  : 'bg-stone-100 text-bakery-800 hover:bg-stone-200'
-              }`}
+              className={`px-6 py-2 rounded-full font-bold transition-all ${locationFilter === 'all'
+                ? 'bg-bakery-500 text-white shadow-md'
+                : 'bg-stone-100 text-bakery-800 hover:bg-stone-200'
+                }`}
             >
               {jobsText.filters.all}
             </button>
             <button
               onClick={() => setLocationFilter('Drăgășani')}
-              className={`px-6 py-2 rounded-full font-bold transition-all ${
-                locationFilter === 'Drăgășani' 
-                  ? 'bg-bakery-500 text-white shadow-md' 
-                  : 'bg-stone-100 text-bakery-800 hover:bg-stone-200'
-              }`}
+              className={`px-6 py-2 rounded-full font-bold transition-all ${locationFilter === 'Drăgășani'
+                ? 'bg-bakery-500 text-white shadow-md'
+                : 'bg-stone-100 text-bakery-800 hover:bg-stone-200'
+                }`}
             >
               {jobsText.filters.dragasani}
             </button>
             <button
               onClick={() => setLocationFilter('Băbeni')}
-              className={`px-6 py-2 rounded-full font-bold transition-all ${
-                locationFilter === 'Băbeni' 
-                  ? 'bg-bakery-500 text-white shadow-md' 
-                  : 'bg-stone-100 text-bakery-800 hover:bg-stone-200'
-              }`}
+              className={`px-6 py-2 rounded-full font-bold transition-all ${locationFilter === 'Băbeni'
+                ? 'bg-bakery-500 text-white shadow-md'
+                : 'bg-stone-100 text-bakery-800 hover:bg-stone-200'
+                }`}
             >
               {jobsText.filters.babeni}
             </button>
@@ -309,7 +319,7 @@ const JobsSection: React.FC = () => {
                 <p className="text-bakery-700 mb-6 leading-relaxed flex-grow">
                   {job.description}
                 </p>
-                <button 
+                <button
                   onClick={() => handleApplyClick(job)}
                   className="w-full py-3 bg-bakery-500 hover:bg-bakery-600 text-white font-bold rounded-xl transition-colors shadow-md mt-auto"
                 >
@@ -323,16 +333,16 @@ const JobsSection: React.FC = () => {
 
       {/* Application Modal */}
       {isModalOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
           onClick={handleCloseModal}
         >
-          <div 
+          <div
             className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl relative animate-fade-in"
             onClick={(e) => e.stopPropagation()}
           >
-            
-            <button 
+
+            <button
               onClick={handleCloseModal}
               disabled={isLoading}
               className="absolute top-4 right-4 p-2 bg-stone-100 rounded-full hover:bg-stone-200 transition-colors text-stone-500 disabled:opacity-50"
@@ -352,7 +362,7 @@ const JobsSection: React.FC = () => {
               <div className="p-8">
                 <h3 className="text-2xl font-serif font-bold text-bakery-900 mb-1">{jobsText.modalTitle}</h3>
                 <p className="text-bakery-500 font-medium text-lg mb-6">{selectedJob?.title}</p>
-                
+
                 {submitError && (
                   <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-6 flex items-center gap-2 text-sm font-bold">
                     <AlertTriangle size={18} />
@@ -363,12 +373,12 @@ const JobsSection: React.FC = () => {
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <label className="block text-sm font-bold text-bakery-800 mb-1">{jobsText.form.name.label}</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       required
                       disabled={isLoading}
                       value={formData.name}
-                      onChange={e => setFormData({...formData, name: e.target.value})}
+                      onChange={e => setFormData({ ...formData, name: e.target.value })}
                       className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bakery-400 focus:ring-2 focus:ring-bakery-200 outline-none transition-all disabled:opacity-70 bg-white text-black placeholder-gray-500 font-medium"
                       placeholder={jobsText.form.name.placeholder}
                     />
@@ -376,12 +386,12 @@ const JobsSection: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-bold text-bakery-800 mb-1">{jobsText.form.phone.label}</label>
-                    <input 
-                      type="tel" 
+                    <input
+                      type="tel"
                       required
                       disabled={isLoading}
                       value={formData.phone}
-                      onChange={e => setFormData({...formData, phone: e.target.value})}
+                      onChange={e => setFormData({ ...formData, phone: e.target.value })}
                       className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bakery-400 focus:ring-2 focus:ring-bakery-200 outline-none transition-all disabled:opacity-70 bg-white text-black placeholder-gray-500 font-medium"
                       placeholder={jobsText.form.phone.placeholder}
                     />
@@ -393,16 +403,15 @@ const JobsSection: React.FC = () => {
                     <label className="block text-sm font-bold text-bakery-800 mb-1">
                       {jobsText.form.location.label} {isLocked && <span className="text-bakery-500 font-normal">{jobsText.lockedLocationNote}</span>}
                     </label>
-                    <select 
+                    <select
                       required
                       disabled={isLoading || isLocked}
                       value={formData.preferredLocation}
-                      onChange={e => setFormData({...formData, preferredLocation: e.target.value})}
-                      className={`w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bakery-400 focus:ring-2 focus:ring-bakery-200 outline-none transition-all text-black font-medium ${
-                        (isLoading || isLocked)
-                          ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
-                          : 'bg-white'
-                      }`}
+                      onChange={e => setFormData({ ...formData, preferredLocation: e.target.value })}
+                      className={`w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bakery-400 focus:ring-2 focus:ring-bakery-200 outline-none transition-all text-black font-medium ${(isLoading || isLocked)
+                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                        : 'bg-white'
+                        }`}
                     >
                       {!isLocked ? (
                         <>
@@ -418,11 +427,11 @@ const JobsSection: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-bold text-bakery-800 mb-1">{jobsText.form.email.label}</label>
-                    <input 
-                      type="email" 
+                    <input
+                      type="email"
                       disabled={isLoading}
                       value={formData.email}
-                      onChange={e => setFormData({...formData, email: e.target.value})}
+                      onChange={e => setFormData({ ...formData, email: e.target.value })}
                       className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bakery-400 focus:ring-2 focus:ring-bakery-200 outline-none transition-all disabled:opacity-70 bg-white text-black placeholder-gray-500 font-medium"
                       placeholder={jobsText.form.email.placeholder}
                     />
@@ -430,11 +439,11 @@ const JobsSection: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-bold text-bakery-800 mb-1">{jobsText.form.message.label}</label>
-                    <textarea 
+                    <textarea
                       rows={3}
                       disabled={isLoading}
                       value={formData.message}
-                      onChange={e => setFormData({...formData, message: e.target.value})}
+                      onChange={e => setFormData({ ...formData, message: e.target.value })}
                       className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bakery-400 focus:ring-2 focus:ring-bakery-200 outline-none transition-all disabled:opacity-70 bg-white text-black placeholder-gray-500 font-medium"
                       placeholder={jobsText.form.message.placeholder}
                     />
@@ -443,8 +452,8 @@ const JobsSection: React.FC = () => {
                   <div>
                     <label className="block text-sm font-bold text-bakery-800 mb-1">{jobsText.form.cv.label}</label>
                     <div className={`relative border-2 border-dashed border-gray-300 rounded-xl p-6 text-center transition-colors cursor-pointer ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-bakery-50'}`}>
-                      <input 
-                        type="file" 
+                      <input
+                        type="file"
                         accept=".pdf,.doc,.docx,.jpg,.png"
                         disabled={isLoading}
                         onChange={e => setCvFile(e.target.files ? e.target.files[0] : null)}
@@ -461,7 +470,20 @@ const JobsSection: React.FC = () => {
                     </div>
                   </div>
 
-                  <button 
+                  <div>
+                    <label className="block text-sm font-bold text-bakery-800 mb-1">Link către CV (Opțional)</label>
+                    <input
+                      type="url"
+                      disabled={isLoading}
+                      value={formData.cvLink}
+                      onChange={e => setFormData({ ...formData, cvLink: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-bakery-400 focus:ring-2 focus:ring-bakery-200 outline-none transition-all disabled:opacity-70 bg-white text-black placeholder-gray-500 font-medium"
+                      placeholder="https://linkedin.com/in/..."
+                    />
+                    <p className="text-xs text-bakery-600 mt-1">Dacă nu ai un fișier, poți lăsa un link către profilul tău (LinkedIn, eJobs, etc).</p>
+                  </div>
+
+                  <button
                     type="submit"
                     disabled={isLoading}
                     className="w-full py-4 bg-bakery-500 hover:bg-bakery-600 disabled:bg-stone-400 text-white font-bold text-lg rounded-xl shadow-lg mt-4 transition-all active:scale-95 flex items-center justify-center gap-2"

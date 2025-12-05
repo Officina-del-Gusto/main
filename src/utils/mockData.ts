@@ -21,7 +21,8 @@ export interface Application {
   message?: string;
   cvFileName?: string;
   cvUrl?: string;
-  status: 'new' | 'starred' | 'rejected' | 'trashed';
+  cvLink?: string;
+  status: 'new' | 'starred' | 'rejected' | 'trashed' | 'hired' | 'fired';
   dateApplied: string;
 }
 
@@ -36,6 +37,30 @@ export interface CarouselImage {
   unit?: string;
 }
 
+export interface StoreSettings {
+  id: string;
+  shipping_fee: number;
+  packaging_fee: number;
+  pricing_enabled: boolean;
+  fee_rules: {
+    standard: {
+      packaging: { threshold: number; fee: number }[];
+      delivery: { threshold: number; fee: number }[];
+    };
+    special: {
+      packaging: { threshold: number; fee: number }[];
+      delivery: { threshold: number; fee: number }[];
+    };
+  };
+}
+
+export interface HeroImage {
+  id: string;
+  image_url: string;
+  display_order: number;
+  created_at: string;
+}
+
 export interface Product {
   id: string;
   image_url: string;
@@ -47,20 +72,6 @@ export interface Product {
   created_at: string;
   price?: number;
   unit?: string;
-}
-
-export interface StoreSettings {
-  id: number;
-  shipping_fee: number;
-  packaging_fee: number;
-  pricing_enabled: boolean;
-}
-
-export interface HeroImage {
-  id: string;
-  image_url: string;
-  display_order: number;
-  created_at: string;
 }
 
 // --- DEFAULT DATA (Fallback when DB is empty/missing) ---
@@ -122,11 +133,23 @@ export const getStoreSettings = async (): Promise<StoreSettings> => {
 
     if (error) {
       // Return defaults if not found
-      return { id: 1, shipping_fee: 15, packaging_fee: 2, pricing_enabled: true };
+      return {
+        id: '1',
+        shipping_fee: 15,
+        packaging_fee: 2,
+        pricing_enabled: true,
+        fee_rules: { standard: { packaging: [], delivery: [] }, special: { packaging: [], delivery: [] } }
+      };
     }
     return data;
   } catch (err) {
-    return { id: 1, shipping_fee: 15, packaging_fee: 2, pricing_enabled: true };
+    return {
+      id: '1',
+      shipping_fee: 15,
+      packaging_fee: 2,
+      pricing_enabled: true,
+      fee_rules: { standard: { packaging: [], delivery: [] }, special: { packaging: [], delivery: [] } }
+    };
   }
 };
 
@@ -401,6 +424,7 @@ export const getApplications = async (): Promise<Application[]> => {
         message: row.message,
         cvUrl: row.cv_url,
         cvFileName: row.cv_filename,
+        cvLink: row.cv_link,
         status: row.status,
         dateApplied: row.created_at
       }));
@@ -459,6 +483,7 @@ export const submitApplication = async (appData: Omit<Application, 'id'>) => {
       message: appData.message,
       cv_url: appData.cvUrl,
       cv_filename: appData.cvFileName,
+      cv_link: appData.cvLink,
       status: 'new'
     }]);
     if (error) throw error;
@@ -467,7 +492,7 @@ export const submitApplication = async (appData: Omit<Application, 'id'>) => {
   }
 };
 
-export const updateApplicationStatus = async (id: string, status: 'new' | 'starred' | 'rejected' | 'trashed') => {
+export const updateApplicationStatus = async (id: string, status: 'new' | 'starred' | 'rejected' | 'trashed' | 'hired' | 'fired') => {
   if (id.startsWith('default-')) return;
   try {
     const { error } = await supabase.from('applications').update({ status }).eq('id', id);
@@ -887,10 +912,12 @@ export interface OrderItem {
   quantity: number;
   type: 'product' | 'custom';
   price?: number;
+  display_order?: number;
 }
 
 export interface OrderRequest {
   id?: string;
+  friendly_id?: string;
   customer_name: string;
   phone_number: string;
   items: OrderItem[];
@@ -902,11 +929,26 @@ export interface OrderRequest {
   created_at?: string;
 }
 
-export const submitOrder = async (order: OrderRequest): Promise<void> => {
+const ROMANIAN_WORDS = [
+  'Mamaliga', 'Sarmale', 'Papanasi', 'Dracula', 'Balaur', 'Viteaz', 'Haiduc', 'Miorita',
+  'Carpati', 'Dunarea', 'Lupul', 'Ursul', 'Vulpea', 'Rasul', 'Zimbrul', 'Bradul',
+  'Stejarul', 'Fagul', 'Teiul', 'Salcamul', 'Trandafir', 'Bujor', 'Crinul', 'Lalea',
+  'Soare', 'Luna', 'Stea', 'Norul', 'Ploaia', 'Zapada', 'Munte', 'Mare', 'Delta',
+  'Codru', 'Izvor', 'Piatra', 'Stanca', 'Aurul', 'Argint', 'Cupru', 'Fier', 'Otel'
+];
+
+const generateRomanianId = (): string => {
+  const word = ROMANIAN_WORDS[Math.floor(Math.random() * ROMANIAN_WORDS.length)];
+  const number = Math.floor(Math.random() * 1000) + 1;
+  return `${word}-${number}`;
+};
+
+export const submitOrder = async (order: OrderRequest): Promise<OrderRequest> => {
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('order_requests')
       .insert([{
+        friendly_id: generateRomanianId(),
         customer_name: order.customer_name,
         phone_number: order.phone_number,
         items: order.items,
@@ -914,9 +956,12 @@ export const submitOrder = async (order: OrderRequest): Promise<void> => {
         delivery_type: order.delivery_type,
         delivery_address: order.delivery_address,
         status: 'pending'
-      }]);
+      }])
+      .select()
+      .single();
 
     if (error) throw error;
+    return data;
   } catch (error) {
     console.error('Error submitting order:', error);
     throw error;

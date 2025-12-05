@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   LayoutDashboard, Users, Plus, Edit, Trash2, Power, PowerOff,
   Star, Archive, Check, X, LogOut, Home, RotateCcw, Eye, Layers, AlertTriangle, Copy, ArrowRight, Settings,
-  Image, ShoppingBag, Upload, GripVertical, ChevronLeft, ChevronRight
+  Image, ShoppingBag, Upload, GripVertical, ChevronLeft, ChevronRight, ChevronDown, Phone, MapPin, Calendar, Briefcase, UserX
 } from 'lucide-react';
 import {
   Job, Application, CarouselImage, Product,
@@ -15,6 +15,7 @@ import {
   OrderRequest, getOrders, deleteOrder, updateOrderStatus,
   getStoreSettings, saveStoreSettings, StoreSettings, updateCarouselImage
 } from '../utils/mockData';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -22,7 +23,7 @@ interface AdminDashboardProps {
   onChristmasToggle: (enabled: boolean) => void;
 }
 
-type AppFilter = 'all' | 'new' | 'starred' | 'rejected' | 'trashed';
+type AppFilter = 'all' | 'new' | 'starred' | 'rejected' | 'trashed' | 'hired' | 'fired';
 type AdminTab = 'jobs' | 'applications' | 'carousel' | 'products' | 'hero' | 'orders';
 
 // Custom Notification Component
@@ -61,7 +62,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnab
   const [heroImages, setHeroImages] = useState<HeroImage[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<OrderRequest[]>([]);
-  const [storeSettings, setStoreSettings] = useState<StoreSettings>({ id: 1, shipping_fee: 15, packaging_fee: 2, pricing_enabled: true });
+  const [newOrdersCount, setNewOrdersCount] = useState(0);
+  const [newAppsCount, setNewAppsCount] = useState(0);
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>({
+    id: '1',
+    shipping_fee: 15,
+    packaging_fee: 2,
+    pricing_enabled: true,
+    fee_rules: {
+      standard: { packaging: [], delivery: [] },
+      special: { packaging: [], delivery: [] }
+    }
+  });
   const [isSettingsLoading, setIsSettingsLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -99,6 +111,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnab
   const [isUploadingProduct, setIsUploadingProduct] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
 
+  useScrollLock(isSettingsOpen || isEditingJob || isEditingProduct || isEditingCarousel || (confirmConfig?.isOpen ?? false));
+
   useEffect(() => {
     const init = async () => {
       setIsLoading(true);
@@ -132,6 +146,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnab
     setOrders(fetchedOrders);
     const fetchedSettings = await getStoreSettings();
     setStoreSettings(fetchedSettings);
+
+    // Calculate notifications based on localStorage
+    const lastViewedOrders = parseInt(localStorage.getItem('lastViewedOrders') || '0');
+    const lastViewedApps = parseInt(localStorage.getItem('lastViewedApplications') || '0');
+
+    const newOrders = fetchedOrders.filter(o => new Date(o.created_at || 0).getTime() > lastViewedOrders).length;
+    const newApps = fetchedApps.filter(a => new Date(a.dateApplied).getTime() > lastViewedApps).length;
+
+    setNewOrdersCount(newOrders);
+    setNewAppsCount(newApps);
+  };
+
+  const handleTabChange = (tab: AdminTab) => {
+    setActiveTab(tab);
+    if (tab === 'orders') {
+      localStorage.setItem('lastViewedOrders', Date.now().toString());
+      setNewOrdersCount(0);
+    }
+    if (tab === 'applications') {
+      localStorage.setItem('lastViewedApplications', Date.now().toString());
+      setNewAppsCount(0);
+    }
   };
 
   const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
@@ -311,7 +347,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnab
 
   // --- APPLICATION ACTIONS ---
 
-  const handleAppStatus = async (id: string, status: 'new' | 'starred' | 'rejected' | 'trashed') => {
+  const handleAppStatus = async (id: string, status: 'new' | 'starred' | 'rejected' | 'trashed' | 'hired' | 'fired') => {
     await updateApplicationStatus(id, status);
     refreshData();
   };
@@ -373,6 +409,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, christmasEnab
     starred: applications.filter(a => a.status === 'starred').length,
     rejected: applications.filter(a => a.status === 'rejected').length,
     trashed: applications.filter(a => a.status === 'trashed').length,
+    hired: applications.filter(a => a.status === 'hired').length,
+    fired: applications.filter(a => a.status === 'fired').length,
   };
 
   const sqlScript = `
@@ -561,21 +599,30 @@ for delete using ( bucket_id = 'images' );
 
         {/* Main Tab Switcher */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
-          <button onClick={() => setActiveTab('hero')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'hero' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
+          <button onClick={() => handleTabChange('hero')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'hero' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
             <Image size={18} /> Hero
           </button>
-          <button onClick={() => setActiveTab('orders')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'orders' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
+          <button onClick={() => handleTabChange('orders')} className={`relative py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'orders' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
             <ShoppingBag size={18} /> Comenzi
+            {newOrdersCount > 0 && (
+              <span className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-bounce">
+                {newOrdersCount}
+              </span>
+            )}
           </button>
-          <button onClick={() => setActiveTab('products')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'products' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
+          <button onClick={() => handleTabChange('products')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'products' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
             <ShoppingBag size={18} /> Produse & Meniu
           </button>
-          <button onClick={() => setActiveTab('jobs')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'jobs' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
+          <button onClick={() => handleTabChange('jobs')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'jobs' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
             <LayoutDashboard size={18} /> Joburi
           </button>
-          <button onClick={() => setActiveTab('applications')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'applications' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
+          <button onClick={() => handleTabChange('applications')} className={`relative py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'applications' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
             <Users size={18} /> Aplicații
-            {counts.new > 0 && <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{counts.new}</span>}
+            {newAppsCount > 0 && (
+              <span className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-bounce">
+                {newAppsCount}
+              </span>
+            )}
           </button>
         </div>
 
@@ -673,6 +720,8 @@ for delete using ( bucket_id = 'images' );
                   <button onClick={() => setAppFilter('all')} className={`px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all flex items-center gap-2 ${appFilter === 'all' ? 'bg-stone-800 text-white shadow-md' : 'bg-white text-stone-500 hover:bg-stone-50'}`}><Layers size={14} /> Toate <span className="opacity-80 ml-1">{counts.all}</span></button>
                   <button onClick={() => setAppFilter('new')} className={`px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${appFilter === 'new' ? 'bg-blue-500 text-white shadow-md' : 'bg-white text-stone-500 hover:bg-stone-50'}`}>Noi (Inbox) <span className="ml-1 opacity-80">{counts.new}</span></button>
                   <button onClick={() => setAppFilter('starred')} className={`px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${appFilter === 'starred' ? 'bg-yellow-500 text-white shadow-md' : 'bg-white text-stone-500 hover:bg-stone-50'}`}>Favorite <span className="ml-1 opacity-80">{counts.starred}</span></button>
+                  <button onClick={() => setAppFilter('hired')} className={`px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${appFilter === 'hired' ? 'bg-green-600 text-white shadow-md' : 'bg-white text-stone-500 hover:bg-stone-50'}`}>Angajați <span className="ml-1 opacity-80">{counts.hired}</span></button>
+                  <button onClick={() => setAppFilter('fired')} className={`px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${appFilter === 'fired' ? 'bg-stone-800 text-white shadow-md' : 'bg-white text-stone-500 hover:bg-stone-50'}`}>Concediați <span className="ml-1 opacity-80">{counts.fired}</span></button>
                   <button onClick={() => setAppFilter('rejected')} className={`px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${appFilter === 'rejected' ? 'bg-red-400 text-white shadow-md' : 'bg-white text-stone-500 hover:bg-stone-50'}`}>Respinse <span className="ml-1 opacity-80">{counts.rejected}</span></button>
                   <button onClick={() => setAppFilter('trashed')} className={`px-5 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${appFilter === 'trashed' ? 'bg-stone-500 text-white shadow-md' : 'bg-white text-stone-500 hover:bg-stone-50'}`}>Coș Gunoi <span className="ml-1 opacity-80">{counts.trashed}</span></button>
                 </div>
@@ -699,6 +748,8 @@ for delete using ( bucket_id = 'images' );
                             <tr key={app.id} className="hover:bg-stone-50 transition-colors">
                               <td className="p-4">
                                 {app.status === 'starred' && <Star className="text-yellow-400 fill-yellow-400" size={18} />}
+                                {app.status === 'hired' && <Briefcase className="text-green-600" size={18} />}
+                                {app.status === 'fired' && <UserX className="text-stone-500" size={18} />}
                                 {app.status === 'rejected' && <X className="text-red-400" size={18} />}
                                 {app.status === 'new' && <div className="w-3 h-3 bg-blue-500 rounded-full"></div>}
                                 {app.status === 'trashed' && <Trash2 className="text-stone-300" size={18} />}
@@ -726,6 +777,8 @@ for delete using ( bucket_id = 'images' );
                                   {app.status !== 'trashed' ? (
                                     <>
                                       <button onClick={() => handleAppStatus(app.id, app.status === 'starred' ? 'new' : 'starred')} className={`p-2 rounded hover:bg-stone-200 ${app.status === 'starred' ? 'text-yellow-500' : 'text-stone-400 hover:text-yellow-500'}`} title={app.status === 'starred' ? 'Elimină din favorite' : 'Adaugă la favorite'}><Star size={18} fill={app.status === 'starred' ? 'currentColor' : 'none'} /></button>
+                                      <button onClick={() => handleAppStatus(app.id, app.status === 'hired' ? 'new' : 'hired')} className={`p-2 rounded hover:bg-stone-200 ${app.status === 'hired' ? 'text-green-600' : 'text-stone-400 hover:text-green-600'}`} title={app.status === 'hired' ? 'Anulează angajarea' : 'Marchează ca angajat'}><Briefcase size={18} /></button>
+                                      <button onClick={() => handleAppStatus(app.id, app.status === 'fired' ? 'new' : 'fired')} className={`p-2 rounded hover:bg-stone-200 ${app.status === 'fired' ? 'text-stone-800' : 'text-stone-400 hover:text-stone-800'}`} title={app.status === 'fired' ? 'Anulează concedierea' : 'Marchează ca concediat'}><UserX size={18} /></button>
                                       <button onClick={() => handleAppStatus(app.id, app.status === 'rejected' ? 'new' : 'rejected')} className={`p-2 rounded hover:bg-stone-200 ${app.status === 'rejected' ? 'text-red-500' : 'text-stone-400 hover:text-red-500'}`} title={app.status === 'rejected' ? 'Anulează respingerea' : 'Marchează ca respins'}><Archive size={18} /></button>
                                       <button onClick={() => handleAppStatus(app.id, 'trashed')} className="p-2 rounded hover:bg-stone-200 text-stone-400 hover:text-stone-600" title="Mută în coșul de gunoi"><Trash2 size={18} /></button>
                                     </>
@@ -803,6 +856,261 @@ for delete using ( bucket_id = 'images' );
                     >
                       {isSettingsLoading ? 'Se salvează...' : 'Salvează Setări'}
                     </button>
+                  </div>
+
+                  {/* Fee Rules Configuration */}
+                  <div className="mt-8 border-t border-stone-200 pt-6">
+                    <h4 className="font-bold text-stone-700 mb-4">Reguli Dinamice Taxe</h4>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                      {/* Standard Products Rules */}
+                      <div className="bg-stone-50 p-4 rounded-xl border border-stone-200">
+                        <h5 className="font-bold text-bakery-600 mb-3 flex items-center gap-2">
+                          <ShoppingBag size={16} /> Produse Standard
+                        </h5>
+
+                        {/* Packaging Rules */}
+                        <div className="mb-4">
+                          <label className="block text-xs font-bold text-stone-500 uppercase mb-2">Reguli Ambalaj</label>
+                          <div className="space-y-2">
+                            {storeSettings.fee_rules?.standard?.packaging?.map((rule, idx) => (
+                              <div key={idx} className="flex gap-2 items-center">
+                                <span className="text-sm text-stone-600">Peste</span>
+                                <input
+                                  type="number"
+                                  value={rule.threshold}
+                                  onChange={(e) => {
+                                    const newRules = [...(storeSettings.fee_rules.standard.packaging || [])];
+                                    newRules[idx].threshold = parseInt(e.target.value) || 0;
+                                    setStoreSettings({ ...storeSettings, fee_rules: { ...storeSettings.fee_rules, standard: { ...storeSettings.fee_rules.standard, packaging: newRules } } });
+                                  }}
+                                  className="w-16 p-1 border rounded text-center text-sm"
+                                  placeholder="Nr"
+                                />
+                                <span className="text-sm text-stone-600">prod. =</span>
+                                <input
+                                  type="number"
+                                  value={rule.fee}
+                                  onChange={(e) => {
+                                    const newRules = [...(storeSettings.fee_rules.standard.packaging || [])];
+                                    newRules[idx].fee = parseFloat(e.target.value) || 0;
+                                    setStoreSettings({ ...storeSettings, fee_rules: { ...storeSettings.fee_rules, standard: { ...storeSettings.fee_rules.standard, packaging: newRules } } });
+                                  }}
+                                  className="w-20 p-1 border rounded text-center text-sm"
+                                  placeholder="RON"
+                                />
+                                <span className="text-sm text-stone-600">RON</span>
+                                <button
+                                  onClick={() => {
+                                    const newRules = storeSettings.fee_rules.standard.packaging.filter((_, i) => i !== idx);
+                                    setStoreSettings({ ...storeSettings, fee_rules: { ...storeSettings.fee_rules, standard: { ...storeSettings.fee_rules.standard, packaging: newRules } } });
+                                  }}
+                                  className="text-red-500 hover:bg-red-50 p-1 rounded"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              onClick={() => {
+                                const newRules = [...(storeSettings.fee_rules.standard.packaging || []), { threshold: 0, fee: 0 }];
+                                setStoreSettings({ ...storeSettings, fee_rules: { ...storeSettings.fee_rules, standard: { ...storeSettings.fee_rules.standard, packaging: newRules } } });
+                              }}
+                              className="text-xs font-bold text-bakery-500 hover:underline flex items-center gap-1"
+                            >
+                              <Plus size={12} /> Adaugă Regulă
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Delivery Rules */}
+                        <div>
+                          <label className="block text-xs font-bold text-stone-500 uppercase mb-2">Reguli Livrare</label>
+                          <div className="space-y-2">
+                            {storeSettings.fee_rules?.standard?.delivery?.map((rule, idx) => (
+                              <div key={idx} className="flex gap-2 items-center">
+                                <span className="text-sm text-stone-600">Comandă &gt;</span>
+                                <input
+                                  type="number"
+                                  value={rule.threshold}
+                                  onChange={(e) => {
+                                    const newRules = [...(storeSettings.fee_rules.standard.delivery || [])];
+                                    newRules[idx].threshold = parseFloat(e.target.value) || 0;
+                                    setStoreSettings({ ...storeSettings, fee_rules: { ...storeSettings.fee_rules, standard: { ...storeSettings.fee_rules.standard, delivery: newRules } } });
+                                  }}
+                                  className="w-16 p-1 border rounded text-center text-sm"
+                                  placeholder="RON"
+                                />
+                                <span className="text-sm text-stone-600">RON =</span>
+                                <input
+                                  type="number"
+                                  value={rule.fee}
+                                  onChange={(e) => {
+                                    const newRules = [...(storeSettings.fee_rules.standard.delivery || [])];
+                                    newRules[idx].fee = parseFloat(e.target.value) || 0;
+                                    setStoreSettings({ ...storeSettings, fee_rules: { ...storeSettings.fee_rules, standard: { ...storeSettings.fee_rules.standard, delivery: newRules } } });
+                                  }}
+                                  className="w-20 p-1 border rounded text-center text-sm"
+                                  placeholder="RON"
+                                />
+                                <span className="text-sm text-stone-600">Taxă</span>
+                                <button
+                                  onClick={() => {
+                                    const newRules = storeSettings.fee_rules.standard.delivery.filter((_, i) => i !== idx);
+                                    setStoreSettings({ ...storeSettings, fee_rules: { ...storeSettings.fee_rules, standard: { ...storeSettings.fee_rules.standard, delivery: newRules } } });
+                                  }}
+                                  className="text-red-500 hover:bg-red-50 p-1 rounded"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              onClick={() => {
+                                const newRules = [...(storeSettings.fee_rules.standard.delivery || []), { threshold: 0, fee: 0 }];
+                                setStoreSettings({ ...storeSettings, fee_rules: { ...storeSettings.fee_rules, standard: { ...storeSettings.fee_rules.standard, delivery: newRules } } });
+                              }}
+                              className="text-xs font-bold text-bakery-500 hover:underline flex items-center gap-1"
+                            >
+                              <Plus size={12} /> Adaugă Regulă
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Special Products Rules */}
+                      <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
+                        <h5 className="font-bold text-amber-700 mb-3 flex items-center gap-2">
+                          <Star size={16} /> Produse Speciale (Carousel)
+                        </h5>
+
+                        {/* Packaging Rules */}
+                        <div className="mb-4">
+                          <label className="block text-xs font-bold text-amber-600 uppercase mb-2">Reguli Ambalaj</label>
+                          <div className="space-y-2">
+                            {storeSettings.fee_rules?.special?.packaging?.map((rule, idx) => (
+                              <div key={idx} className="flex gap-2 items-center">
+                                <span className="text-sm text-stone-600">Peste</span>
+                                <input
+                                  type="number"
+                                  value={rule.threshold}
+                                  onChange={(e) => {
+                                    const newRules = [...(storeSettings.fee_rules.special.packaging || [])];
+                                    newRules[idx].threshold = parseInt(e.target.value) || 0;
+                                    setStoreSettings({ ...storeSettings, fee_rules: { ...storeSettings.fee_rules, special: { ...storeSettings.fee_rules.special, packaging: newRules } } });
+                                  }}
+                                  className="w-16 p-1 border rounded text-center text-sm"
+                                  placeholder="Nr"
+                                />
+                                <span className="text-sm text-stone-600">prod. =</span>
+                                <input
+                                  type="number"
+                                  value={rule.fee}
+                                  onChange={(e) => {
+                                    const newRules = [...(storeSettings.fee_rules.special.packaging || [])];
+                                    newRules[idx].fee = parseFloat(e.target.value) || 0;
+                                    setStoreSettings({ ...storeSettings, fee_rules: { ...storeSettings.fee_rules, special: { ...storeSettings.fee_rules.special, packaging: newRules } } });
+                                  }}
+                                  className="w-20 p-1 border rounded text-center text-sm"
+                                  placeholder="RON"
+                                />
+                                <span className="text-sm text-stone-600">RON</span>
+                                <button
+                                  onClick={() => {
+                                    const newRules = storeSettings.fee_rules.special.packaging.filter((_, i) => i !== idx);
+                                    setStoreSettings({ ...storeSettings, fee_rules: { ...storeSettings.fee_rules, special: { ...storeSettings.fee_rules.special, packaging: newRules } } });
+                                  }}
+                                  className="text-red-500 hover:bg-red-50 p-1 rounded"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              onClick={() => {
+                                const newRules = [...(storeSettings.fee_rules.special.packaging || []), { threshold: 0, fee: 0 }];
+                                setStoreSettings({ ...storeSettings, fee_rules: { ...storeSettings.fee_rules, special: { ...storeSettings.fee_rules.special, packaging: newRules } } });
+                              }}
+                              className="text-xs font-bold text-amber-600 hover:underline flex items-center gap-1"
+                            >
+                              <Plus size={12} /> Adaugă Regulă
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Delivery Rules */}
+                        <div>
+                          <label className="block text-xs font-bold text-amber-600 uppercase mb-2">Reguli Livrare</label>
+                          <div className="space-y-2">
+                            {storeSettings.fee_rules?.special?.delivery?.map((rule, idx) => (
+                              <div key={idx} className="flex gap-2 items-center">
+                                <span className="text-sm text-stone-600">Comandă &gt;</span>
+                                <input
+                                  type="number"
+                                  value={rule.threshold}
+                                  onChange={(e) => {
+                                    const newRules = [...(storeSettings.fee_rules.special.delivery || [])];
+                                    newRules[idx].threshold = parseFloat(e.target.value) || 0;
+                                    setStoreSettings({ ...storeSettings, fee_rules: { ...storeSettings.fee_rules, special: { ...storeSettings.fee_rules.special, delivery: newRules } } });
+                                  }}
+                                  className="w-16 p-1 border rounded text-center text-sm"
+                                  placeholder="RON"
+                                />
+                                <span className="text-sm text-stone-600">RON =</span>
+                                <input
+                                  type="number"
+                                  value={rule.fee}
+                                  onChange={(e) => {
+                                    const newRules = [...(storeSettings.fee_rules.special.delivery || [])];
+                                    newRules[idx].fee = parseFloat(e.target.value) || 0;
+                                    setStoreSettings({ ...storeSettings, fee_rules: { ...storeSettings.fee_rules, special: { ...storeSettings.fee_rules.special, delivery: newRules } } });
+                                  }}
+                                  className="w-20 p-1 border rounded text-center text-sm"
+                                  placeholder="RON"
+                                />
+                                <span className="text-sm text-stone-600">Taxă</span>
+                                <button
+                                  onClick={() => {
+                                    const newRules = storeSettings.fee_rules.special.delivery.filter((_, i) => i !== idx);
+                                    setStoreSettings({ ...storeSettings, fee_rules: { ...storeSettings.fee_rules, special: { ...storeSettings.fee_rules.special, delivery: newRules } } });
+                                  }}
+                                  className="text-red-500 hover:bg-red-50 p-1 rounded"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              onClick={() => {
+                                const newRules = [...(storeSettings.fee_rules.special.delivery || []), { threshold: 0, fee: 0 }];
+                                setStoreSettings({ ...storeSettings, fee_rules: { ...storeSettings.fee_rules, special: { ...storeSettings.fee_rules.special, delivery: newRules } } });
+                              }}
+                              className="text-xs font-bold text-amber-600 hover:underline flex items-center gap-1"
+                            >
+                              <Plus size={12} /> Adaugă Regulă
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-8 flex justify-end">
+                      <button
+                        onClick={async () => {
+                          setIsSettingsLoading(true);
+                          try {
+                            await saveStoreSettings(storeSettings);
+                            showNotification("Setări salvate cu succes!");
+                          } catch (e) {
+                            showNotification("Eroare la salvare setări", "error");
+                          }
+                          setIsSettingsLoading(false);
+                        }}
+                        disabled={isSettingsLoading}
+                        className="px-6 py-2 bg-stone-800 text-white rounded-lg font-bold hover:bg-stone-900 disabled:opacity-50"
+                      >
+                        {isSettingsLoading ? 'Se salvează...' : 'Salvează Setări'}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1191,266 +1499,275 @@ for delete using ( bucket_id = 'images' );
                     <p className="text-stone-500">Nu există comenzi momentan.</p>
                   </div>
                 ) : (
-                  <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left">
-                        <thead className="bg-stone-50 border-b border-stone-200">
-                          <tr>
-                            <th className="p-4 text-stone-500 font-bold text-sm">Client</th>
-                            <th className="p-4 text-stone-500 font-bold text-sm">Telefon</th>
-                            <th className="p-4 text-stone-500 font-bold text-sm">Data Livrării</th>
-                            <th className="p-4 text-stone-500 font-bold text-sm">Livrare</th>
-                            <th className="p-4 text-stone-500 font-bold text-sm">Produse</th>
-                            <th className="p-4 text-stone-500 font-bold text-sm">Total</th>
-                            <th className="p-4 text-stone-500 font-bold text-sm">Status</th>
-                            <th className="p-4 text-stone-500 font-bold text-sm text-right">Acțiuni</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-stone-100">
-
-                          {orders.map((order) => {
-                            // Calculate Total
-                            const itemsTotal = order.items.reduce((sum: number, item: any) => sum + ((item.price || 0) * item.quantity), 0);
-                            const shipping = order.delivery_type === 'delivery' ? storeSettings.shipping_fee : 0;
-                            const packaging = storeSettings.packaging_fee;
-                            // Only add fees if there are items
-                            const grandTotal = itemsTotal > 0 ? itemsTotal + shipping + packaging : 0;
-
-                            return (
-                              <tr key={order.id} className="hover:bg-stone-50 transition-colors align-top">
-                                <td className="p-4 font-bold text-stone-800">
-                                  {order.customer_name}
-                                  <div className="text-xs text-stone-400 font-normal">
-                                    {order.created_at ? new Date(order.created_at).toLocaleDateString() : '-'}
+                  <div className="space-y-4">
+                    {orders.map((order) => {
+                      const itemsTotal = order.items.reduce((sum: number, item: any) => sum + ((item.price || 0) * item.quantity), 0);
+                      const shipping = order.delivery_type === 'delivery' ? storeSettings.shipping_fee : 0;
+                      const packaging = storeSettings.packaging_fee;
+                      const grandTotal = itemsTotal > 0 ? itemsTotal + shipping + packaging : 0;
+                      const hasUnpricedItems = order.items.some((item: any) => !item.price || item.price === 0);
+                      return (
+                        <div key={order.id} className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                          <details className="group">
+                            <summary className="flex flex-wrap md:flex-nowrap items-center justify-between p-4 cursor-pointer hover:bg-stone-50 transition-colors list-none">
+                              <div className="flex items-center gap-4 flex-grow">
+                                <div className={`p-2 rounded-full ${order.status === 'pending' ? 'bg-blue-100 text-blue-600' : order.status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-stone-100 text-stone-600'}`}>
+                                  <ShoppingBag size={20} />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono font-bold text-bakery-600 bg-bakery-50 px-1.5 rounded text-xs">#{order.friendly_id || '---'}</span>
+                                    <div className="font-bold text-stone-800">{order.customer_name}</div>
                                   </div>
-                                </td>
-                                <td className="p-4 text-stone-600">
-                                  <a href={`tel:${order.phone_number}`} className="hover:text-bakery-600 hover:underline">
-                                    {order.phone_number}
-                                  </a>
-                                </td>
-                                <td className="p-4 text-stone-700">
-                                  {new Date(order.needed_by).toLocaleDateString()}
-                                </td>
-                                <td className="p-4">
-                                  <div className="flex flex-col">
-                                    <span className={`text-sm font-bold ${order.delivery_type === 'delivery' ? 'text-blue-600' : 'text-orange-600'}`}>
-                                      {order.delivery_type === 'delivery' ? 'Livrare' : 'Ridicare'}
-                                    </span>
-                                    {order.delivery_type === 'delivery' && order.delivery_address && (
-                                      <span className="text-xs text-stone-500 max-w-[200px] truncate" title={order.delivery_address}>
-                                        {order.delivery_address}
-                                      </span>
+                                  <div className="text-xs text-stone-500">
+                                    {new Date(order.created_at || Date.now()).toLocaleDateString()} • {order.items.length} produse
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-4 mt-2 md:mt-0">
+                                <div className="font-bold text-stone-800">{grandTotal.toFixed(2)} RON</div>
+                                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${order.status === 'pending' ? 'bg-blue-100 text-blue-700' :
+                                  order.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                    'bg-yellow-100 text-yellow-700'
+                                  }`}>
+                                  {order.status === 'pending' ? 'Nouă' : order.status === 'completed' ? 'Finalizată' : order.status}
+                                </span>
+                                <ChevronDown size={20} className="text-stone-400 transition-transform group-open:rotate-180" />
+                              </div>
+                            </summary>
+
+                            <div className="p-4 border-t border-stone-100 bg-stone-50/50">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                  <h4 className="font-bold text-stone-700 mb-2 text-sm uppercase">Detalii Client</h4>
+                                  <div className="space-y-2 text-sm text-stone-600">
+                                    <div className="flex items-center gap-2">
+                                      <Phone size={14} />
+                                      <a href={`tel:${order.phone_number}`} className="hover:text-bakery-600 underline">{order.phone_number}</a>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <MapPin size={14} />
+                                      <span>{order.delivery_type === 'delivery' ? `Livrare: ${order.delivery_address}` : 'Ridicare Personală'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Calendar size={14} />
+                                      <span>Data: {new Date(order.needed_by).toLocaleDateString()}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <h4 className="font-bold text-stone-700 mb-2 text-sm uppercase">Produse Comandate</h4>
+                                  <div className="space-y-2">
+                                    {order.items.map((item: any, idx: number) => (
+                                      <div key={idx} className={`flex justify-between text-sm border-b border-stone-200 pb-1 last:border-0 ${(!item.price || item.price === 0) ? 'bg-red-50 p-1 rounded border-red-100' : ''}`}>
+                                        <span className={`text-stone-700 ${(!item.price || item.price === 0) ? 'font-bold text-red-700' : ''}`}>
+                                          <span className="font-bold">{item.quantity}x</span> {item.name}
+                                          {(!item.price || item.price === 0) && <span className="ml-2 text-xs bg-red-100 text-red-600 px-1 rounded">Preț Lipsă</span>}
+                                        </span>
+                                        <span className={`${(!item.price || item.price === 0) ? 'text-red-600 font-bold' : 'text-stone-500'}`}>
+                                          {item.price ? `${(item.price * item.quantity).toFixed(2)} RON` : 'Suna pt. pret'}
+                                        </span>
+                                      </div>
+                                    ))}
+                                    {order.details && (
+                                      <div className="bg-yellow-50 p-2 rounded text-xs text-yellow-800 italic mt-2 border border-yellow-100">
+                                        Note: {order.details}
+                                      </div>
+                                    )}
+                                    {hasUnpricedItems && (
+                                      <div className="bg-red-50 p-3 rounded-lg border border-red-200 flex items-start gap-2 mt-2">
+                                        <Phone className="text-red-500 shrink-0 mt-0.5" size={16} />
+                                        <div>
+                                          <div className="text-red-800 font-bold text-xs uppercase mb-1">Acțiune Necesară</div>
+                                          <div className="text-red-700 text-sm">
+                                            Sună clientul pentru a comunica prețul final.
+                                          </div>
+                                        </div>
+                                      </div>
                                     )}
                                   </div>
-                                </td>
-                                <td className="p-4">
-                                  <details className="group">
-                                    <summary className="cursor-pointer font-bold text-bakery-600 flex items-center gap-2 list-none text-sm">
-                                      <span>{order.items.length} produse</span>
-                                      <ChevronRight size={14} className="transition-transform group-open:rotate-90" />
-                                    </summary>
-                                    <div className="mt-2 pl-2 border-l-2 border-stone-200 space-y-1 text-sm min-w-[200px]">
-                                      {order.items.map((item: any, idx: number) => (
-                                        <div key={idx} className="flex justify-between gap-2">
-                                          <span className="text-stone-600">{item.quantity}x {item.name}</span>
-                                          <span className="text-stone-400 text-xs">
-                                            {item.price ? `${(item.price * item.quantity).toFixed(2)}` : '-'}
-                                          </span>
-                                        </div>
-                                      ))}
-                                      {order.details && (
-                                        <div className="pt-1 text-stone-500 italic text-xs border-t border-stone-100 mt-1">
-                                          Note: {order.details}
-                                        </div>
-                                      )}
-                                      <div className="pt-2 mt-2 border-t border-stone-100 text-xs text-stone-500">
-                                        <div className="flex justify-between"><span>Subtotal:</span> <span>{itemsTotal.toFixed(2)} RON</span></div>
-                                        {order.delivery_type === 'delivery' && (
-                                          <div className="flex justify-between"><span>Livrare:</span> <span>{shipping.toFixed(2)} RON</span></div>
-                                        )}
-                                        <div className="flex justify-between"><span>Ambalaj:</span> <span>{packaging.toFixed(2)} RON</span></div>
-                                      </div>
+
+                                  <div className="mt-4 pt-2 border-t border-stone-200 flex flex-col gap-1 text-sm">
+                                    <div className="flex justify-between text-stone-500"><span>Subtotal:</span> <span>{itemsTotal.toFixed(2)} RON</span></div>
+                                    {order.delivery_type === 'delivery' && (
+                                      <div className="flex justify-between text-stone-500"><span>Livrare:</span> <span>{shipping.toFixed(2)} RON</span></div>
+                                    )}
+                                    <div className="flex justify-between text-stone-500"><span>Ambalaj:</span> <span>{packaging.toFixed(2)} RON</span></div>
+                                    <div className="flex justify-between font-bold text-stone-800 text-base mt-1 pt-1 border-t border-stone-200">
+                                      <span>Total:</span> <span>{grandTotal.toFixed(2)} RON</span>
                                     </div>
-                                  </details>
-                                </td>
-                                <td className="p-4 font-bold text-stone-800">
-                                  {grandTotal.toFixed(2)} RON
-                                </td>
-                                <td className="p-4">
-                                  <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${order.status === 'pending' ? 'bg-blue-100 text-blue-700' :
-                                    order.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                      'bg-yellow-100 text-yellow-700'
-                                    }`}>
-                                    {order.status === 'pending' ? 'Nouă' : order.status === 'completed' ? 'Finalizată' : order.status === 'contacted' ? 'Contactat' : order.status}
-                                  </span>
-                                </td>
-                                <td className="p-4 text-right">
-                                  <div className="flex justify-end gap-2">
-                                    <button
-                                      onClick={() => handleToggleOrderStatus(order.id, order.status)}
-                                      className={`p-2 rounded-lg transition-colors ${order.status === 'completed' ? 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}
-                                      title={order.status === 'completed' ? 'Marchează ca nefinalizat' : 'Marchează ca finalizat'}
-                                    >
-                                      {order.status === 'completed' ? <RotateCcw size={18} /> : <Check size={18} />}
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteOrder(order.id)}
-                                      className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                                      title="Șterge comandă"
-                                    >
-                                      <Trash2 size={18} />
-                                    </button>
                                   </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-stone-200">
+                                <button
+                                  onClick={() => handleToggleOrderStatus(order.id, order.status)}
+                                  className={`px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-colors ${order.status === 'completed'
+                                    ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                                    : 'bg-green-600 text-white hover:bg-green-700 shadow-md'
+                                    }`}
+                                >
+                                  {order.status === 'completed' ? <><RotateCcw size={16} /> Redeschide</> : <><Check size={16} /> Finalizează</>}
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteOrder(order.id)}
+                                  className="px-4 py-2 rounded-lg font-bold bg-red-100 text-red-600 hover:bg-red-200 flex items-center gap-2"
+                                >
+                                  <Trash2 size={16} /> Șterge
+                                </button>
+                              </div>
+                            </div >
+                          </details >
+                        </div >
+                      );
+                    })}
+                  </div >
                 )}
-              </div>
+              </div >
             )}
 
             {/* --- HERO TAB --- */}
-            {activeTab === 'hero' && (
-              <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-bold text-stone-800">Imagini Hero (Slider Principal)</h2>
-                  <button
-                    onClick={() => heroFileRef.current?.click()}
-                    disabled={isUploadingHero}
-                    className="bg-bakery-500 hover:bg-bakery-600 disabled:bg-stone-400 text-white px-6 py-3 rounded-xl font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95"
-                  >
-                    {isUploadingHero ? (
-                      <span className="animate-pulse">Se încarcă...</span>
-                    ) : (
-                      <><Upload size={20} /> Adaugă Imagine</>
-                    )}
-                  </button>
-                  <input
-                    type="file"
-                    ref={heroFileRef}
-                    accept="image/*"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      setIsUploadingHero(true);
-                      try {
-                        const url = await uploadHeroImage(file);
-                        await addHeroImage(url);
-                        await refreshData();
-                        showNotification('Imagine Hero adăugată cu succes!');
-                      } catch (err: any) {
-                        showNotification('Eroare la încărcare: ' + (err.message || 'Necunoscută'), 'error');
-                      }
-                      setIsUploadingHero(false);
-                      e.target.value = '';
-                    }}
-                  />
-                </div>
-
-                <p className="text-stone-500 text-sm">
-                  Aceste imagini apar în slider-ul principal de pe prima pagină. Trage pentru a reordona.
-                </p>
-
-                {heroImages.length === 0 ? (
-                  <div className="text-center p-10 bg-white rounded-2xl border border-dashed border-stone-300">
-                    <Image size={48} className="mx-auto text-stone-300 mb-4" />
-                    <p className="text-stone-500">Nicio imagine în slider.</p>
-                    <p className="text-stone-400 text-sm">Apasă "Adaugă Imagine" pentru a începe.</p>
+            {
+              activeTab === 'hero' && (
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-2xl font-bold text-stone-800">Imagini Hero (Slider Principal)</h2>
+                    <button
+                      onClick={() => heroFileRef.current?.click()}
+                      disabled={isUploadingHero}
+                      className="bg-bakery-500 hover:bg-bakery-600 disabled:bg-stone-400 text-white px-6 py-3 rounded-xl font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95"
+                    >
+                      {isUploadingHero ? (
+                        <span className="animate-pulse">Se încarcă...</span>
+                      ) : (
+                        <><Upload size={20} /> Adaugă Imagine</>
+                      )}
+                    </button>
+                    <input
+                      type="file"
+                      ref={heroFileRef}
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setIsUploadingHero(true);
+                        try {
+                          const url = await uploadHeroImage(file);
+                          await addHeroImage(url);
+                          await refreshData();
+                          showNotification('Imagine Hero adăugată cu succes!');
+                        } catch (err: any) {
+                          showNotification('Eroare la încărcare: ' + (err.message || 'Necunoscută'), 'error');
+                        }
+                        setIsUploadingHero(false);
+                        e.target.value = '';
+                      }}
+                    />
                   </div>
-                ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {heroImages.map((img, index) => (
-                      <div
-                        key={img.id}
-                        className={`relative group bg-white rounded-xl overflow-hidden shadow-sm border-2 ${img.id.startsWith('default-') ? 'border-yellow-300' : 'border-transparent'}`}
-                      >
-                        <img
-                          src={img.image_url}
-                          alt={`Hero ${index + 1}`}
-                          className="w-full h-48 object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                          <button
-                            onClick={async () => {
-                              if (index > 0 && !isReordering) {
-                                setIsReordering(true);
-                                try {
-                                  const newOrder = [...heroImages];
-                                  [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
-                                  setHeroImages(newOrder);
-                                  await reorderHeroImages(newOrder.map((img, i) => ({ id: img.id, display_order: i + 1, image_url: img.image_url })));
-                                  showNotification(`Imagine mutată la poziția #${index}`);
-                                } catch (error: any) {
-                                  showNotification('Eroare la mutare: ' + (error.message || 'Necunoscută'), 'error');
-                                  await refreshData();
-                                } finally {
-                                  setIsReordering(false);
-                                }
-                              }
-                            }}
-                            disabled={index === 0}
-                            className={`p-2 bg-white rounded-lg transition-colors ${index === 0 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
-                            title="Mută la stânga"
-                          >
-                            <ChevronLeft size={20} />
-                          </button>
-                          <button
-                            onClick={async () => {
-                              if (index < heroImages.length - 1 && !isReordering) {
-                                setIsReordering(true);
-                                try {
-                                  const newOrder = [...heroImages];
-                                  [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
-                                  setHeroImages(newOrder);
-                                  await reorderHeroImages(newOrder.map((img, i) => ({ id: img.id, display_order: i + 1, image_url: img.image_url })));
-                                  showNotification(`Imagine mutată la poziția #${index + 2}`);
-                                } catch (error: any) {
-                                  showNotification('Eroare la mutare: ' + (error.message || 'Necunoscută'), 'error');
-                                  await refreshData();
-                                } finally {
-                                  setIsReordering(false);
-                                }
-                              }
-                            }}
-                            disabled={index === heroImages.length - 1}
-                            className={`p-2 bg-white rounded-lg transition-colors ${index === heroImages.length - 1 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
-                            title="Mută la dreapta"
-                          >
-                            <ChevronRight size={20} />
-                          </button>
-                        </div>
-                        <button
-                          onClick={async () => {
-                            if (confirm('Sigur vrei să ștergi această imagine?')) {
-                              try {
-                                await deleteHeroImage(img.id, img.image_url);
-                                await refreshData();
-                                showNotification('Imagine ștearsă!');
-                              } catch (error: any) {
-                                showNotification('Eroare la ștergere: ' + (error.message || 'Necunoscută'), 'error');
-                              }
-                            }
-                          }}
-                          className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-md"
-                          title="Șterge imagine"
+
+                  <p className="text-stone-500 text-sm">
+                    Aceste imagini apar în slider-ul principal de pe prima pagină. Trage pentru a reordona.
+                  </p>
+
+                  {heroImages.length === 0 ? (
+                    <div className="text-center p-10 bg-white rounded-2xl border border-dashed border-stone-300">
+                      <Image size={48} className="mx-auto text-stone-300 mb-4" />
+                      <p className="text-stone-500">Nicio imagine în slider.</p>
+                      <p className="text-stone-400 text-sm">Apasă "Adaugă Imagine" pentru a începe.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {heroImages.map((img, index) => (
+                        <div
+                          key={img.id}
+                          className={`relative group bg-white rounded-xl overflow-hidden shadow-sm border-2 ${img.id.startsWith('default-') ? 'border-yellow-300' : 'border-transparent'}`}
                         >
-                          <Trash2 size={16} />
-                        </button>
-                        <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
-                          #{index + 1}
+                          <img
+                            src={img.image_url}
+                            alt={`Hero ${index + 1}`}
+                            className="w-full h-48 object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <button
+                              onClick={async () => {
+                                if (index > 0 && !isReordering) {
+                                  setIsReordering(true);
+                                  try {
+                                    const newOrder = [...heroImages];
+                                    [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
+                                    setHeroImages(newOrder);
+                                    await reorderHeroImages(newOrder.map((img, i) => ({ id: img.id, display_order: i + 1, image_url: img.image_url })));
+                                    showNotification(`Imagine mutată la poziția #${index}`);
+                                  } catch (error: any) {
+                                    showNotification('Eroare la mutare: ' + (error.message || 'Necunoscută'), 'error');
+                                    await refreshData();
+                                  } finally {
+                                    setIsReordering(false);
+                                  }
+                                }
+                              }}
+                              disabled={index === 0}
+                              className={`p-2 bg-white rounded-lg transition-colors ${index === 0 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
+                              title="Mută la stânga"
+                            >
+                              <ChevronLeft size={20} />
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (index < heroImages.length - 1 && !isReordering) {
+                                  setIsReordering(true);
+                                  try {
+                                    const newOrder = [...heroImages];
+                                    [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+                                    setHeroImages(newOrder);
+                                    await reorderHeroImages(newOrder.map((img, i) => ({ id: img.id, display_order: i + 1, image_url: img.image_url })));
+                                    showNotification(`Imagine mutată la poziția #${index + 2}`);
+                                  } catch (error: any) {
+                                    showNotification('Eroare la mutare: ' + (error.message || 'Necunoscută'), 'error');
+                                    await refreshData();
+                                  } finally {
+                                    setIsReordering(false);
+                                  }
+                                }
+                              }}
+                              disabled={index === heroImages.length - 1}
+                              className={`p-2 bg-white rounded-lg transition-colors ${index === heroImages.length - 1 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100'}`}
+                              title="Mută la dreapta"
+                            >
+                              <ChevronRight size={20} />
+                            </button>
+                          </div>
+                          <button
+                            onClick={async () => {
+                              if (confirm('Sigur vrei să ștergi această imagine?')) {
+                                try {
+                                  await deleteHeroImage(img.id, img.image_url);
+                                  await refreshData();
+                                  showNotification('Imagine ștearsă!');
+                                } catch (error: any) {
+                                  showNotification('Eroare la ștergere: ' + (error.message || 'Necunoscută'), 'error');
+                                }
+                              }
+                            }}
+                            className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-md"
+                            title="Șterge imagine"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                          <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
+                            #{index + 1}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            }
           </>
         )
         }
@@ -1503,7 +1820,12 @@ for delete using ( bucket_id = 'images' );
         isEditingProduct && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 animate-fade-in max-h-[90vh] overflow-y-auto">
-              <h3 className="text-2xl font-bold mb-6 text-stone-800">{currentProduct.id ? 'Editează Produs' : 'Produs Nou'}</h3>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-stone-800">{currentProduct.id ? 'Editează Produs' : 'Produs Nou'}</h3>
+                <button onClick={() => setIsEditingProduct(false)} className="p-2 hover:bg-stone-100 rounded-lg transition-colors text-stone-500">
+                  <X size={24} />
+                </button>
+              </div>
               <form onSubmit={async (e) => {
                 e.preventDefault();
                 try {
@@ -1662,7 +1984,12 @@ for delete using ( bucket_id = 'images' );
         isEditingCarousel && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 animate-fade-in max-h-[90vh] overflow-y-auto">
-              <h3 className="text-2xl font-bold mb-6 text-stone-800">Editează Imagine Carusel</h3>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-stone-800">Editează Imagine Carusel</h3>
+                <button onClick={() => setIsEditingCarousel(false)} className="p-2 hover:bg-stone-100 rounded-lg transition-colors text-stone-500">
+                  <X size={24} />
+                </button>
+              </div>
               <form onSubmit={async (e) => {
                 e.preventDefault();
                 try {
