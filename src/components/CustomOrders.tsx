@@ -35,11 +35,21 @@ const CustomOrders: React.FC<CustomOrdersProps> = ({ onOpenOrderModal }) => {
   const phoneCta = useEditableContent('customOrders.phoneCta', content.phoneCta);
   const emailCta = useEditableContent('customOrders.emailCta', content.emailCta);
 
+  // Editable phone/email values (shared with MapSection via same keys)
+  const phoneNumber = useEditableContent('contact.phone', content.phoneNumber || '0754 554 194');
+  const emailAddress = useEditableContent('contact.email', content.emailAddress || 'odgdragasani@gmail.com');
+
   // 4 feature boxes - editable individually
   const feature1 = useEditableContent('customOrders.feature1', content.features[0] || 'Nunți și Botezuri');
   const feature2 = useEditableContent('customOrders.feature2', content.features[1] || 'Petreceri și Aniversări');
   const feature3 = useEditableContent('customOrders.feature3', content.features[2] || 'Evenimente Corporate');
   const feature4 = useEditableContent('customOrders.feature4', content.features[3] || 'Sărbători și Ocazii Speciale');
+
+  // Format phone for tel: link
+  const formatPhoneForHref = (phone: string) => {
+    const cleaned = phone.replace(/\s+/g, '').replace(/^0/, '+40');
+    return `tel:${cleaned}`;
+  };
 
   // Fetch carousel images from database with Realtime Subscription
   useEffect(() => {
@@ -289,14 +299,14 @@ const CustomOrders: React.FC<CustomOrdersProps> = ({ onOpenOrderModal }) => {
                 )}
                 <div className="flex flex-col sm:flex-row gap-3">
                   <a
-                    href={`tel:+40${content.phoneNumber.replace(/\s/g, '')}`}
+                    href={formatPhoneForHref(phoneNumber.value)}
                     className="flex-1 inline-flex items-center justify-center gap-3 bg-white hover:bg-bakery-50 border-2 border-bakery-500 text-bakery-700 font-bold py-3 px-5 rounded-xl transition-all transform hover:-translate-y-1"
                   >
                     <Phone size={20} />
                     {phoneCta.value}
                   </a>
                   <a
-                    href={`mailto:${content.emailAddress}`}
+                    href={`mailto:${emailAddress.value}`}
                     className="flex-1 inline-flex items-center justify-center gap-3 bg-white hover:bg-bakery-50 border-2 border-bakery-500 text-bakery-700 font-bold py-3 px-5 rounded-xl transition-all transform hover:-translate-y-1"
                   >
                     <Mail size={20} />

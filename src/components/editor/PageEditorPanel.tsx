@@ -177,16 +177,16 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
             setIsResetting(true);
             try {
                 await resetAllContent();
-                await refreshContent();
-                const content = await getAllPageContent();
-                setContentList(content);
-                const history = await getAllContentHistory();
-                setHistoryList(history);
-                showNotification('Conținut resetat la valori originale!', 'success');
+                showNotification('Conținut resetat! Se reîncarcă pagina...', 'success');
+                // Force full page reload to clear all cached state
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
             } catch (error) {
-                showNotification('Eroare la resetare', 'error');
+                console.error('Reset error:', error);
+                showNotification('Eroare la resetare: ' + (error as Error).message, 'error');
+                setIsResetting(false);
             }
-            setIsResetting(false);
         }
     };
 

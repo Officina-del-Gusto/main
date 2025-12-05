@@ -40,6 +40,16 @@ const MapSection: React.FC = () => {
   const phoneLabel = useEditableContent('mapSection.phoneLabel', mapText.phoneLabel);
   const emailLabel = useEditableContent('mapSection.emailLabel', mapText.emailLabel);
 
+  // Editable phone and email values (for display AND links)
+  const phoneNumber = useEditableContent('contact.phone', '0754 554 194');
+  const emailAddress = useEditableContent('contact.email', 'odgdragasani@gmail.com');
+
+  // Format phone for tel: link (remove spaces, add country code if needed)
+  const formatPhoneForHref = (phone: string) => {
+    const cleaned = phone.replace(/\s+/g, '').replace(/^0/, '+40');
+    return `tel:${cleaned}`;
+  };
+
   return (
     <section id="contact" className="py-24 bg-neutral-900 text-stone-50 relative overflow-hidden">
       {/* Texture overlay */}
@@ -101,8 +111,8 @@ const MapSection: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="font-serif font-bold text-xl text-white mb-1">{phoneLabel.value}</h4>
-                  <a href="tel:+40754554194" className="text-stone-400 hover:text-bakery-300 transition-colors text-lg font-medium block mt-1">
-                    0754 554 194
+                  <a href={formatPhoneForHref(phoneNumber.value)} className="text-stone-400 hover:text-bakery-300 transition-colors text-lg font-medium block mt-1">
+                    {phoneNumber.value}
                   </a>
                 </div>
               </div>
@@ -113,8 +123,8 @@ const MapSection: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="font-serif font-bold text-xl text-white mb-1">{emailLabel.value}</h4>
-                  <a href="mailto:odgdragasani@gmail.com" className="text-stone-400 hover:text-bakery-300 transition-colors text-lg font-medium block mt-1">
-                    odgdragasani@gmail.com
+                  <a href={`mailto:${emailAddress.value}`} className="text-stone-400 hover:text-bakery-300 transition-colors text-lg font-medium block mt-1">
+                    {emailAddress.value}
                   </a>
                 </div>
               </div>
