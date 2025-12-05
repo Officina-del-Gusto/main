@@ -239,14 +239,6 @@ const CustomOrders: React.FC<CustomOrdersProps> = ({ onOpenOrderModal }) => {
                       🔍 {dictionary.customOrders.viewImage || 'View'}
                     </span>
                   </div>
-
-                  {/* Name Overlay at bottom */}
-                  {image.name && (
-                    <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                      <p className="text-white font-bold text-lg drop-shadow-md truncate">{image.name}</p>
-                      {image.price && <p className="text-white/90 text-sm font-medium drop-shadow-md">{image.price} RON</p>}
-                    </div>
-                  )}
                 </button>
               ))}
             </div>
@@ -321,7 +313,7 @@ const CustomOrders: React.FC<CustomOrdersProps> = ({ onOpenOrderModal }) => {
 
       {/* Lightbox Modal */}
       <div
-        className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-300 ${lightboxOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 ${lightboxOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
         onClick={closeLightbox}
       >
@@ -329,51 +321,50 @@ const CustomOrders: React.FC<CustomOrdersProps> = ({ onOpenOrderModal }) => {
         <div className={`absolute inset-0 bg-black/90 backdrop-blur-sm transition-opacity duration-300 ${lightboxOpen ? 'opacity-100' : 'opacity-0'
           }`}></div>
 
-        {/* Image Container */}
+        {/* Image Container - with proper overflow handling */}
         <div
-          className={`relative z-10 max-w-5xl max-h-[90vh] mx-4 transition-all duration-300 ${lightboxOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
+          className={`relative z-10 max-w-5xl w-full max-h-[90vh] flex flex-col transition-all duration-300 ${lightboxOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
             }`}
           onClick={(e) => e.stopPropagation()}
         >
+          {/* Close Button - positioned at top right of container */}
+          <button
+            onClick={closeLightbox}
+            className="absolute -top-2 -right-2 md:top-0 md:right-0 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors z-20 backdrop-blur"
+            aria-label="Close lightbox"
+          >
+            <X size={24} />
+          </button>
+
           <img
             src={orderImages[currentImageIndex]?.image_url}
             alt={`Comandă personalizată Officina del Gusto - ${orderImages[currentImageIndex]?.name || 'Produs'} ${currentImageIndex + 1}`}
-            className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl mx-auto"
+            className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-2xl mx-auto"
           />
 
-          {/* Image Details */}
-          <div className="bg-white/95 backdrop-blur-md p-4 rounded-xl mt-4 max-w-2xl mx-auto shadow-lg text-center">
-            <h3 className="text-2xl font-bold text-bakery-800 mb-1">{orderImages[currentImageIndex]?.name || 'Comandă Personalizată'}</h3>
-            {orderImages[currentImageIndex]?.description && (
-              <p className="text-stone-600 mb-2">{orderImages[currentImageIndex]?.description}</p>
-            )}
-            {orderImages[currentImageIndex]?.price && (
-              <div className="inline-block bg-bakery-100 text-bakery-800 px-3 py-1 rounded-full font-bold text-sm">
-                {orderImages[currentImageIndex]?.price} RON {orderImages[currentImageIndex]?.unit ? `/ ${orderImages[currentImageIndex]?.unit}` : ''}
-              </div>
-            )}
-          </div>
-
-          {/* Close Button */}
-          <button
-            onClick={closeLightbox}
-            className="absolute -top-12 right-0 p-2 text-white/80 hover:text-white transition-colors"
-            aria-label="Close lightbox"
-          >
-            <X size={32} />
-          </button>
+          {/* Image Details - only name and description, NO price */}
+          {(orderImages[currentImageIndex]?.name || orderImages[currentImageIndex]?.description) && (
+            <div className="bg-white/95 backdrop-blur-md p-4 rounded-xl mt-4 max-w-2xl mx-auto shadow-lg text-center flex-shrink-0">
+              {orderImages[currentImageIndex]?.name && (
+                <h3 className="text-xl font-bold text-bakery-800">{orderImages[currentImageIndex]?.name}</h3>
+              )}
+              {orderImages[currentImageIndex]?.description && (
+                <p className="text-stone-600 mt-1">{orderImages[currentImageIndex]?.description}</p>
+              )}
+            </div>
+          )}
 
           {/* Navigation Buttons */}
           <button
             onClick={(e) => { e.stopPropagation(); goToPrevious(); }}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-14 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur"
+            className="absolute left-2 md:-left-16 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur"
             aria-label="Previous image"
           >
             <ChevronLeft size={28} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); goToNext(); }}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-14 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur"
+            className="absolute right-2 md:-right-16 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur"
             aria-label="Next image"
           >
             <ChevronRight size={28} />
@@ -390,3 +381,4 @@ const CustomOrders: React.FC<CustomOrdersProps> = ({ onOpenOrderModal }) => {
 };
 
 export default CustomOrders;
+
