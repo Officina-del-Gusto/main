@@ -260,7 +260,7 @@ const CustomOrders: React.FC<CustomOrdersProps> = ({ onOpenOrderModal }) => {
                     className="w-full flex items-center justify-center gap-3 bg-bakery-500 hover:bg-bakery-600 text-white font-bold py-3 px-5 rounded-xl shadow-lg hover:shadow-bakery-500/30 transition-all transform hover:-translate-y-1"
                   >
                     <PartyPopper size={20} />
-                    Comandă Acum
+                    {dictionary.navbar.mobileMenu.orderNow}
                   </button>
                 )}
                 <div className="flex flex-col sm:flex-row gap-3">

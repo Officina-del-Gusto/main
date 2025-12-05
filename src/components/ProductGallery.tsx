@@ -86,7 +86,7 @@ const ProductGallery: React.FC<ProductGalleryProps> = ({ onOpenOrderModal }) => 
                       className="w-full mt-auto py-3 bg-bakery-100 text-bakery-800 font-bold rounded-xl hover:bg-bakery-500 hover:text-white transition-all flex items-center justify-center gap-2 group-hover:shadow-md"
                     >
                       <ShoppingBag size={18} />
-                      Comandă Acum
+                      {dictionary.navbar.mobileMenu.orderNow}
                     </button>
                   )}
                 </div>

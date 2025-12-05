@@ -599,14 +599,14 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                                                     onClick={() => setFormData({ ...formData, deliveryType: 'pickup' })}
                                                     className={`flex-1 py-2 px-2 rounded-lg text-sm font-bold border transition-all flex items-center justify-center gap-1 ${formData.deliveryType === 'pickup' ? 'bg-bakery-50 border-bakery-500 text-bakery-800 ring-1 ring-bakery-500' : 'border-stone-200 text-stone-600 hover:bg-stone-50'}`}
                                                 >
-                                                    <ShoppingBag size={16} /> Ridicare
+                                                    <ShoppingBag size={16} /> {dictionary.orderModal.buttons.pickup}
                                                 </button>
                                                 <button
                                                     onClick={() => setFormData({ ...formData, deliveryType: 'delivery' })}
                                                     className={`flex-1 py-2 px-2 rounded-lg text-sm font-bold border transition-all flex items-center justify-center gap-1 ${formData.deliveryType === 'delivery' ? 'bg-bakery-50 border-bakery-500 text-bakery-800 ring-1 ring-bakery-500' : 'border-stone-200 text-stone-600 hover:bg-stone-50'}`}
                                                 >
                                                     {/* Truck icon replacement */}
-                                                    <span>🚚 Livrare</span>
+                                                    <span>🚚 {dictionary.orderModal.buttons.delivery}</span>
                                                 </button>
                                             </div>
                                         </div>
@@ -616,7 +616,7 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                                             disabled={cart.size === 0}
                                             className="w-full bg-bakery-500 hover:bg-bakery-600 disabled:bg-stone-300 text-white py-3 rounded-xl font-bold shadow-md transition-all active:scale-95 flex justify-center items-center gap-2"
                                         >
-                                            Continuă <ArrowRight size={18} />
+                                            {dictionary.orderModal.buttons.next} <ArrowRight size={18} />
                                         </button>
                                     </div>
                                 )}
@@ -626,12 +626,12 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                     {step === 2 && (
                         <form onSubmit={handleSubmit} className="max-w-md mx-auto space-y-6">
                             <div className="bg-bakery-50 p-4 rounded-xl mb-6 text-center">
-                                <h3 className="font-bold text-bakery-800 mb-2">Detalii Livrare</h3>
-                                <p className="text-sm text-stone-600">Completează datele pentru a finaliza comanda.</p>
+                                <h3 className="font-bold text-bakery-800 mb-2">{dictionary.orderModal.steps.details}</h3>
+                                <p className="text-sm text-stone-600">{dictionary.orderModal.steps.details}</p>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-bold text-stone-700 mb-1">Numele Tău (Opțional)</label>
+                                <label className="block text-sm font-bold text-stone-700 mb-1">{dictionary.orderModal.labels.name} {dictionary.orderModal.labels.optional}</label>
                                 <div className="relative">
                                     <User className="absolute left-3 top-3 text-stone-400" size={20} />
                                     <input
@@ -645,7 +645,7 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-bold text-stone-700 mb-1">Număr de Telefon <span className="text-red-500">*</span></label>
+                                <label className="block text-sm font-bold text-stone-700 mb-1">{dictionary.orderModal.labels.phone} <span className="text-red-500">*</span></label>
                                 <div className="relative">
                                     <Phone className="absolute left-3 top-3 text-stone-400" size={20} />
                                     <input
@@ -660,7 +660,7 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-bold text-stone-700 mb-1">Data Dorită <span className="text-red-500">*</span></label>
+                                <label className="block text-sm font-bold text-stone-700 mb-1">{dictionary.orderModal.labels.date} <span className="text-red-500">*</span></label>
                                 <div className="relative">
                                     <Calendar className="absolute left-3 top-3 text-stone-400" size={20} />
                                     <input
@@ -678,7 +678,7 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
 
                             {formData.deliveryType === 'delivery' && (
                                 <div className="animate-fade-in">
-                                    <label className="block text-sm font-bold text-stone-700 mb-1">Adresa de Livrare <span className="text-red-500">*</span></label>
+                                    <label className="block text-sm font-bold text-stone-700 mb-1">{dictionary.orderModal.labels.address} <span className="text-red-500">*</span></label>
                                     <textarea
                                         required
                                         value={formData.address}
@@ -694,7 +694,7 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                                 disabled={loading}
                                 className="w-full bg-bakery-500 text-white font-bold py-4 rounded-xl hover:bg-bakery-600 transition-colors flex justify-center items-center gap-2"
                             >
-                                {loading ? <Loader className="animate-spin" /> : <>Revizuiește Comanda <Check size={20} /></>}
+                                {loading ? <Loader className="animate-spin" /> : <>{dictionary.orderModal.steps.review} <Check size={20} /></>}
                             </button>
                         </form>
                     )
@@ -704,7 +704,7 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                         step === 3 && (
                             <div className="max-w-2xl mx-auto space-y-6">
                                 <div className="bg-bakery-50 p-6 rounded-xl border border-bakery-100">
-                                    <h3 className="font-bold text-bakery-800 mb-4 text-lg border-b border-bakery-200 pb-2">Sumar Final</h3>
+                                    <h3 className="font-bold text-bakery-800 mb-4 text-lg border-b border-bakery-200 pb-2">{dictionary.orderModal.summary.title}</h3>
 
                                     {/* Items List */}
                                     <div className="space-y-3 mb-6">
@@ -725,21 +725,21 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                                     {storeSettings.pricing_enabled && (
                                         <div className="border-t border-bakery-200 pt-4 space-y-2 text-sm">
                                             <div className="flex justify-between text-stone-600">
-                                                <span>Subtotal Produse:</span>
+                                                <span>{dictionary.orderModal.summary.subtotal}:</span>
                                                 <span>{Array.from(cart.values()).reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0).toFixed(2)} RON</span>
                                             </div>
                                             {formData.deliveryType === 'delivery' && (
                                                 <div className="flex justify-between text-stone-600">
-                                                    <span>Taxă Livrare:</span>
+                                                    <span>{dictionary.orderModal.summary.shippingFee}:</span>
                                                     <span>{storeSettings.shipping_fee.toFixed(2)} RON</span>
                                                 </div>
                                             )}
                                             <div className="flex justify-between text-stone-600">
-                                                <span>Taxă Ambalaj:</span>
+                                                <span>{dictionary.orderModal.summary.packagingFee}:</span>
                                                 <span>{storeSettings.packaging_fee.toFixed(2)} RON</span>
                                             </div>
                                             <div className="flex justify-between text-lg font-bold text-bakery-800 border-t border-bakery-200 pt-2 mt-2">
-                                                <span>Total General:</span>
+                                                <span>{dictionary.orderModal.summary.total}:</span>
                                                 <span>
                                                     {(Array.from(cart.values()).reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0) +
                                                         (formData.deliveryType === 'delivery' ? storeSettings.shipping_fee : 0) +
@@ -751,27 +751,27 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                                 </div>
 
                                 <div className="bg-white border border-stone-200 p-6 rounded-xl">
-                                    <h3 className="font-bold text-stone-800 mb-4 text-lg">Detalii Livrare</h3>
+                                    <h3 className="font-bold text-stone-800 mb-4 text-lg">{dictionary.orderModal.steps.details}</h3>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                                         <div>
-                                            <span className="block text-stone-500 text-xs uppercase font-bold">Nume</span>
+                                            <span className="block text-stone-500 text-xs uppercase font-bold">{dictionary.orderModal.labels.name}</span>
                                             <span className="font-medium">{formData.name || '-'}</span>
                                         </div>
                                         <div>
-                                            <span className="block text-stone-500 text-xs uppercase font-bold">Telefon</span>
+                                            <span className="block text-stone-500 text-xs uppercase font-bold">{dictionary.orderModal.labels.phone}</span>
                                             <span className="font-medium">{formData.phone}</span>
                                         </div>
                                         <div>
-                                            <span className="block text-stone-500 text-xs uppercase font-bold">Data</span>
+                                            <span className="block text-stone-500 text-xs uppercase font-bold">{dictionary.orderModal.labels.date}</span>
                                             <span className="font-medium">{new Date(formData.date).toLocaleDateString('ro-RO')}</span>
                                         </div>
                                         <div>
-                                            <span className="block text-stone-500 text-xs uppercase font-bold">Metoda</span>
-                                            <span className="font-medium">{formData.deliveryType === 'delivery' ? 'Livrare la Domiciliu' : 'Ridicare Personală'}</span>
+                                            <span className="block text-stone-500 text-xs uppercase font-bold">{dictionary.orderModal.labels.deliveryMethod}</span>
+                                            <span className="font-medium">{formData.deliveryType === 'delivery' ? dictionary.orderModal.buttons.delivery : dictionary.orderModal.buttons.pickup}</span>
                                         </div>
                                         {formData.deliveryType === 'delivery' && (
                                             <div className="sm:col-span-2">
-                                                <span className="block text-stone-500 text-xs uppercase font-bold">Adresa</span>
+                                                <span className="block text-stone-500 text-xs uppercase font-bold">{dictionary.orderModal.labels.address}</span>
                                                 <span className="font-medium">{formData.address}</span>
                                             </div>
                                         )}
@@ -784,14 +784,14 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                                         disabled={loading}
                                         className="flex-1 bg-stone-200 text-stone-700 font-bold py-4 rounded-xl hover:bg-stone-300 transition-colors"
                                     >
-                                        Înapoi
+                                        {dictionary.orderModal.buttons.back}
                                     </button>
                                     <button
                                         onClick={handleSubmit}
                                         disabled={loading}
                                         className="flex-[2] bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-700 transition-colors flex justify-center items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                                     >
-                                        {loading ? <Loader className="animate-spin" /> : <>Confirmă și Trimite Comanda <Check size={24} /></>}
+                                        {loading ? <Loader className="animate-spin" /> : <>{dictionary.orderModal.buttons.submit} <Check size={24} /></>}
                                     </button>
                                 </div>
                             </div>
@@ -804,14 +804,14 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                                 <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-4 animate-bounce">
                                     <Check size={48} className="text-green-600" />
                                 </div>
-                                <h3 className="text-3xl font-bold text-stone-800">Comandă Trimisă!</h3>
+                                <h3 className="text-3xl font-bold text-stone-800">{dictionary.orderModal.steps.success}</h3>
                                 <p className="text-stone-600 max-w-md">
-                                    Mulțumim pentru comandă! Te vom contacta în curând pentru confirmare.
+                                    {dictionary.orderModal.messages.successMessage}
                                 </p>
 
                                 {createdOrder?.friendly_id && (
                                     <div className="bg-stone-50 border border-stone-200 rounded-xl p-4 flex flex-col items-center gap-2 animate-fade-in">
-                                        <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">ID Comandă</span>
+                                        <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">{dictionary.orderModal.messages.orderId}</span>
                                         <div className="flex items-center gap-3">
                                             <span className="text-2xl font-mono font-bold text-bakery-600">#{createdOrder.friendly_id}</span>
                                             <button
@@ -826,7 +826,7 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                                                 {isCopied ? <Check size={20} className="text-green-500" /> : <Copy size={20} />}
                                                 {isCopied && (
                                                     <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-stone-800 text-white text-xs py-1 px-2 rounded shadow-lg whitespace-nowrap animate-fade-in">
-                                                        Copiat!
+                                                        {dictionary.orderModal.messages.copied}
                                                     </span>
                                                 )}
                                             </button>
@@ -838,7 +838,7 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                                     onClick={handleClose}
                                     className="bg-bakery-500 text-white font-bold py-3 px-8 rounded-xl hover:bg-bakery-600 transition-colors shadow-lg"
                                 >
-                                    Închide
+                                    {dictionary.orderModal.buttons.close}
                                 </button>
                             </div>
                         )
@@ -852,7 +852,7 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                     step === 2 && (
                         <div className="p-4 border-t bg-stone-50">
                             <button onClick={() => setStep(1)} className="text-stone-500 hover:text-stone-800 font-bold text-sm">
-                                ← Înapoi la produse
+                                ← {dictionary.orderModal.buttons.back}
                             </button>
                         </div>
                     )
@@ -868,14 +868,14 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                             </div>
                             <h3 className="text-xl font-bold text-center text-stone-800 mb-2">Confirmare Preț</h3>
                             <p className="text-stone-600 text-center mb-6">
-                                Unele produse din coș nu au un preț setat. Te rugăm să contactezi magazinul pentru o ofertă finală după trimiterea comenzii.
+                                {dictionary.orderModal.messages.unpricedWarning}
                             </p>
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => setShowUnpricedWarning(false)}
                                     className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded-xl transition-colors"
                                 >
-                                    Anulează
+                                    {dictionary.orderModal.buttons.cancel}
                                 </button>
                                 <button
                                     onClick={() => {
@@ -884,7 +884,7 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                                     }}
                                     className="flex-1 py-3 bg-bakery-500 hover:bg-bakery-600 text-white font-bold rounded-xl transition-colors"
                                 >
-                                    Am înțeles, Trimite
+                                    {dictionary.orderModal.buttons.confirmUnpriced}
                                 </button>
                             </div>
                         </div>
@@ -899,22 +899,22 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                             <div className="flex justify-center mb-4 text-red-500">
                                 <X size={48} />
                             </div>
-                            <h3 className="text-xl font-bold text-center text-stone-800 mb-2">Închizi Comanda?</h3>
+                            <h3 className="text-xl font-bold text-center text-stone-800 mb-2">{dictionary.orderModal.buttons.close}?</h3>
                             <p className="text-stone-600 text-center mb-6">
-                                Toate produsele din coș și datele introduse se vor pierde. Ești sigur?
+                                {dictionary.orderModal.messages.closeWarning}
                             </p>
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => setShowCloseConfirm(false)}
                                     className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded-xl transition-colors"
                                 >
-                                    Nu, rămân
+                                    {dictionary.orderModal.buttons.cancel}
                                 </button>
                                 <button
                                     onClick={confirmClose}
                                     className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors"
                                 >
-                                    Da, închide
+                                    {dictionary.orderModal.buttons.confirmClose}
                                 </button>
                             </div>
                         </div>

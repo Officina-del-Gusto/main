@@ -151,7 +151,7 @@ const Footer: React.FC<FooterProps> = ({ onAdminClick }) => {
             </button>
             <span className="text-stone-700">|</span>
             <a
-              href="https://anpc.ro/ce-spune-legea-702/702/"
+              href="https://reclamatiisal.anpc.ro/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-stone-400 hover:text-bakery-400 transition-colors underline-offset-4 hover:underline"
@@ -170,7 +170,7 @@ const Footer: React.FC<FooterProps> = ({ onAdminClick }) => {
             <div className="flex flex-wrap justify-center items-center gap-6">
               {/* ANPC SAL - Soluționarea Alternativă a Litigiilor */}
               <a
-                href="https://anpc.ro/ce-spune-legea-702/702/"
+                href="https://reclamatiisal.anpc.ro/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-white rounded-lg px-4 py-2 hover:shadow-lg transition-all hover:scale-105"

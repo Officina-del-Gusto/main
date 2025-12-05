@@ -221,7 +221,7 @@ const Navbar: React.FC<NavbarProps> = ({ christmasAdminEnabled = true, onOpenOrd
                     } `}
                 >
                   <ShoppingBag size={18} />
-                  <span className="hidden xl:inline">Comandă</span>
+                  <span className="hidden xl:inline">{dictionary.navbar.orderButton}</span>
                 </button>
 
                 <a
@@ -303,7 +303,7 @@ const Navbar: React.FC<NavbarProps> = ({ christmasAdminEnabled = true, onOpenOrd
                 className="w-full bg-bakery-500 text-white px-4 py-3 rounded-lg text-lg font-bold flex items-center justify-center gap-2 shadow-md"
               >
                 <ShoppingBag size={20} />
-                Comandă Acum
+                {dictionary.navbar.mobileMenu.orderNow}
               </button>
 
               {christmasAdminEnabled && (
