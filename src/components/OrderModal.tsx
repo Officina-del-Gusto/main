@@ -240,8 +240,8 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
             const fees = calculateFees();
 
             const templateParams = {
-                // Order identification
-                order_id: newOrder?.id?.slice(0, 8).toUpperCase() || 'N/A',
+                // Order identification - use friendly Romanian ID
+                order_id: newOrder?.friendly_id || `CMD-${newOrder?.id?.slice(0, 6).toUpperCase()}` || 'N/A',
                 order_date: orderDate,
                 order_time: orderTime,
 
