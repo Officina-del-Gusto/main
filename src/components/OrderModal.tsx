@@ -236,7 +236,14 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
 
             // 2. Send Email via EmailJS with comprehensive order data
             const now = new Date();
-            const orderDate = now.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const formatDDMMYYYY = (d: Date) => {
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const year = d.getFullYear();
+                return `${day}:${month}:${year}`;
+            };
+
+            const orderDate = formatDDMMYYYY(now);
             const orderTime = now.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
 
             // Check if order is urgent (needed within 2 days)
@@ -247,8 +254,44 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
             // Use calculateFees helper for consistent calculations
             const fees = calculateFees();
 
+            // Pre-format HTML sections since EmailJS doesn't support conditionals
+            const urgentSection = isUrgent ? `
+                <div style="padding:15px;background:#fef2f2;border-bottom:1px solid #fee2e2;text-align:center;">
+                    <div style="color:#dc2626;font-weight:900;font-size:18px;text-transform:uppercase;letter-spacing:1px;">
+                        ⚠️ COMANDĂ URGENTĂ ⚠️
+                    </div>
+                    <div style="color:#ef4444;font-size:14px;font-weight:600;margin-top:4px;">
+                        Această comandă este necesară pe ${formatDDMMYYYY(new Date(formData.date))}!
+                    </div>
+                </div>` : '';
+
+            const locationSection = formData.deliveryType === 'delivery'
+                ? `<div style="margin-top:16px;padding:12px;background:#eff6ff;border-radius:8px;">
+                    <div style="font-size:12px;color:#888;text-transform:uppercase;font-weight:600;">📍 Adresă de Livrare</div>
+                    <div style="font-size:16px;color:#333;font-weight:600;margin-top:4px;">${formData.address}</div>
+                   </div>`
+                : formData.pickupLocation
+                    ? `<div style="margin-top:16px;padding:12px;background:#f0fdfa;border-radius:8px;border:1px solid #ccfbf1;">
+                        <div style="font-size:12px;color:#0f766e;text-transform:uppercase;font-weight:600;">📍 Locație Ridicare</div>
+                        <div style="font-size:16px;color:#0f766e;font-weight:600;margin-top:4px;">${PICKUP_LOCATIONS[formData.pickupLocation]}</div>
+                       </div>`
+                    : '';
+
+            const packagingFeeRow = fees.packagingFee > 0
+                ? `<tr><td style="padding:4px 0;color:#666;font-size:14px;">Taxă Ambalaj:</td><td style="padding:4px 0;text-align:right;font-weight:600;">${fees.packagingFee.toFixed(2)} RON</td></tr>`
+                : '';
+
+            const shippingFeeRow = formData.deliveryType === 'delivery'
+                ? `<tr><td style="padding:4px 0;color:#666;font-size:14px;">Taxă Livrare (Estimat):</td><td style="padding:4px 0;text-align:right;font-weight:600;">${fees.shippingFee.toFixed(2)} RON</td></tr>`
+                : '';
+
+            const hasUnpriced = Array.from(cart.values()).some(item => !item.price || item.price === 0);
+            const unpricedWarning = hasUnpriced
+                ? `<p style="color:#dc2626;font-size:12px;text-align:center;margin-top:10px;font-weight:bold;">⚠️ ATENȚIE: Totalul include produse cu "Preț la cerere". Vă rugăm verificați produsele.</p>`
+                : '';
+
             const templateParams = {
-                // Order identification - use friendly Romanian ID
+                // Order identification
                 order_id: newOrder?.friendly_id || `CMD-${newOrder?.id?.slice(0, 6).toUpperCase()}` || 'N/A',
                 order_date: orderDate,
                 order_time: orderTime,
@@ -258,44 +301,26 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                 phone_number: formData.phone,
 
                 // Delivery info
-                needed_by: new Date(formData.date).toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+                needed_by: formatDDMMYYYY(new Date(formData.date)),
                 delivery_type_label: formData.deliveryType === 'delivery'
                     ? '🚚 Livrare la Domiciliu'
                     : `🏪 Ridicare ${formData.pickupLocation === 'dragasani' ? 'Drăgășani' : 'Băbeni'}`,
-                delivery_type_class: formData.deliveryType === 'delivery' ? 'badge-delivery' : 'badge-pickup',
-                delivery_address: formData.deliveryType === 'delivery' ? formData.address : '',
 
-                // Pickup location details
-                pickup_location: formData.pickupLocation || '',
-                pickup_location_full: formData.pickupLocation ? PICKUP_LOCATIONS[formData.pickupLocation] : '',
+                // Pre-formatted HTML sections (EmailJS doesn't support conditionals)
+                urgent_section: urgentSection,
+                location_section: locationSection,
+                packaging_fee_row: packagingFeeRow,
+                shipping_fee_row: shippingFeeRow,
+                unpriced_warning: unpricedWarning,
 
-                // Urgency
-                is_urgent: isUrgent,
-                days_until_needed: daysUntilNeeded,
-
-                // Items with full details
-                items: Array.from(cart.values()).map(item => ({
-                    name: item.name,
-                    quantity: item.quantity,
-                    type: item.type === 'product' ? 'Produs Standard' : 'Comandă Specială',
-                    price: item.price || 0,
-                    price_display: item.price ? `${(item.price * item.quantity).toFixed(2)} RON` : 'Preț la cerere',
-                    unit_price: item.price ? `${item.price} RON/buc` : ''
-                })),
-
-                // Item counts for quick reference
-                standard_count: fees.standardCount,
-                special_count: fees.specialCount,
+                // Item counts
                 total_items: fees.standardCount + fees.specialCount,
 
-                // Pricing (business owner sees this)
+                // Pricing
                 subtotal: fees.subtotal.toFixed(2),
-                packaging_fee: fees.packagingFee.toFixed(2),
-                shipping_fee: fees.shippingFee.toFixed(2),
                 total: fees.total.toFixed(2),
-                has_unpriced: Array.from(cart.values()).some(item => !item.price || item.price === 0),
 
-                // Plain text items list (backup for simple templates)
+                // Plain text items list
                 items_text: Array.from(cart.values()).map(item =>
                     `• ${item.quantity}x ${item.name}${item.price ? ` - ${(item.price * item.quantity).toFixed(2)} RON` : ' (preț la cerere)'}`
                 ).join('\n')
@@ -939,7 +964,15 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                                         </div>
                                         <div>
                                             <span className="block text-stone-500 text-xs uppercase font-bold">{dictionary.orderModal.labels.date}</span>
-                                            <span className="font-medium">{new Date(formData.date).toLocaleDateString('ro-RO')}</span>
+                                            <span className="font-medium">
+                                                {(() => {
+                                                    const d = new Date(formData.date);
+                                                    const day = String(d.getDate()).padStart(2, '0');
+                                                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                                                    const year = d.getFullYear();
+                                                    return `${day}:${month}:${year}`;
+                                                })()}
+                                            </span>
                                         </div>
                                         <div>
                                             <span className="block text-stone-500 text-xs uppercase font-bold">{dictionary.orderModal.labels.deliveryMethod}</span>
