@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   LayoutDashboard, Users, Plus, Edit, Trash2, Power, PowerOff,
   Star, Archive, Check, X, LogOut, Home, RotateCcw, Eye, Layers, AlertTriangle, Copy, ArrowRight, Settings,
-  Image, ShoppingBag, Upload, GripVertical, ChevronLeft, ChevronRight, ChevronDown, Phone, MapPin, Calendar, Briefcase, UserX
+  Image, ShoppingBag, Upload, GripVertical, ChevronLeft, ChevronRight, ChevronDown, Phone, MapPin, Calendar, Briefcase, UserX, Edit3
 } from 'lucide-react';
 import {
   Job, Application, CarouselImage, Product,
@@ -16,6 +16,8 @@ import {
   getStoreSettings, saveStoreSettings, StoreSettings, updateCarouselImage
 } from '../utils/mockData';
 import { useScrollLock } from '../hooks/useScrollLock';
+import PageEditorPanel from './editor/PageEditorPanel';
+import { PageEditorProvider } from '../contexts/PageEditorContext';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -24,7 +26,7 @@ interface AdminDashboardProps {
 }
 
 type AppFilter = 'all' | 'new' | 'starred' | 'rejected' | 'trashed' | 'hired' | 'fired';
-type AdminTab = 'jobs' | 'applications' | 'carousel' | 'products' | 'hero' | 'orders';
+type AdminTab = 'jobs' | 'applications' | 'carousel' | 'products' | 'hero' | 'orders' | 'page-editor';
 
 // Custom Notification Component
 const NotificationToast = ({ message, type, onClose }: { message: string, type: 'success' | 'error', onClose: () => void }) => (
@@ -598,7 +600,10 @@ for delete using ( bucket_id = 'images' );
         )}
 
         {/* Main Tab Switcher */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+          <button onClick={() => handleTabChange('page-editor')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'page-editor' ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white ring-2 ring-purple-300' : 'bg-gradient-to-r from-purple-50 to-indigo-50 text-purple-600 hover:from-purple-100 hover:to-indigo-100'}`}>
+            <Edit3 size={18} /> Editor Pagină
+          </button>
           <button onClick={() => handleTabChange('hero')} className={`py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm lg:text-base shadow-sm transition-all ${activeTab === 'hero' ? 'bg-white text-bakery-500 ring-2 ring-bakery-500' : 'bg-white/50 text-stone-500 hover:bg-white'}`}>
             <Image size={18} /> Hero
           </button>
@@ -633,6 +638,15 @@ for delete using ( bucket_id = 'images' );
           </div>
         ) : (
           <>
+            {/* --- PAGE EDITOR TAB --- */}
+            {activeTab === 'page-editor' && (
+              <PageEditorProvider enabled={true}>
+                <div className="bg-white rounded-2xl shadow-lg overflow-hidden" style={{ minHeight: '70vh' }}>
+                  <PageEditorPanel />
+                </div>
+              </PageEditorProvider>
+            )}
+
             {/* --- JOBS TAB --- */}
             {activeTab === 'jobs' && (
               <div className="space-y-6">

@@ -1013,3 +1013,299 @@ export const updateOrderStatus = async (id: string, status: 'pending' | 'contact
     throw error;
   }
 };
+
+// --- PAGE CONTENT OPERATIONS (Page Editor Feature) ---
+
+export type Language = 'ro' | 'en' | 'it' | 'fr' | 'es' | 'zh' | 'ru';
+
+export interface PageContent {
+  id: string;
+  section_key: string;
+  content_ro: string;
+  content_en?: string;
+  content_it?: string;
+  content_fr?: string;
+  content_es?: string;
+  content_zh?: string;
+  content_ru?: string;
+  needs_translation: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Get all page content entries
+ */
+export const getAllPageContent = async (): Promise<PageContent[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('page_content')
+      .select('*')
+      .order('section_key', { ascending: true });
+
+    if (error) {
+      if (error.code === '42P01') return []; // Table doesn't exist yet
+      throw error;
+    }
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching page content:', error);
+    return [];
+  }
+};
+
+/**
+ * Get a single page content entry by section key
+ */
+export const getPageContent = async (sectionKey: string): Promise<PageContent | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('page_content')
+      .select('*')
+      .eq('section_key', sectionKey)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null; // Not found
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    return null;
+  }
+};
+
+/**
+ * Get content for a specific section and language
+ */
+export const getPageContentText = async (sectionKey: string, lang: Language = 'ro'): Promise<string | null> => {
+  const content = await getPageContent(sectionKey);
+  if (!content) return null;
+
+  const langKey = `content_${lang}` as keyof PageContent;
+  return (content[langKey] as string) || content.content_ro || null;
+};
+
+/**
+ * Save page content (Romanian only, marks as needing translation)
+ */
+export const savePageContent = async (sectionKey: string, contentRo: string): Promise<void> => {
+  try {
+    const existing = await getPageContent(sectionKey);
+
+    if (existing) {
+      // Update existing
+      const { error } = await supabase
+        .from('page_content')
+        .update({
+          content_ro: contentRo,
+          needs_translation: true
+        })
+        .eq('section_key', sectionKey);
+
+      if (error) throw error;
+    } else {
+      // Insert new
+      const { error } = await supabase
+        .from('page_content')
+        .insert([{
+          section_key: sectionKey,
+          content_ro: contentRo,
+          needs_translation: true
+        }]);
+
+      if (error) throw error;
+    }
+  } catch (error) {
+    console.error('Error saving page content:', error);
+    throw error;
+  }
+};
+
+/**
+ * Bulk save multiple page content entries
+ */
+export const bulkSavePageContent = async (entries: { sectionKey: string; contentRo: string }[]): Promise<void> => {
+  for (const entry of entries) {
+    await savePageContent(entry.sectionKey, entry.contentRo);
+  }
+};
+
+/**
+ * Check if any content needs translation
+ */
+export const hasContentPendingTranslation = async (): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .from('page_content')
+      .select('id')
+      .eq('needs_translation', true)
+      .limit(1);
+
+    if (error) return false;
+    return (data?.length ?? 0) > 0;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Get all content that needs translation
+ */
+export const getContentNeedingTranslation = async (): Promise<PageContent[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('page_content')
+      .select('*')
+      .eq('needs_translation', true);
+
+    if (error) return [];
+    return data || [];
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * Update translations for a page content entry
+ */
+export const updatePageContentTranslations = async (
+  sectionKey: string,
+  translations: Partial<Record<Language, string>>
+): Promise<void> => {
+  try {
+    const updateData: Record<string, any> = { needs_translation: false };
+
+    for (const [lang, text] of Object.entries(translations)) {
+      if (lang !== 'ro') {
+        updateData[`content_${lang}`] = text;
+      }
+    }
+
+    const { error } = await supabase
+      .from('page_content')
+      .update(updateData)
+      .eq('section_key', sectionKey);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error updating translations:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete a page content entry
+ */
+export const deletePageContent = async (sectionKey: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('page_content')
+      .delete()
+      .eq('section_key', sectionKey);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error deleting page content:', error);
+    throw error;
+  }
+};
+
+// --- PAGE CONTENT HISTORY OPERATIONS ---
+
+export interface ContentHistory {
+  id: string;
+  content_id: string;
+  section_key: string;
+  content_ro: string;
+  content_en?: string;
+  content_it?: string;
+  content_fr?: string;
+  content_es?: string;
+  content_zh?: string;
+  content_ru?: string;
+  version_number: number;
+  changed_at: string;
+  change_description?: string;
+}
+
+/**
+ * Get version history for a content entry
+ */
+export const getContentHistory = async (sectionKey: string): Promise<ContentHistory[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('page_content_history')
+      .select('*')
+      .eq('section_key', sectionKey)
+      .order('version_number', { ascending: false });
+
+    if (error) {
+      if (error.code === '42P01') return []; // Table doesn't exist
+      throw error;
+    }
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching content history:', error);
+    return [];
+  }
+};
+
+/**
+ * Get all history entries
+ */
+export const getAllContentHistory = async (): Promise<ContentHistory[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('page_content_history')
+      .select('*')
+      .order('changed_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      if (error.code === '42P01') return []; // Table doesn't exist
+      throw error;
+    }
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching all history:', error);
+    return [];
+  }
+};
+
+/**
+ * Revert content to a specific version
+ */
+export const revertToVersion = async (historyId: string): Promise<void> => {
+  try {
+    // Get the history entry
+    const { data: historyEntry, error: fetchError } = await supabase
+      .from('page_content_history')
+      .select('*')
+      .eq('id', historyId)
+      .single();
+
+    if (fetchError) throw fetchError;
+    if (!historyEntry) throw new Error('History entry not found');
+
+    // Update the main content with the historical values
+    const { error: updateError } = await supabase
+      .from('page_content')
+      .update({
+        content_ro: historyEntry.content_ro,
+        content_en: historyEntry.content_en,
+        content_it: historyEntry.content_it,
+        content_fr: historyEntry.content_fr,
+        content_es: historyEntry.content_es,
+        content_zh: historyEntry.content_zh,
+        content_ru: historyEntry.content_ru,
+        needs_translation: false
+      })
+      .eq('section_key', historyEntry.section_key);
+
+    if (updateError) throw updateError;
+  } catch (error) {
+    console.error('Error reverting to version:', error);
+    throw error;
+  }
+};
