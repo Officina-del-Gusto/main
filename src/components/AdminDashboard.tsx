@@ -1562,7 +1562,12 @@ for delete using ( bucket_id = 'images' );
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <MapPin size={14} />
-                                      <span>{order.delivery_type === 'delivery' ? `Livrare: ${order.delivery_address}` : 'Ridicare Personală'}</span>
+                                      <span>
+                                        {order.delivery_type === 'delivery'
+                                          ? `Livrare: ${order.delivery_address}`
+                                          : `Ridicare: ${order.pickup_location === 'dragasani' ? 'Drăgășani' : (order.pickup_location === 'babeni' ? 'Băbeni' : 'Personală')}`
+                                        }
+                                      </span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <Calendar size={14} />
