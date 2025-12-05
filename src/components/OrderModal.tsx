@@ -126,6 +126,73 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
         });
     };
 
+    // Helper function to calculate fees (used in Step 1, Step 3, and email)
+    const calculateFees = () => {
+        const standardItems = Array.from(cart.values()).filter(i => i.type === 'product');
+        const specialItems = Array.from(cart.values()).filter(i => i.type === 'custom');
+
+        const standardCount = standardItems.reduce((sum, item) => sum + item.quantity, 0);
+        const specialCount = specialItems.reduce((sum, item) => sum + item.quantity, 0);
+
+        const standardSubtotal = standardItems.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0);
+        const specialSubtotal = specialItems.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0);
+        const subtotal = standardSubtotal + specialSubtotal;
+
+        // Helper to find applicable fee from rules
+        const getFee = (baseFee: number, rules: { threshold: number, fee: number }[] | undefined, value: number) => {
+            if (!rules || rules.length === 0) return baseFee;
+            const sortedRules = [...rules].sort((a, b) => a.threshold - b.threshold);
+            let applicableFee = baseFee;
+            for (const rule of sortedRules) {
+                if (value >= rule.threshold) {
+                    applicableFee = rule.fee;
+                }
+            }
+            return applicableFee;
+        };
+
+        // Calculate Packaging Fee
+        let finalPackagingFee = 0;
+        const hasStandardRules = storeSettings.fee_rules?.standard?.packaging?.length > 0;
+        const hasSpecialRules = storeSettings.fee_rules?.special?.packaging?.length > 0;
+
+        if (hasStandardRules || hasSpecialRules) {
+            const stdFee = standardCount > 0 ? getFee(storeSettings.packaging_fee, storeSettings.fee_rules?.standard?.packaging, standardCount) : 0;
+            const spcFee = specialCount > 0 ? getFee(0, storeSettings.fee_rules?.special?.packaging, specialCount) : 0;
+            finalPackagingFee = stdFee + spcFee;
+        } else {
+            finalPackagingFee = storeSettings.packaging_fee;
+        }
+
+        // Calculate Shipping Fee
+        let finalShippingFee = 0;
+        if (formData.deliveryType === 'delivery') {
+            const hasStdShipRules = storeSettings.fee_rules?.standard?.delivery?.length > 0;
+            const hasSpcShipRules = storeSettings.fee_rules?.special?.delivery?.length > 0;
+
+            if (hasStdShipRules || hasSpcShipRules) {
+                const stdShip = standardCount > 0 ? getFee(storeSettings.shipping_fee, storeSettings.fee_rules?.standard?.delivery, standardSubtotal) : 0;
+                const spcShip = specialCount > 0 ? getFee(0, storeSettings.fee_rules?.special?.delivery, specialSubtotal) : 0;
+                finalShippingFee = stdShip + spcShip;
+            } else {
+                finalShippingFee = storeSettings.shipping_fee;
+            }
+        }
+
+        const total = subtotal + finalPackagingFee + finalShippingFee;
+
+        return {
+            subtotal,
+            standardSubtotal,
+            specialSubtotal,
+            standardCount,
+            specialCount,
+            packagingFee: finalPackagingFee,
+            shippingFee: finalShippingFee,
+            total
+        };
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -169,13 +236,8 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
             const daysUntilNeeded = Math.ceil((neededDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
             const isUrgent = daysUntilNeeded <= 2;
 
-            // Calculate totals
-            const standardItems = Array.from(cart.values()).filter(i => i.type === 'product');
-            const specialItems = Array.from(cart.values()).filter(i => i.type === 'custom');
-            const subtotal = Array.from(cart.values()).reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0);
-            const packagingFee = storeSettings?.packaging_fee || 0;
-            const shippingFee = formData.deliveryType === 'delivery' ? (storeSettings?.shipping_fee || 0) : 0;
-            const total = subtotal + packagingFee + shippingFee;
+            // Use calculateFees helper for consistent calculations
+            const fees = calculateFees();
 
             const templateParams = {
                 // Order identification
@@ -208,15 +270,15 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                 })),
 
                 // Item counts for quick reference
-                standard_count: standardItems.reduce((sum, i) => sum + i.quantity, 0),
-                special_count: specialItems.reduce((sum, i) => sum + i.quantity, 0),
-                total_items: Array.from(cart.values()).reduce((sum, i) => sum + i.quantity, 0),
+                standard_count: fees.standardCount,
+                special_count: fees.specialCount,
+                total_items: fees.standardCount + fees.specialCount,
 
                 // Pricing (business owner sees this)
-                subtotal: subtotal.toFixed(2),
-                packaging_fee: packagingFee.toFixed(2),
-                shipping_fee: shippingFee.toFixed(2),
-                total: total.toFixed(2),
+                subtotal: fees.subtotal.toFixed(2),
+                packaging_fee: fees.packagingFee.toFixed(2),
+                shipping_fee: fees.shippingFee.toFixed(2),
+                total: fees.total.toFixed(2),
                 has_unpriced: Array.from(cart.values()).some(item => !item.price || item.price === 0),
 
                 // Plain text items list (backup for simple templates)
@@ -774,32 +836,31 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                                     </div>
 
                                     {/* Fees & Totals */}
-                                    {storeSettings.pricing_enabled && (
-                                        <div className="border-t border-bakery-200 pt-4 space-y-2 text-sm">
-                                            <div className="flex justify-between text-stone-600">
-                                                <span>{dictionary.orderModal.summary.subtotal}:</span>
-                                                <span>{Array.from(cart.values()).reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0).toFixed(2)} RON</span>
-                                            </div>
-                                            {formData.deliveryType === 'delivery' && (
+                                    {storeSettings.pricing_enabled && (() => {
+                                        const fees = calculateFees();
+                                        return (
+                                            <div className="border-t border-bakery-200 pt-4 space-y-2 text-sm">
                                                 <div className="flex justify-between text-stone-600">
-                                                    <span>{dictionary.orderModal.summary.shippingFee}:</span>
-                                                    <span>{storeSettings.shipping_fee.toFixed(2)} RON</span>
+                                                    <span>{dictionary.orderModal.summary.subtotal}:</span>
+                                                    <span>{fees.subtotal.toFixed(2)} RON</span>
                                                 </div>
-                                            )}
-                                            <div className="flex justify-between text-stone-600">
-                                                <span>{dictionary.orderModal.summary.packagingFee}:</span>
-                                                <span>{storeSettings.packaging_fee.toFixed(2)} RON</span>
+                                                {formData.deliveryType === 'delivery' && (
+                                                    <div className="flex justify-between text-stone-600">
+                                                        <span>{dictionary.orderModal.summary.shippingFee}:</span>
+                                                        <span>{fees.shippingFee.toFixed(2)} RON</span>
+                                                    </div>
+                                                )}
+                                                <div className="flex justify-between text-stone-600">
+                                                    <span>{dictionary.orderModal.summary.packagingFee}:</span>
+                                                    <span>{fees.packagingFee.toFixed(2)} RON</span>
+                                                </div>
+                                                <div className="flex justify-between text-lg font-bold text-bakery-800 border-t border-bakery-200 pt-2 mt-2">
+                                                    <span>{dictionary.orderModal.summary.total}:</span>
+                                                    <span>{fees.total.toFixed(2)} RON</span>
+                                                </div>
                                             </div>
-                                            <div className="flex justify-between text-lg font-bold text-bakery-800 border-t border-bakery-200 pt-2 mt-2">
-                                                <span>{dictionary.orderModal.summary.total}:</span>
-                                                <span>
-                                                    {(Array.from(cart.values()).reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0) +
-                                                        (formData.deliveryType === 'delivery' ? storeSettings.shipping_fee : 0) +
-                                                        storeSettings.packaging_fee).toFixed(2)} RON
-                                                </span>
-                                            </div>
-                                        </div>
-                                    )}
+                                        );
+                                    })()}
                                 </div>
 
                                 <div className="bg-white border border-stone-200 p-6 rounded-xl">
