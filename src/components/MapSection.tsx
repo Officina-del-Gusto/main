@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MapPin, Navigation, Phone, ExternalLink, Mail } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useEditableContent } from '../contexts/useEditableContent';
 
 type LocationKey = 'dragasani' | 'babeni';
 
@@ -31,6 +32,14 @@ const MapSection: React.FC = () => {
   const { dictionary } = useLanguage();
   const mapText = dictionary.mapSection;
 
+  // Get editable content from DB
+  const title = useEditableContent('mapSection.title', mapText.title);
+  const description = useEditableContent('mapSection.description', mapText.description);
+  const intro = useEditableContent('mapSection.intro', mapText.intro);
+  const addressLabel = useEditableContent('mapSection.addressLabel', mapText.addressLabel);
+  const phoneLabel = useEditableContent('mapSection.phoneLabel', mapText.phoneLabel);
+  const emailLabel = useEditableContent('mapSection.emailLabel', mapText.emailLabel);
+
   return (
     <section id="contact" className="py-24 bg-neutral-900 text-stone-50 relative overflow-hidden">
       {/* Texture overlay */}
@@ -38,26 +47,24 @@ const MapSection: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-serif font-bold mb-4 text-bakery-400">{mapText.title}</h2>
-          <p className="text-stone-400 max-w-2xl mx-auto">{mapText.description}</p>
+          <h2 className="text-4xl md:text-5xl font-serif font-bold mb-4 text-bakery-400">{title.value}</h2>
+          <p className="text-stone-400 max-w-2xl mx-auto">{description.value}</p>
           <div className="flex justify-center gap-4 mt-8">
             <button
               onClick={() => setActiveLocation('dragasani')}
-              className={`px-8 py-3 rounded-full font-bold transition-all duration-300 ${
-                activeLocation === 'dragasani'
-                  ? 'bg-bakery-500 text-white shadow-lg scale-105 ring-2 ring-bakery-400 ring-offset-2 ring-offset-neutral-900'
-                  : 'bg-stone-800 text-stone-400 hover:bg-stone-700'
-              }`}
+              className={`px-8 py-3 rounded-full font-bold transition-all duration-300 ${activeLocation === 'dragasani'
+                ? 'bg-bakery-500 text-white shadow-lg scale-105 ring-2 ring-bakery-400 ring-offset-2 ring-offset-neutral-900'
+                : 'bg-stone-800 text-stone-400 hover:bg-stone-700'
+                }`}
             >
               {mapText.dragasaniButton}
             </button>
             <button
               onClick={() => setActiveLocation('babeni')}
-              className={`px-8 py-3 rounded-full font-bold transition-all duration-300 ${
-                activeLocation === 'babeni'
-                  ? 'bg-bakery-500 text-white shadow-lg scale-105 ring-2 ring-bakery-400 ring-offset-2 ring-offset-neutral-900'
-                  : 'bg-stone-800 text-stone-400 hover:bg-stone-700'
-              }`}
+              className={`px-8 py-3 rounded-full font-bold transition-all duration-300 ${activeLocation === 'babeni'
+                ? 'bg-bakery-500 text-white shadow-lg scale-105 ring-2 ring-bakery-400 ring-offset-2 ring-offset-neutral-900'
+                : 'bg-stone-800 text-stone-400 hover:bg-stone-700'
+                }`}
             >
               {mapText.babeniButton}
             </button>
@@ -65,12 +72,12 @@ const MapSection: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 items-start">
-          
+
           <div className="lg:col-span-2 space-y-10 animate-fade-in">
             <div>
               <div className="w-20 h-1 bg-bakery-500 rounded-full mb-6"></div>
               <p className="text-stone-300 text-lg leading-relaxed">
-                {mapText.intro} <strong>{currentLocation.title}</strong>.
+                {intro.value}
               </p>
             </div>
 
@@ -81,7 +88,7 @@ const MapSection: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="font-serif font-bold text-xl text-white mb-1">
-                    {mapText.addressLabel} {currentLocation.title}
+                    {addressLabel.value} - {currentLocation.title}
                   </h4>
                   <p className="text-stone-400">{currentLocation.addressLine1}</p>
                   <p className="text-stone-400">{currentLocation.addressLine2}</p>
@@ -93,7 +100,7 @@ const MapSection: React.FC = () => {
                   <Phone className="text-bakery-300" size={24} />
                 </div>
                 <div>
-                  <h4 className="font-serif font-bold text-xl text-white mb-1">{mapText.phoneLabel}</h4>
+                  <h4 className="font-serif font-bold text-xl text-white mb-1">{phoneLabel.value}</h4>
                   <a href="tel:+40754554194" className="text-stone-400 hover:text-bakery-300 transition-colors text-lg font-medium block mt-1">
                     0754 554 194
                   </a>
@@ -105,7 +112,7 @@ const MapSection: React.FC = () => {
                   <Mail className="text-bakery-300" size={24} />
                 </div>
                 <div>
-                  <h4 className="font-serif font-bold text-xl text-white mb-1">{mapText.emailLabel}</h4>
+                  <h4 className="font-serif font-bold text-xl text-white mb-1">{emailLabel.value}</h4>
                   <a href="mailto:odgdragasani@gmail.com" className="text-stone-400 hover:text-bakery-300 transition-colors text-lg font-medium block mt-1">
                     odgdragasani@gmail.com
                   </a>
@@ -114,18 +121,18 @@ const MapSection: React.FC = () => {
             </div>
 
             <div className="pt-6 flex flex-col sm:flex-row gap-4">
-              <a 
+              <a
                 href={currentLocation.mapLink}
-                target="_blank" 
+                target="_blank"
                 rel="noreferrer"
                 className="flex-1 inline-flex items-center justify-center gap-3 bg-bakery-500 hover:bg-bakery-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-bakery-500/30 transition-all transform hover:-translate-y-1"
               >
                 <Navigation size={20} />
                 {mapText.callCta}
               </a>
-              <a 
-                href="https://www.facebook.com/ODGOfficinaDelGusto" 
-                target="_blank" 
+              <a
+                href="https://www.facebook.com/ODGOfficinaDelGusto"
+                target="_blank"
                 rel="noreferrer"
                 className="flex-1 inline-flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium py-4 px-6 rounded-xl transition-all"
               >
@@ -136,19 +143,19 @@ const MapSection: React.FC = () => {
           </div>
 
           <div className="lg:col-span-3 h-[450px] lg:h-[600px] w-full rounded-3xl overflow-hidden shadow-2xl border-8 border-stone-800 relative group transition-all duration-500">
-             {/* Map Overlay for interactivity suggestion */}
-             <div className="absolute inset-0 bg-black/30 pointer-events-none group-hover:bg-transparent transition-colors z-10 flex items-center justify-center">
-                <span className="bg-white/90 text-neutral-900 px-4 py-2 rounded-lg font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                  {mapText.mapOverlay}
-                </span>
-             </div>
-             
-             <iframe 
+            {/* Map Overlay for interactivity suggestion */}
+            <div className="absolute inset-0 bg-black/30 pointer-events-none group-hover:bg-transparent transition-colors z-10 flex items-center justify-center">
+              <span className="bg-white/90 text-neutral-900 px-4 py-2 rounded-lg font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                {mapText.mapOverlay}
+              </span>
+            </div>
+
+            <iframe
               key={activeLocation} // Force re-render on location change
-              width="100%" 
-              height="100%" 
-              frameBorder="0" 
-              style={{ border: 0 }} 
+              width="100%"
+              height="100%"
+              frameBorder="0"
+              style={{ border: 0 }}
               src={currentLocation.mapSrc}
               allowFullScreen
               title={`Hartă locație Officina del Gusto ${currentLocation.title} - patiserie și pizzerie`}

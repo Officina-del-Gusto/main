@@ -3,6 +3,7 @@ import { Briefcase, MapPin, Clock, X, Upload, CheckCircle, Loader2, AlertTriangl
 import { Job, getJobs, submitApplication, uploadCV } from '../utils/mockData';
 import emailjs from '@emailjs/browser';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useEditableContent } from '../contexts/useEditableContent';
 import { useScrollLock } from '../hooks/useScrollLock';
 
 // EmailJS Credentials - MUST be set in environment variables
@@ -44,6 +45,11 @@ const JobsSection: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const { dictionary } = useLanguage();
   const jobsText = dictionary.jobs;
+
+  // Get editable content from DB
+  const eyebrow = useEditableContent('jobs.eyebrow', jobsText.eyebrow);
+  const title = useEditableContent('jobs.title', jobsText.title);
+  const description = useEditableContent('jobs.description', jobsText.description);
 
   useScrollLock(isModalOpen);
 
@@ -246,10 +252,10 @@ const JobsSection: React.FC = () => {
     <section id="jobs" className="py-24 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <span className="font-cursive text-3xl text-bakery-500 block mb-2">{jobsText.eyebrow}</span>
-          <h2 className="text-4xl md:text-5xl font-serif font-bold text-bakery-900 mb-6">{jobsText.title}</h2>
+          <span className="font-cursive text-3xl text-bakery-500 block mb-2">{eyebrow.value}</span>
+          <h2 className="text-4xl md:text-5xl font-serif font-bold text-bakery-900 mb-6">{title.value}</h2>
           <p className="text-bakery-700 max-w-2xl mx-auto text-lg mb-8">
-            {jobsText.description}
+            {description.value}
           </p>
 
           {/* Location Tabs */}

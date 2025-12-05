@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Phone, Mail, Sparkles, PartyPopper, Gift, Calendar, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useEditableContent } from '../contexts/useEditableContent';
 import { getCarouselImages, DEFAULT_CAROUSEL_IMAGES, CarouselImage } from '../utils/mockData';
 import { supabase } from '../supabaseClient';
 
@@ -26,6 +27,13 @@ const CustomOrders: React.FC<CustomOrdersProps> = ({ onOpenOrderModal }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number | null>(null);
   const scrollPositionRef = useRef(0);
+
+  // Get editable content from DB
+  const eyebrow = useEditableContent('customOrders.eyebrow', content.eyebrow);
+  const title = useEditableContent('customOrders.title', content.title);
+  const description = useEditableContent('customOrders.description', content.description);
+  const phoneCta = useEditableContent('customOrders.phoneCta', content.phoneCta);
+  const emailCta = useEditableContent('customOrders.emailCta', content.emailCta);
 
   // Fetch carousel images from database with Realtime Subscription
   useEffect(() => {
@@ -172,10 +180,10 @@ const CustomOrders: React.FC<CustomOrdersProps> = ({ onOpenOrderModal }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           {/* Header */}
           <div className="text-center mb-10">
-            <span className="font-cursive text-3xl text-bakery-500 block mb-2">{content.eyebrow}</span>
-            <h2 className="text-4xl md:text-5xl font-serif font-bold text-bakery-900 mb-4">{content.title}</h2>
+            <span className="font-cursive text-3xl text-bakery-500 block mb-2">{eyebrow.value}</span>
+            <h2 className="text-4xl md:text-5xl font-serif font-bold text-bakery-900 mb-4">{title.value}</h2>
             <p className="text-bakery-700 max-w-2xl mx-auto text-lg leading-relaxed">
-              {content.description}
+              {description.value}
             </p>
           </div>
 
@@ -269,14 +277,14 @@ const CustomOrders: React.FC<CustomOrdersProps> = ({ onOpenOrderModal }) => {
                     className="flex-1 inline-flex items-center justify-center gap-3 bg-white hover:bg-bakery-50 border-2 border-bakery-500 text-bakery-700 font-bold py-3 px-5 rounded-xl transition-all transform hover:-translate-y-1"
                   >
                     <Phone size={20} />
-                    {content.phoneCta}
+                    {phoneCta.value}
                   </a>
                   <a
                     href={`mailto:${content.emailAddress}`}
                     className="flex-1 inline-flex items-center justify-center gap-3 bg-white hover:bg-bakery-50 border-2 border-bakery-500 text-bakery-700 font-bold py-3 px-5 rounded-xl transition-all transform hover:-translate-y-1"
                   >
                     <Mail size={20} />
-                    {content.emailCta}
+                    {emailCta.value}
                   </a>
                 </div>
               </div>

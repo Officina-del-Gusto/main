@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import {
     Save, X, Loader, RefreshCw, Languages, Edit, Eye,
     CheckCircle, AlertCircle, MapPin, Clock, Wheat, Heart, Coffee,
-    ShoppingBag, PartyPopper, Briefcase, Phone, Mail, Navigation
+    ShoppingBag, PartyPopper, Briefcase, Phone, Mail, Navigation,
+    RotateCcw, Download, History, Facebook, Link
 } from 'lucide-react';
 import { usePageEditor } from '../../contexts/PageEditorContext';
-import { getAllPageContent, PageContent } from '../../utils/mockData';
+import { getAllPageContent, PageContent, getAllContentHistory, ContentHistory, revertToVersion } from '../../utils/mockData';
 import EditableText from './EditableText';
 
 interface PageEditorPanelProps {
@@ -13,7 +14,7 @@ interface PageEditorPanelProps {
 }
 
 /**
- * Page Editor Panel v3 - Complete page mirror with all sections
+ * Page Editor Panel v4 - Complete with ALL sections, hyperlinks, backup/restore
  */
 const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
     const {
@@ -32,28 +33,29 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
 
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [contentList, setContentList] = useState<PageContent[]>([]);
+    const [historyList, setHistoryList] = useState<ContentHistory[]>([]);
+    const [showHistory, setShowHistory] = useState(false);
 
-    // Get current hostname for display
     const currentHost = window.location.hostname === 'localhost'
         ? `localhost:${window.location.port}`
         : window.location.hostname;
 
-    // Load content list
+    // Load content and history
     useEffect(() => {
         const loadContent = async () => {
             const content = await getAllPageContent();
             setContentList(content);
+            const history = await getAllContentHistory();
+            setHistoryList(history);
         };
         loadContent();
     }, [dbContent]);
 
-    // Show notification
     const showNotification = (message: string, type: 'success' | 'error') => {
         setNotification({ message, type });
         setTimeout(() => setNotification(null), 3000);
     };
 
-    // Handle save
     const handleSave = async () => {
         try {
             await saveAllChanges();
@@ -63,7 +65,6 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
         }
     };
 
-    // Handle discard
     const handleDiscard = () => {
         if (hasUnsavedChanges) {
             if (window.confirm('Sigur vrei să anulezi modificările?')) {
@@ -73,7 +74,6 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
         }
     };
 
-    // Handle translate
     const handleTranslate = async () => {
         try {
             await translateAll();
@@ -83,7 +83,6 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
         }
     };
 
-    // Toggle edit mode
     const handleToggleEditMode = () => {
         if (isEditMode && hasUnsavedChanges) {
             if (window.confirm('Ai modificări nesalvate. Vrei să le anulezi?')) {
@@ -92,6 +91,18 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
             }
         } else {
             setEditMode(!isEditMode);
+        }
+    };
+
+    const handleRevert = async (historyId: string) => {
+        if (window.confirm('Sigur vrei să restaurezi această versiune?')) {
+            try {
+                await revertToVersion(historyId);
+                await refreshContent();
+                showNotification('Versiune restaurată!', 'success');
+            } catch (error) {
+                showNotification('Eroare la restaurare', 'error');
+            }
         }
     };
 
@@ -111,21 +122,28 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
                 <div className="flex items-center gap-4">
                     <h2 className="text-xl font-serif font-bold text-stone-800">Editor Pagină</h2>
 
-                    {/* Edit Mode Toggle */}
                     <button
                         onClick={handleToggleEditMode}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${isEditMode
-                                ? 'bg-green-500 text-white shadow-md'
-                                : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                            ? 'bg-green-500 text-white shadow-md'
+                            : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
                             }`}
                     >
                         {isEditMode ? <Edit size={18} /> : <Eye size={18} />}
                         {isEditMode ? 'Mod Editare ACTIV' : 'Mod Vizualizare'}
                     </button>
+
+                    <button
+                        onClick={() => setShowHistory(!showHistory)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-all ${showHistory ? 'bg-purple-500 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                            }`}
+                    >
+                        <History size={18} />
+                        Istoric
+                    </button>
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {/* Refresh */}
                     <button
                         onClick={refreshContent}
                         className="p-2 text-stone-500 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors"
@@ -134,28 +152,17 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
                         <RefreshCw size={20} />
                     </button>
 
-                    {/* Translate Button */}
                     {hasPendingTranslations && (
                         <button
                             onClick={handleTranslate}
                             disabled={isTranslating}
                             className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-all disabled:opacity-50 shadow-md"
                         >
-                            {isTranslating ? (
-                                <>
-                                    <Loader size={18} className="animate-spin" />
-                                    Se traduce...
-                                </>
-                            ) : (
-                                <>
-                                    <Languages size={18} />
-                                    Încarcă traduceri
-                                </>
-                            )}
+                            {isTranslating ? <Loader size={18} className="animate-spin" /> : <Languages size={18} />}
+                            {isTranslating ? 'Se traduce...' : 'Încarcă traduceri'}
                         </button>
                     )}
 
-                    {/* Save/Discard buttons */}
                     {isEditMode && (
                         <>
                             <button
@@ -172,17 +179,8 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
                                 disabled={!hasUnsavedChanges || isSaving}
                                 className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-all disabled:opacity-50 shadow-md"
                             >
-                                {isSaving ? (
-                                    <>
-                                        <Loader size={18} className="animate-spin" />
-                                        Se salvează...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Save size={18} />
-                                        Salvează
-                                    </>
-                                )}
+                                {isSaving ? <Loader size={18} className="animate-spin" /> : <Save size={18} />}
+                                {isSaving ? 'Se salvează...' : 'Salvează'}
                             </button>
                         </>
                     )}
@@ -200,15 +198,16 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
                         <span><kbd className="px-1.5 py-0.5 bg-white rounded border text-xs font-mono">Ctrl+Shift+Z</kbd> redo</span>
                         <span className="text-green-400">•</span>
                         <span><kbd className="px-1.5 py-0.5 bg-white rounded border text-xs font-mono">Esc</kbd> anulează</span>
+                        <span className="text-green-400">•</span>
+                        <span className="flex items-center gap-1"><Link size={14} /> = hyperlink editabil</span>
                     </div>
                 </div>
             )}
 
             {/* Main Content Area */}
             <div className="flex-1 flex overflow-hidden">
-                {/* Preview Panel - Scrollable */}
+                {/* Preview Panel */}
                 <div className="flex-1 overflow-y-auto">
-                    {/* Browser Chrome */}
                     <div className="sticky top-0 z-10 bg-stone-800 text-white px-4 py-2 flex items-center gap-2 text-sm">
                         <div className="flex gap-1.5">
                             <div className="w-3 h-3 rounded-full bg-red-500"></div>
@@ -223,164 +222,61 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
                         )}
                     </div>
 
-                    {/* Page Content - All Sections */}
                     <div className="bg-white">
                         {/* === HERO SECTION === */}
                         <section className="relative bg-gradient-to-b from-bakery-900 via-bakery-800 to-bakery-900 text-white py-20 px-6">
-                            <div className="absolute top-2 left-2 bg-white/10 text-white/60 text-xs px-2 py-1 rounded">
-                                Hero Section
-                            </div>
+                            <div className="absolute top-2 left-2 bg-white/10 text-white/60 text-xs px-2 py-1 rounded">Hero</div>
                             <div className="max-w-4xl mx-auto text-center pt-8">
                                 <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 border border-white/30 rounded-full text-sm bg-black/30">
                                     <MapPin size={14} className="text-bakery-400" />
                                     <span>Drăgășani • Băbeni</span>
                                 </div>
 
-                                <EditableText
-                                    contentKey="hero.heading"
-                                    defaultValue="Officina del Gusto"
-                                    as="h1"
-                                    className="text-5xl md:text-6xl font-serif font-bold mb-4"
-                                />
-                                <EditableText
-                                    contentKey="hero.subheading"
-                                    defaultValue="Pasiune pentru Delicii"
-                                    as="p"
-                                    className="font-cursive text-3xl text-bakery-300 mb-6"
-                                />
-                                <EditableText
-                                    contentKey="hero.description"
-                                    defaultValue="Descoperă aromele autentice ale patiseriei noastre artizanale. Fiecare produs este făcut cu dragoste și ingrediente proaspete."
-                                    as="p"
-                                    className="text-lg text-bakery-100 max-w-2xl mx-auto mb-8"
-                                    multiline
-                                />
+                                <EditableText contentKey="hero.heading" defaultValue="Officina del Gusto" as="h1" className="text-5xl md:text-6xl font-serif font-bold mb-4" />
+                                <EditableText contentKey="hero.subheading" defaultValue="Pasiune pentru Delicii" as="p" className="font-cursive text-3xl text-bakery-300 mb-6" />
+                                <EditableText contentKey="hero.description" defaultValue="Descoperă aromele autentice ale patiseriei noastre artizanale." as="p" className="text-lg text-bakery-100 max-w-2xl mx-auto mb-8" multiline />
                                 <div className="flex gap-4 justify-center flex-wrap">
-                                    <EditableText
-                                        contentKey="hero.primaryCta"
-                                        defaultValue="Descoperă Produsele"
-                                        as="span"
-                                        className="px-8 py-3 bg-bakery-500 rounded-full font-bold cursor-pointer hover:bg-bakery-600"
-                                    />
-                                    <EditableText
-                                        contentKey="hero.secondaryCta"
-                                        defaultValue="Localizare"
-                                        as="span"
-                                        className="px-8 py-3 bg-white/10 border border-white/30 rounded-full font-medium cursor-pointer hover:bg-white/20"
-                                    />
+                                    <EditableText contentKey="hero.primaryCta" defaultValue="Descoperă Produsele" as="span" className="px-8 py-3 bg-bakery-500 rounded-full font-bold" />
+                                    <EditableText contentKey="hero.secondaryCta" defaultValue="Localizare" as="span" className="px-8 py-3 bg-white/10 border border-white/30 rounded-full font-medium" />
                                 </div>
                             </div>
                         </section>
 
-                        {/* === INFO SECTION - Tradiție și Pasiune === */}
+                        {/* === INFO SECTION === */}
                         <section className="py-16 px-6 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
-                            <div className="absolute top-2 left-2 bg-bakery-500/10 text-bakery-600 text-xs px-2 py-1 rounded">
-                                Info Section
-                            </div>
+                            <div className="absolute top-2 left-2 bg-bakery-500/10 text-bakery-600 text-xs px-2 py-1 rounded">Tradiție și Pasiune</div>
                             <div className="max-w-6xl mx-auto">
                                 <div className="text-center mb-12">
-                                    <EditableText
-                                        contentKey="infoSection.heading"
-                                        defaultValue="Tradiție și Pasiune"
-                                        as="h2"
-                                        className="text-4xl font-serif font-bold text-bakery-900 mb-4"
-                                    />
+                                    <EditableText contentKey="infoSection.heading" defaultValue="Tradiție și Pasiune" as="h2" className="text-4xl font-serif font-bold text-bakery-900 mb-4" />
                                     <div className="w-20 h-1 bg-bakery-400 mx-auto rounded-full mb-6"></div>
-                                    <EditableText
-                                        contentKey="infoSection.description"
-                                        defaultValue="Fiecare produs din Officina del Gusto este creat cu atenție la detalii, folosind rețete tradiționale și ingrediente de cea mai bună calitate."
-                                        as="p"
-                                        className="text-bakery-700 max-w-3xl mx-auto text-lg"
-                                        multiline
-                                    />
+                                    <EditableText contentKey="infoSection.description" defaultValue="Fiecare produs din Officina del Gusto este creat cu atenție la detalii." as="p" className="text-bakery-700 max-w-3xl mx-auto text-lg" multiline />
                                 </div>
-
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    {/* Schedule Card */}
                                     <div className="bg-white p-6 rounded-2xl shadow-lg border border-bakery-100">
-                                        <div className="w-12 h-12 bg-bakery-100 text-bakery-600 rounded-xl flex items-center justify-center mb-4">
-                                            <Clock size={24} />
-                                        </div>
-                                        <EditableText
-                                            contentKey="infoSection.cards.schedule.title"
-                                            defaultValue="Program"
-                                            as="h3"
-                                            className="text-xl font-serif font-bold text-bakery-800 mb-2"
-                                        />
-                                        <EditableText
-                                            contentKey="infoSection.cards.schedule.description"
-                                            defaultValue="Vă așteptăm să ne vizitați în fiecare zi."
-                                            as="p"
-                                            className="text-bakery-600 text-sm"
-                                            multiline
-                                        />
+                                        <Clock size={24} className="text-bakery-600 mb-4" />
+                                        <EditableText contentKey="infoSection.cards.schedule.title" defaultValue="Program" as="h3" className="text-xl font-serif font-bold text-bakery-800 mb-2" />
+                                        <EditableText contentKey="infoSection.cards.schedule.description" defaultValue="Vă așteptăm să ne vizitați." as="p" className="text-bakery-600 text-sm" multiline />
                                     </div>
-
-                                    {/* Quality Card */}
                                     <div className="bg-white p-6 rounded-2xl shadow-lg border border-bakery-100">
-                                        <div className="w-12 h-12 bg-bakery-100 text-bakery-600 rounded-xl flex items-center justify-center mb-4">
-                                            <Wheat size={24} />
-                                        </div>
-                                        <EditableText
-                                            contentKey="infoSection.cards.quality.title"
-                                            defaultValue="Calitate Supremă"
-                                            as="h3"
-                                            className="text-xl font-serif font-bold text-bakery-800 mb-2"
-                                        />
-                                        <EditableText
-                                            contentKey="infoSection.cards.quality.description"
-                                            defaultValue="Ingrediente proaspete, rețete autentice și pasiune în fiecare produs."
-                                            as="p"
-                                            className="text-bakery-600 text-sm"
-                                            multiline
-                                        />
+                                        <Wheat size={24} className="text-bakery-600 mb-4" />
+                                        <EditableText contentKey="infoSection.cards.quality.title" defaultValue="Calitate Supremă" as="h3" className="text-xl font-serif font-bold text-bakery-800 mb-2" />
+                                        <EditableText contentKey="infoSection.cards.quality.description" defaultValue="Ingrediente proaspete, rețete autentice." as="p" className="text-bakery-600 text-sm" multiline />
                                     </div>
-
-                                    {/* Passion Card */}
                                     <div className="bg-white p-6 rounded-2xl shadow-lg border border-bakery-100">
-                                        <div className="w-12 h-12 bg-bakery-100 text-bakery-600 rounded-xl flex items-center justify-center mb-4">
-                                            <Heart size={24} />
-                                        </div>
-                                        <EditableText
-                                            contentKey="infoSection.cards.passion.title"
-                                            defaultValue="Cu Pasiune"
-                                            as="h3"
-                                            className="text-xl font-serif font-bold text-bakery-800 mb-2"
-                                        />
-                                        <EditableText
-                                            contentKey="infoSection.cards.passion.description"
-                                            defaultValue="Fiecare creație este făcută cu dragoste și dedicare."
-                                            as="p"
-                                            className="text-bakery-600 text-sm"
-                                            multiline
-                                        />
+                                        <Heart size={24} className="text-bakery-600 mb-4" />
+                                        <EditableText contentKey="infoSection.cards.passion.title" defaultValue="Cu Pasiune" as="h3" className="text-xl font-serif font-bold text-bakery-800 mb-2" />
+                                        <EditableText contentKey="infoSection.cards.passion.description" defaultValue="Fiecare creație este făcută cu dragoste." as="p" className="text-bakery-600 text-sm" multiline />
                                     </div>
                                 </div>
                             </div>
                         </section>
 
-                        {/* === PRODUCTS SECTION (Header Only) === */}
+                        {/* === PRODUCTS SECTION === */}
                         <section className="py-16 px-6 bg-bakery-50">
                             <div className="max-w-6xl mx-auto text-center">
-                                <EditableText
-                                    contentKey="productGallery.eyebrow"
-                                    defaultValue="Bunătăți"
-                                    as="span"
-                                    className="font-cursive text-2xl text-bakery-500 block mb-2"
-                                />
-                                <EditableText
-                                    contentKey="productGallery.title"
-                                    defaultValue="Produsele Noastre"
-                                    as="h2"
-                                    className="text-4xl font-serif font-bold text-bakery-900 mb-4"
-                                />
-                                <EditableText
-                                    contentKey="productGallery.description"
-                                    defaultValue="De la prăjituri delicate la pizza artizanală, fiecare produs este o operă de artă culinară."
-                                    as="p"
-                                    className="text-bakery-700 max-w-2xl mx-auto text-lg mb-8"
-                                    multiline
-                                />
+                                <EditableText contentKey="productGallery.eyebrow" defaultValue="Delicii Zilnice" as="span" className="font-cursive text-2xl text-bakery-500 block mb-2" />
+                                <EditableText contentKey="productGallery.title" defaultValue="Produsele Noastre" as="h2" className="text-4xl font-serif font-bold text-bakery-900 mb-4" />
+                                <EditableText contentKey="productGallery.description" defaultValue="De la prăjituri delicate la pizza artizanală." as="p" className="text-bakery-700 max-w-2xl mx-auto text-lg mb-8" multiline />
                                 <div className="bg-white/50 border-2 border-dashed border-bakery-200 rounded-2xl p-8 text-bakery-400">
                                     <ShoppingBag size={48} className="mx-auto mb-4 opacity-50" />
                                     <p className="text-sm">Produsele sunt editabile în tabul "Produse & Meniu"</p>
@@ -388,91 +284,53 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
                             </div>
                         </section>
 
-                        {/* === CUSTOM ORDERS SECTION === */}
+                        {/* === CUSTOM ORDERS SECTION (FULL) === */}
                         <section className="py-16 px-6 bg-gradient-to-b from-amber-50 to-orange-50">
                             <div className="max-w-6xl mx-auto text-center">
-                                <EditableText
-                                    contentKey="customOrders.eyebrow"
-                                    defaultValue="Servicii Speciale"
-                                    as="span"
-                                    className="font-cursive text-2xl text-bakery-500 block mb-2"
-                                />
-                                <EditableText
-                                    contentKey="customOrders.title"
-                                    defaultValue="Comenzi Speciale"
-                                    as="h2"
-                                    className="text-4xl font-serif font-bold text-bakery-900 mb-4"
-                                />
-                                <EditableText
-                                    contentKey="customOrders.description"
-                                    defaultValue="Torturi personalizate, prăjituri pentru evenimente și comenzi pentru ocazii speciale."
-                                    as="p"
-                                    className="text-bakery-700 max-w-2xl mx-auto text-lg mb-8"
-                                    multiline
-                                />
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
+                                <EditableText contentKey="customOrders.eyebrow" defaultValue="Servicii Speciale" as="span" className="font-cursive text-2xl text-bakery-500 block mb-2" />
+                                <EditableText contentKey="customOrders.title" defaultValue="Comenzi Speciale" as="h2" className="text-4xl font-serif font-bold text-bakery-900 mb-4" />
+                                <EditableText contentKey="customOrders.description" defaultValue="Torturi personalizate, prăjituri pentru evenimente și comenzi pentru ocazii speciale." as="p" className="text-bakery-700 max-w-2xl mx-auto text-lg mb-8" multiline />
+
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mb-8">
                                     <div className="bg-white p-4 rounded-xl shadow-sm">
                                         <PartyPopper size={24} className="text-bakery-500 mx-auto mb-2" />
-                                        <EditableText
-                                            contentKey="customOrders.feature1"
-                                            defaultValue="Evenimente"
-                                            as="span"
-                                            className="text-sm text-bakery-700 font-medium"
-                                        />
+                                        <EditableText contentKey="customOrders.feature1" defaultValue="Nunți și Botezuri" as="span" className="text-sm text-bakery-700 font-medium" />
                                     </div>
                                     <div className="bg-white p-4 rounded-xl shadow-sm">
                                         <Heart size={24} className="text-bakery-500 mx-auto mb-2" />
-                                        <EditableText
-                                            contentKey="customOrders.feature2"
-                                            defaultValue="Nunți"
-                                            as="span"
-                                            className="text-sm text-bakery-700 font-medium"
-                                        />
+                                        <EditableText contentKey="customOrders.feature2" defaultValue="Petreceri și Aniversări" as="span" className="text-sm text-bakery-700 font-medium" />
                                     </div>
                                     <div className="bg-white p-4 rounded-xl shadow-sm">
                                         <Coffee size={24} className="text-bakery-500 mx-auto mb-2" />
-                                        <EditableText
-                                            contentKey="customOrders.feature3"
-                                            defaultValue="Botezuri"
-                                            as="span"
-                                            className="text-sm text-bakery-700 font-medium"
-                                        />
+                                        <EditableText contentKey="customOrders.feature3" defaultValue="Botezuri" as="span" className="text-sm text-bakery-700 font-medium" />
                                     </div>
                                     <div className="bg-white p-4 rounded-xl shadow-sm">
                                         <Clock size={24} className="text-bakery-500 mx-auto mb-2" />
-                                        <EditableText
-                                            contentKey="customOrders.feature4"
-                                            defaultValue="Aniversări"
-                                            as="span"
-                                            className="text-sm text-bakery-700 font-medium"
-                                        />
+                                        <EditableText contentKey="customOrders.feature4" defaultValue="Aniversări" as="span" className="text-sm text-bakery-700 font-medium" />
+                                    </div>
+                                </div>
+
+                                {/* CTA Buttons */}
+                                <div className="flex flex-wrap gap-4 justify-center">
+                                    <EditableText contentKey="customOrders.orderButton" defaultValue="Comandă Acum" as="span" className="px-6 py-3 bg-bakery-500 text-white rounded-xl font-bold" />
+                                    <div className="flex items-center gap-2 px-4 py-3 bg-white border-2 border-bakery-500 rounded-xl">
+                                        <Phone size={18} className="text-bakery-500" />
+                                        <EditableText contentKey="customOrders.phoneCta" defaultValue="Sună-ne" as="span" className="text-bakery-700 font-medium" />
+                                    </div>
+                                    <div className="flex items-center gap-2 px-4 py-3 bg-white border-2 border-bakery-500 rounded-xl">
+                                        <Mail size={18} className="text-bakery-500" />
+                                        <EditableText contentKey="customOrders.emailCta" defaultValue="Trimite Email" as="span" className="text-bakery-700 font-medium" />
                                     </div>
                                 </div>
                             </div>
                         </section>
 
-                        {/* === JOBS SECTION (Header Only) === */}
+                        {/* === JOBS SECTION (FULL) === */}
                         <section className="py-16 px-6 bg-white">
                             <div className="max-w-6xl mx-auto text-center">
-                                <EditableText
-                                    contentKey="jobs.eyebrow"
-                                    defaultValue="Cariere"
-                                    as="span"
-                                    className="font-cursive text-2xl text-bakery-500 block mb-2"
-                                />
-                                <EditableText
-                                    contentKey="jobs.title"
-                                    defaultValue="Cariere la Officina"
-                                    as="h2"
-                                    className="text-4xl font-serif font-bold text-bakery-900 mb-4"
-                                />
-                                <EditableText
-                                    contentKey="jobs.description"
-                                    defaultValue="Vino să faci parte din echipa noastră! Căutăm oameni pasionați care vor să crească alături de noi."
-                                    as="p"
-                                    className="text-bakery-700 max-w-2xl mx-auto text-lg mb-8"
-                                    multiline
-                                />
+                                <EditableText contentKey="jobs.eyebrow" defaultValue="Cariere" as="span" className="font-cursive text-2xl text-bakery-500 block mb-2" />
+                                <EditableText contentKey="jobs.title" defaultValue="Cariere la Officina" as="h2" className="text-4xl font-serif font-bold text-bakery-900 mb-4" />
+                                <EditableText contentKey="jobs.description" defaultValue="Vino să faci parte din echipa noastră! Căutăm oameni pasionați." as="p" className="text-bakery-700 max-w-2xl mx-auto text-lg mb-8" multiline />
                                 <div className="bg-bakery-50 border-2 border-dashed border-bakery-200 rounded-2xl p-8 text-bakery-400">
                                     <Briefcase size={48} className="mx-auto mb-4 opacity-50" />
                                     <p className="text-sm">Joburile sunt editabile în tabul "Joburi"</p>
@@ -480,34 +338,20 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
                             </div>
                         </section>
 
-                        {/* === MAP SECTION === */}
+                        {/* === MAP SECTION (FULL) === */}
                         <section className="py-16 px-6 bg-neutral-900 text-white">
                             <div className="max-w-6xl mx-auto text-center">
-                                <EditableText
-                                    contentKey="mapSection.title"
-                                    defaultValue="Te Așteptăm pe la noi!"
-                                    as="h2"
-                                    className="text-4xl font-serif font-bold text-bakery-400 mb-4"
-                                />
-                                <EditableText
-                                    contentKey="mapSection.description"
-                                    defaultValue="Vizitează-ne în una din cele două locații din Drăgășani și Băbeni."
-                                    as="p"
-                                    className="text-stone-400 max-w-2xl mx-auto text-lg mb-8"
-                                    multiline
-                                />
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto text-left">
+                                <EditableText contentKey="mapSection.title" defaultValue="Te Așteptăm pe la noi!" as="h2" className="text-4xl font-serif font-bold text-bakery-400 mb-4" />
+                                <EditableText contentKey="mapSection.description" defaultValue="Vizitează-ne în una din cele două locații." as="p" className="text-stone-400 max-w-2xl mx-auto text-lg mb-4" multiline />
+                                <EditableText contentKey="mapSection.intro" defaultValue="Fie că ești în drum spre serviciu sau vrei să iei ceva bun pentru acasă, oprește-te la noi. Mirosul de patiserie caldă te va ghida." as="p" className="text-stone-300 max-w-2xl mx-auto text-lg mb-8" multiline />
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto text-left">
                                     <div className="flex items-start gap-4">
                                         <div className="p-3 bg-stone-800 rounded-full">
                                             <MapPin className="text-bakery-400" size={20} />
                                         </div>
                                         <div>
-                                            <EditableText
-                                                contentKey="mapSection.addressLabel"
-                                                defaultValue="Adresă"
-                                                as="h4"
-                                                className="font-bold text-white mb-1"
-                                            />
+                                            <EditableText contentKey="mapSection.addressLabel" defaultValue="Adresă" as="h4" className="font-bold text-white mb-1" />
                                             <p className="text-stone-400 text-sm">Drăgășani & Băbeni</p>
                                         </div>
                                     </div>
@@ -516,13 +360,38 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
                                             <Phone className="text-bakery-400" size={20} />
                                         </div>
                                         <div>
-                                            <EditableText
-                                                contentKey="mapSection.phoneLabel"
-                                                defaultValue="Telefon"
-                                                as="h4"
-                                                className="font-bold text-white mb-1"
-                                            />
-                                            <p className="text-stone-400 text-sm">0754 554 194</p>
+                                            <EditableText contentKey="mapSection.phoneLabel" defaultValue="Telefon" as="h4" className="font-bold text-white mb-1" />
+                                            <div className="flex items-center gap-2">
+                                                <EditableText contentKey="contact.phone" defaultValue="0754 554 194" as="span" className="text-stone-400 text-sm" />
+                                                <Link size={12} className="text-bakery-400" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-4">
+                                        <div className="p-3 bg-stone-800 rounded-full">
+                                            <Mail className="text-bakery-400" size={20} />
+                                        </div>
+                                        <div>
+                                            <EditableText contentKey="mapSection.emailLabel" defaultValue="Email" as="h4" className="font-bold text-white mb-1" />
+                                            <div className="flex items-center gap-2">
+                                                <EditableText contentKey="contact.email" defaultValue="odgdragasani@gmail.com" as="span" className="text-stone-400 text-sm" />
+                                                <Link size={12} className="text-bakery-400" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Social Links */}
+                                <div className="mt-8 pt-6 border-t border-stone-700">
+                                    <p className="text-stone-500 text-sm mb-4">Linkuri Social Media (click pentru a edita URL-ul):</p>
+                                    <div className="flex justify-center gap-4">
+                                        <div className="flex items-center gap-2 px-4 py-2 bg-stone-800 rounded-lg">
+                                            <Facebook size={18} className="text-blue-400" />
+                                            <EditableText contentKey="social.facebook" defaultValue="facebook.com/ODGOfficinaDelGusto" as="span" className="text-stone-300 text-sm" />
+                                        </div>
+                                        <div className="flex items-center gap-2 px-4 py-2 bg-stone-800 rounded-lg">
+                                            <Phone size={18} className="text-green-400" />
+                                            <EditableText contentKey="social.whatsapp" defaultValue="wa.me/40754554194" as="span" className="text-stone-300 text-sm" />
                                         </div>
                                     </div>
                                 </div>
@@ -535,41 +404,18 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
                                 <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
                                     <div className="text-center md:text-left">
                                         <h3 className="text-2xl font-serif text-white font-bold mb-1">Officina del Gusto</h3>
-                                        <EditableText
-                                            contentKey="footer.tagline"
-                                            defaultValue="Pasiune pentru Delicii"
-                                            as="p"
-                                            className="font-cursive text-bakery-400 text-lg"
-                                        />
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <span className="text-stone-400">Social & Contact Icons</span>
+                                        <EditableText contentKey="footer.tagline" defaultValue="Pasiune pentru Delicii" as="p" className="font-cursive text-bakery-400 text-lg" />
                                     </div>
                                 </div>
                                 <div className="border-t border-stone-800 pt-6 flex flex-col md:flex-row justify-between items-center text-sm text-stone-500 gap-4">
                                     <div>
                                         <p>© {new Date().getFullYear()} Officina del Gusto.</p>
-                                        <EditableText
-                                            contentKey="footer.locationsNote"
-                                            defaultValue="Drăgășani • Băbeni"
-                                            as="p"
-                                            className="text-stone-400 mt-1"
-                                        />
+                                        <EditableText contentKey="footer.locationsNote" defaultValue="Drăgășani • Băbeni" as="p" className="text-stone-400 mt-1" />
                                     </div>
                                     <div className="flex gap-4">
-                                        <EditableText
-                                            contentKey="footer.schedule"
-                                            defaultValue="Luni - Sâmbătă: 08:00 - 20:00"
-                                            as="span"
-                                            className="text-stone-400"
-                                        />
+                                        <EditableText contentKey="footer.schedule" defaultValue="Luni - Sâmbătă: 08:00 - 20:00" as="span" className="text-stone-400" />
                                         <span>•</span>
-                                        <EditableText
-                                            contentKey="footer.sundayClosed"
-                                            defaultValue="Duminică: Închis"
-                                            as="span"
-                                            className="text-red-400/80"
-                                        />
+                                        <EditableText contentKey="footer.sundayClosed" defaultValue="Duminică: Închis" as="span" className="text-red-400/80" />
                                     </div>
                                 </div>
                             </div>
@@ -577,40 +423,93 @@ const PageEditorPanel: React.FC<PageEditorPanelProps> = ({ onClose }) => {
                     </div>
                 </div>
 
-                {/* Sidebar - Content List */}
-                <div className="w-72 bg-white border-l border-stone-200 p-4 overflow-y-auto flex-shrink-0">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-stone-800">Conținut Salvat</h3>
-                        <span className="text-xs text-stone-400">{contentList.length}</span>
-                    </div>
+                {/* Sidebar */}
+                <div className="w-80 bg-white border-l border-stone-200 p-4 overflow-y-auto flex-shrink-0">
+                    {showHistory ? (
+                        <>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-bold text-stone-800 flex items-center gap-2">
+                                    <History size={18} />
+                                    Istoric Versiuni
+                                </h3>
+                                <span className="text-xs text-stone-400">{historyList.length}</span>
+                            </div>
 
-                    {contentList.length === 0 ? (
-                        <div className="text-stone-400 text-sm text-center py-8">
-                            <Edit size={28} className="mx-auto mb-3 opacity-30" />
-                            <p>Niciun conținut încă.</p>
-                            <p className="text-xs mt-1">Editați și salvați pentru a vedea aici.</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                            {contentList.map((content) => (
-                                <div
-                                    key={content.id}
-                                    className="p-3 bg-stone-50 rounded-lg border border-stone-200 hover:border-bakery-300 transition-colors"
-                                >
-                                    <div className="flex items-center justify-between mb-1">
-                                        <span className="text-xs font-mono text-bakery-600 bg-bakery-50 px-1.5 py-0.5 rounded truncate max-w-[140px]">
-                                            {content.section_key}
-                                        </span>
-                                        {content.needs_translation && (
-                                            <span className="text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full">
-                                                traducere
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="text-xs text-stone-600 line-clamp-2 mt-1">{content.content_ro}</p>
+                            {historyList.length === 0 ? (
+                                <div className="text-stone-400 text-sm text-center py-8">
+                                    <RotateCcw size={28} className="mx-auto mb-3 opacity-30" />
+                                    <p>Niciun istoric încă.</p>
+                                    <p className="text-xs mt-1">Istoricul apare după salvări.</p>
                                 </div>
-                            ))}
-                        </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {historyList.slice(0, 20).map((history) => (
+                                        <div
+                                            key={history.id}
+                                            className="p-3 bg-stone-50 rounded-lg border border-stone-200 hover:border-purple-300 transition-colors"
+                                        >
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-xs font-mono text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded truncate max-w-[120px]">
+                                                    {history.section_key}
+                                                </span>
+                                                <span className="text-[10px] text-stone-400">
+                                                    v{history.version_number}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-stone-600 line-clamp-2 mt-1">{history.content_ro}</p>
+                                            <div className="flex items-center justify-between mt-2">
+                                                <span className="text-[10px] text-stone-400">
+                                                    {new Date(history.changed_at).toLocaleDateString('ro-RO')}
+                                                </span>
+                                                <button
+                                                    onClick={() => handleRevert(history.id)}
+                                                    className="text-xs text-purple-600 hover:text-purple-800 flex items-center gap-1"
+                                                >
+                                                    <RotateCcw size={12} />
+                                                    Restaurează
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-bold text-stone-800">Conținut Salvat</h3>
+                                <span className="text-xs text-stone-400">{contentList.length}</span>
+                            </div>
+
+                            {contentList.length === 0 ? (
+                                <div className="text-stone-400 text-sm text-center py-8">
+                                    <Edit size={28} className="mx-auto mb-3 opacity-30" />
+                                    <p>Niciun conținut încă.</p>
+                                    <p className="text-xs mt-1">Editați și salvați.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {contentList.map((content) => (
+                                        <div
+                                            key={content.id}
+                                            className="p-3 bg-stone-50 rounded-lg border border-stone-200 hover:border-bakery-300 transition-colors"
+                                        >
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-xs font-mono text-bakery-600 bg-bakery-50 px-1.5 py-0.5 rounded truncate max-w-[140px]">
+                                                    {content.section_key}
+                                                </span>
+                                                {content.needs_translation && (
+                                                    <span className="text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full">
+                                                        traducere
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-stone-600 line-clamp-2 mt-1">{content.content_ro}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             </div>

@@ -5,7 +5,7 @@ import { Edit2 } from 'lucide-react';
 interface EditableTextProps {
     contentKey: string;
     defaultValue: string;
-    as?: 'h1' | 'h2' | 'h3' | 'p' | 'span' | 'div';
+    as?: 'h1' | 'h2' | 'h3' | 'h4' | 'p' | 'span' | 'div';
     className?: string;
     multiline?: boolean;
 }
