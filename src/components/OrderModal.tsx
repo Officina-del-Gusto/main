@@ -36,12 +36,18 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
         phone: '',
         date: '',
         deliveryType: 'pickup' as 'pickup' | 'delivery',
+        pickupLocation: '' as '' | 'dragasani' | 'babeni',
         address: ''
     });
 
     const [showUnpricedWarning, setShowUnpricedWarning] = useState(false);
     const [showCloseConfirm, setShowCloseConfirm] = useState(false);
     const [createdOrder, setCreatedOrder] = useState<OrderRequest | null>(null);
+
+    const PICKUP_LOCATIONS = {
+        dragasani: 'Drăgășani - Str. Tudor Vladimirescu 62',
+        babeni: 'Băbeni - Str. Constituției 34'
+    };
 
     const resetState = () => {
         setStep(1);
@@ -51,6 +57,7 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
             phone: '',
             date: '',
             deliveryType: 'pickup',
+            pickupLocation: '',
             address: ''
         });
         setShowCloseConfirm(false);
@@ -221,6 +228,7 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                 items: Array.from(cart.values()),
                 needed_by: formData.date,
                 delivery_type: formData.deliveryType,
+                pickup_location: formData.deliveryType === 'pickup' ? formData.pickupLocation : undefined,
                 delivery_address: formData.deliveryType === 'delivery' ? formData.address : undefined,
                 status: 'pending'
             });
@@ -251,9 +259,15 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
 
                 // Delivery info
                 needed_by: new Date(formData.date).toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
-                delivery_type_label: formData.deliveryType === 'delivery' ? '🚚 Livrare la Domiciliu' : '🏪 Ridicare Personală',
+                delivery_type_label: formData.deliveryType === 'delivery'
+                    ? '🚚 Livrare la Domiciliu'
+                    : `🏪 Ridicare ${formData.pickupLocation === 'dragasani' ? 'Drăgășani' : 'Băbeni'}`,
                 delivery_type_class: formData.deliveryType === 'delivery' ? 'badge-delivery' : 'badge-pickup',
                 delivery_address: formData.deliveryType === 'delivery' ? formData.address : '',
+
+                // Pickup location details
+                pickup_location: formData.pickupLocation || '',
+                pickup_location_full: formData.pickupLocation ? PICKUP_LOCATIONS[formData.pickupLocation] : '',
 
                 // Urgency
                 is_urgent: isUrgent,
@@ -790,6 +804,55 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
 
                             {/* Delivery Type moved to Step 1 */}
 
+                            {/* Pickup Location Selection */}
+                            {formData.deliveryType === 'pickup' && (
+                                <div className="animate-fade-in">
+                                    <label className="block text-sm font-bold text-stone-700 mb-2">
+                                        Locație Ridicare <span className="text-red-500">*</span>
+                                    </label>
+                                    <div className="space-y-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, pickupLocation: 'dragasani' })}
+                                            className={`w-full p-4 rounded-xl border-2 text-left transition-all flex items-center gap-3 ${formData.pickupLocation === 'dragasani'
+                                                ? 'border-bakery-500 bg-bakery-50 ring-2 ring-bakery-200'
+                                                : 'border-stone-200 hover:border-bakery-300'
+                                                }`}
+                                        >
+                                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.pickupLocation === 'dragasani' ? 'border-bakery-500' : 'border-stone-300'
+                                                }`}>
+                                                {formData.pickupLocation === 'dragasani' && (
+                                                    <div className="w-3 h-3 rounded-full bg-bakery-500" />
+                                                )}
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-stone-800">📍 Drăgășani</div>
+                                                <div className="text-sm text-stone-500">Str. Tudor Vladimirescu 62</div>
+                                            </div>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, pickupLocation: 'babeni' })}
+                                            className={`w-full p-4 rounded-xl border-2 text-left transition-all flex items-center gap-3 ${formData.pickupLocation === 'babeni'
+                                                ? 'border-bakery-500 bg-bakery-50 ring-2 ring-bakery-200'
+                                                : 'border-stone-200 hover:border-bakery-300'
+                                                }`}
+                                        >
+                                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.pickupLocation === 'babeni' ? 'border-bakery-500' : 'border-stone-300'
+                                                }`}>
+                                                {formData.pickupLocation === 'babeni' && (
+                                                    <div className="w-3 h-3 rounded-full bg-bakery-500" />
+                                                )}
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-stone-800">📍 Băbeni</div>
+                                                <div className="text-sm text-stone-500">Str. Constituției 34</div>
+                                            </div>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
                             {formData.deliveryType === 'delivery' && (
                                 <div className="animate-fade-in">
                                     <label className="block text-sm font-bold text-stone-700 mb-1">{dictionary.orderModal.labels.address} <span className="text-red-500">*</span></label>
@@ -805,8 +868,8 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
 
                             <button
                                 type="submit"
-                                disabled={loading}
-                                className="w-full bg-bakery-500 text-white font-bold py-4 rounded-xl hover:bg-bakery-600 transition-colors flex justify-center items-center gap-2"
+                                disabled={loading || (formData.deliveryType === 'pickup' && !formData.pickupLocation)}
+                                className="w-full bg-bakery-500 text-white font-bold py-4 rounded-xl hover:bg-bakery-600 disabled:bg-stone-300 disabled:cursor-not-allowed transition-colors flex justify-center items-center gap-2"
                             >
                                 {loading ? <Loader className="animate-spin" /> : <>{dictionary.orderModal.steps.review} <Check size={20} /></>}
                             </button>
@@ -882,6 +945,12 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                                             <span className="block text-stone-500 text-xs uppercase font-bold">{dictionary.orderModal.labels.deliveryMethod}</span>
                                             <span className="font-medium">{formData.deliveryType === 'delivery' ? dictionary.orderModal.buttons.delivery : dictionary.orderModal.buttons.pickup}</span>
                                         </div>
+                                        {formData.deliveryType === 'pickup' && formData.pickupLocation && (
+                                            <div className="sm:col-span-2">
+                                                <span className="block text-stone-500 text-xs uppercase font-bold">Locație Ridicare</span>
+                                                <span className="font-medium">📍 {PICKUP_LOCATIONS[formData.pickupLocation]}</span>
+                                            </div>
+                                        )}
                                         {formData.deliveryType === 'delivery' && (
                                             <div className="sm:col-span-2">
                                                 <span className="block text-stone-500 text-xs uppercase font-bold">{dictionary.orderModal.labels.address}</span>

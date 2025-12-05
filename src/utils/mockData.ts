@@ -923,6 +923,7 @@ export interface OrderRequest {
   items: OrderItem[];
   needed_by: string;
   delivery_type: 'pickup' | 'delivery';
+  pickup_location?: 'dragasani' | 'babeni' | string;
   delivery_address?: string;
   details?: string;
   status: 'pending' | 'contacted' | 'completed';
