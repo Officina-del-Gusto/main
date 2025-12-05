@@ -151,7 +151,7 @@ const Footer: React.FC<FooterProps> = ({ onAdminClick }) => {
             </button>
             <span className="text-stone-700">|</span>
             <a
-              href="https://reclamatiisal.anpc.ro/"
+              href="https://anpc.ro/ce-spune-legea-702/702/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-stone-400 hover:text-bakery-400 transition-colors underline-offset-4 hover:underline"
@@ -211,6 +211,16 @@ const Footer: React.FC<FooterProps> = ({ onAdminClick }) => {
             <span>•</span>
             <span className="text-red-400/80">{footerText.sundayClosed}</span>
           </div>
+        </div>
+
+        {/* Admin Link (Hidden/Discrete) */}
+        <div className="flex justify-center mt-12 opacity-30 hover:opacity-100 transition-opacity">
+          <button
+            onClick={onAdminClick}
+            className="flex items-center gap-2 text-xs text-stone-600 hover:text-bakery-400"
+          >
+            <Lock size={12} /> {footerText.adminLink}
+          </button>
         </div>
 
 
