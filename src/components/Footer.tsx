@@ -151,7 +151,7 @@ const Footer: React.FC<FooterProps> = ({ onAdminClick }) => {
             </button>
             <span className="text-stone-700">|</span>
             <a
-              href="https://anpc.ro/ce-spune-legea-702/702/"
+              href="https://anpc.ro/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-stone-400 hover:text-bakery-400 transition-colors underline-offset-4 hover:underline"
@@ -185,7 +185,7 @@ const Footer: React.FC<FooterProps> = ({ onAdminClick }) => {
 
               {/* SOL - Soluționarea Online a Litigiilor (EU ODR) */}
               <a
-                href="https://ec.europa.eu/consumers/odr"
+                href="https://anpc.ro"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-white rounded-lg px-4 py-2 hover:shadow-lg transition-all hover:scale-105"
