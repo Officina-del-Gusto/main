@@ -10,6 +10,10 @@ import Footer from './components/Footer';
 import AdminDashboard from './components/AdminDashboard';
 import ChristmasEffects from './components/ChristmasEffects';
 import OrderModal from './components/OrderModal';
+import Redesign2 from './components/redesigns/Redesign2';
+import Redesign3 from './components/redesigns/Redesign3';
+import Redesign4 from './components/redesigns/Redesign4';
+import Redesign5 from './components/redesigns/Redesign5';
 import { ChristmasMusicProvider } from './contexts/ChristmasMusicContext';
 import { Lock, ArrowUp } from 'lucide-react';
 import { useLanguage } from './contexts/LanguageContext';
@@ -28,9 +32,15 @@ const safeGetBooleanFromStorage = (key: string, defaultValue: boolean): boolean 
 
 const App: React.FC = () => {
   const { dictionary } = useLanguage();
-  const [view, setView] = useState<'public' | 'login' | 'admin'>(() => {
+  const [view, setView] = useState<'public' | 'login' | 'admin' | 'redesign2' | 'redesign3' | 'redesign4' | 'redesign5'>(() => {
+    // Check path for redesigns first
+    const path = window.location.pathname;
+    if (path === '/redesign2') return 'redesign2';
+    if (path === '/redesign3') return 'redesign3';
+    if (path === '/redesign4') return 'redesign4';
+    if (path === '/redesign5') return 'redesign5';
     // Check if already logged in
-    if (window.location.pathname === '/admin') {
+    if (path === '/admin') {
       if (localStorage.getItem('adminSession')) {
         return 'admin';
       }
@@ -142,6 +152,12 @@ const App: React.FC = () => {
       setLoginError(false);
     }
   };
+
+  // Render Redesign Views (static design-only pages)
+  if (view === 'redesign2') return <Redesign2 />;
+  if (view === 'redesign3') return <Redesign3 />;
+  if (view === 'redesign4') return <Redesign4 />;
+  if (view === 'redesign5') return <Redesign5 />;
 
   // Render Admin View
   if (view === 'admin') {

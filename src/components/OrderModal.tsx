@@ -236,59 +236,36 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
 
             // 2. Send Email via EmailJS with comprehensive order data
             const now = new Date();
-            const formatDDMMYYYY = (d: Date) => {
-                const day = String(d.getDate()).padStart(2, '0');
-                const month = String(d.getMonth() + 1).padStart(2, '0');
+            const ROMANIAN_MONTHS = [
+                'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
+                'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'
+            ];
+            const formatRomanianDate = (d: Date) => {
+                const day = d.getDate();
+                const month = ROMANIAN_MONTHS[d.getMonth()];
                 const year = d.getFullYear();
-                return `${day}:${month}:${year}`;
+                return `${day} ${month} ${year}`;
             };
 
-            const orderDate = formatDDMMYYYY(now);
+            const orderDate = formatRomanianDate(now);
             const orderTime = now.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
 
             // Check if order is urgent (needed within 2 days)
-            const neededDate = new Date(formData.date);
+            const neededDate = formData.date ? new Date(formData.date) : new Date();
             const daysUntilNeeded = Math.ceil((neededDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
             const isUrgent = daysUntilNeeded <= 2;
 
             // Use calculateFees helper for consistent calculations
             const fees = calculateFees();
 
-            // Pre-format HTML sections since EmailJS doesn't support conditionals
-            const urgentSection = isUrgent ? `
-                <div style="padding:15px;background:#fef2f2;border-bottom:1px solid #fee2e2;text-align:center;">
-                    <div style="color:#dc2626;font-weight:900;font-size:18px;text-transform:uppercase;letter-spacing:1px;">
-                        ⚠️ COMANDĂ URGENTĂ ⚠️
-                    </div>
-                    <div style="color:#ef4444;font-size:14px;font-weight:600;margin-top:4px;">
-                        Această comandă este necesară pe ${formatDDMMYYYY(new Date(formData.date))}!
-                    </div>
-                </div>` : '';
-
-            const locationSection = formData.deliveryType === 'delivery'
-                ? `<div style="margin-top:16px;padding:12px;background:#eff6ff;border-radius:8px;">
-                    <div style="font-size:12px;color:#888;text-transform:uppercase;font-weight:600;">📍 Adresă de Livrare</div>
-                    <div style="font-size:16px;color:#333;font-weight:600;margin-top:4px;">${formData.address}</div>
-                   </div>`
-                : formData.pickupLocation
-                    ? `<div style="margin-top:16px;padding:12px;background:#f0fdfa;border-radius:8px;border:1px solid #ccfbf1;">
-                        <div style="font-size:12px;color:#0f766e;text-transform:uppercase;font-weight:600;">📍 Locație Ridicare</div>
-                        <div style="font-size:16px;color:#0f766e;font-weight:600;margin-top:4px;">${PICKUP_LOCATIONS[formData.pickupLocation]}</div>
-                       </div>`
-                    : '';
-
-            const packagingFeeRow = fees.packagingFee > 0
-                ? `<tr><td style="padding:4px 0;color:#666;font-size:14px;">Taxă Ambalaj:</td><td style="padding:4px 0;text-align:right;font-weight:600;">${fees.packagingFee.toFixed(2)} RON</td></tr>`
-                : '';
-
-            const shippingFeeRow = formData.deliveryType === 'delivery'
-                ? `<tr><td style="padding:4px 0;color:#666;font-size:14px;">Taxă Livrare (Estimat):</td><td style="padding:4px 0;text-align:right;font-weight:600;">${fees.shippingFee.toFixed(2)} RON</td></tr>`
-                : '';
-
-            const hasUnpriced = Array.from(cart.values()).some(item => !item.price || item.price === 0);
-            const unpricedWarning = hasUnpriced
-                ? `<p style="color:#dc2626;font-size:12px;text-align:center;margin-top:10px;font-weight:bold;">⚠️ ATENȚIE: Totalul include produse cu "Preț la cerere". Vă rugăm verificați produsele.</p>`
-                : '';
+            // Determine location info (either delivery address OR pickup location)
+            const isDelivery = formData.deliveryType === 'delivery';
+            const locationLabel = isDelivery ? 'Adresă de Livrare' : 'Locație Ridicare';
+            const locationValue = isDelivery
+                ? formData.address
+                : (formData.pickupLocation ? PICKUP_LOCATIONS[formData.pickupLocation] : '');
+            const locationBg = isDelivery ? '#eff6ff' : '#f0fdfa';
+            const locationColor = isDelivery ? '#333' : '#0f766e';
 
             const templateParams = {
                 // Order identification
@@ -296,28 +273,36 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                 order_date: orderDate,
                 order_time: orderTime,
 
+                // Urgency (using CSS display and padding)
+                urgent_text: isUrgent ? `⚠️ COMANDĂ URGENTĂ - Necesară pe ${formatRomanianDate(neededDate)}! ⚠️` : '',
+                urgent_padding: isUrgent ? '15px' : '0',
+
                 // Customer info
                 customer_name: formData.name || 'Client Anonim',
                 phone_number: formData.phone,
 
                 // Delivery info
-                needed_by: formatDDMMYYYY(new Date(formData.date)),
-                delivery_type_label: formData.deliveryType === 'delivery'
+                needed_by: formatRomanianDate(neededDate),
+                delivery_type_label: isDelivery
                     ? '🚚 Livrare la Domiciliu'
                     : `🏪 Ridicare ${formData.pickupLocation === 'dragasani' ? 'Drăgășani' : 'Băbeni'}`,
 
-                // Pre-formatted HTML sections (EmailJS doesn't support conditionals)
-                urgent_section: urgentSection,
-                location_section: locationSection,
-                packaging_fee_row: packagingFeeRow,
-                shipping_fee_row: shippingFeeRow,
-                unpriced_warning: unpricedWarning,
+                // Location section (uses CSS display for visibility)
+                location_display: locationValue ? 'block' : 'none',
+                location_label: locationLabel,
+                location_value: locationValue,
+                location_bg: locationBg,
+                location_color: locationColor,
 
                 // Item counts
                 total_items: fees.standardCount + fees.specialCount,
 
-                // Pricing
+                // Pricing with CSS display for conditional rows
                 subtotal: fees.subtotal.toFixed(2),
+                packaging_fee: fees.packagingFee.toFixed(2),
+                packaging_display: fees.packagingFee > 0 ? 'table-row' : 'none',
+                shipping_fee: fees.shippingFee.toFixed(2),
+                shipping_display: isDelivery ? 'table-row' : 'none',
                 total: fees.total.toFixed(2),
 
                 // Plain text items list
@@ -815,7 +800,7 @@ const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose }) => {
                             <div>
                                 <label className="block text-sm font-bold text-stone-700 mb-1">{dictionary.orderModal.labels.date} <span className="text-red-500">*</span></label>
                                 <div className="relative">
-                                    <Calendar className="absolute left-3 top-3 text-stone-400" size={20} />
+                                    <Calendar className="absolute left-3 top-3 text-stone-400 pointer-events-none" size={20} />
                                     <input
                                         type="date"
                                         required
